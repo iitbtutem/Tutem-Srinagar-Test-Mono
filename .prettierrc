@@ -1,0 +1,3 @@
+{
+  "extends": "@tutem/prettier-config"
+}

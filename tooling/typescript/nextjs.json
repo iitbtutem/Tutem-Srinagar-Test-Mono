@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "ESNext",
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "_comment" : "verbatimModuleSyntax is intentionally kept true (inherited from base). If Next.js 16 internal re-export patterns cause build errors, disable it in the consuming app's own tsconfig with an explanatory comment."
+  }
+}

@@ -1,0 +1,5 @@
+# convex/_generated/ is produced by `convex dev` — never commit it
+convex/_generated/
+
+# Environment
+.env.local

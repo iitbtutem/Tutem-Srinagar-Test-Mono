@@ -1,0 +1,22 @@
+{
+  "name": "@tutem/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./convex/_generated/api.js",
+    "./convex/_generated/dataModel": "./convex/_generated/dataModel.js"
+  },
+  "types": "./convex/_generated/api.d.ts",
+  "dependencies": {
+    "convex": "^1.32.0"
+  },
+  "devDependencies": {
+    "@tutem/typescript-config": "*",
+    "typescript": "^5.6.0"
+  }
+}
