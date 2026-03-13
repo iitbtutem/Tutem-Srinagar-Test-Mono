@@ -25,8 +25,18 @@ export default function RootLayout() {
 
 
       <ConvexProvider client={convex} >
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Stack />
+        <StatusBar 
+          backgroundColor='#edeef0'
+          style={
+            colorScheme === 'dark'
+            ? 'light'
+            // : 'dark'
+            : 'light'
+          } 
+        />
+        <Stack screenOptions={{
+          headerShown: false
+        }} />
         <PortalHost />
 
       </ConvexProvider>
