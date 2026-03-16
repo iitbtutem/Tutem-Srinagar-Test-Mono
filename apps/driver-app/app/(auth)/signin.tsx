@@ -49,7 +49,7 @@ export default function Signin() {
       </Button>
       <HR text="or" />
       <Button variant={'secondary'} size={'lg'}>
-        <AntDesign name="google" size={20} color="black" /> 
+        <AntDesign name="google" size={20} color="black" />
         <Text className="text-base font-semibold">Continue with Google</Text>
       </Button>
       <Button variant={'secondary'} size={'lg'}>
