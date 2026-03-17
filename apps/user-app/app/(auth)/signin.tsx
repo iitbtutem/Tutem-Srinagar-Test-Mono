@@ -1,10 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { Mail, Search } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Mail, Search, TriangleAlert } from 'lucide-react-native';
+import { useState } from 'react';
+import { View } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useRouter } from 'expo-router';
 
@@ -54,7 +53,12 @@ export default function Signin() {
           />
           <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+91</Text>
         </View>
-        {numberError && <Text className="py-2 text-md text-destructive">{numberError}</Text>}
+        {numberError && (
+          <View className="flex-row items-center gap-x-1">
+            <TriangleAlert size={15} color={'red'} />
+            <Text className="text-md py-2 text-destructive">{numberError}</Text>
+          </View>
+        )}
       </View>
 
       {/* signin button */}
