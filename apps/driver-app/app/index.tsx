@@ -25,7 +25,9 @@ const IMAGE_STYLE: ImageStyle = {
 
 export default function Screen() {
   const { colorScheme } = useColorScheme();
-  return (<Redirect href="/(tabs)" />);
+  return <Redirect href={'/(auth)/signin'} />;
+  
+  return <Redirect href="/(tabs)" />;
 
   return (
     <>

@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { SafeAreaView } from 'react-native-safe-area-context';
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -25,9 +26,20 @@ export default function RootLayout() {
 
 
       <ConvexProvider client={convex} >
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Stack />
-        <PortalHost />
+        <StatusBar 
+          backgroundColor='#edeef0'
+          style={
+            colorScheme === 'dark'
+            ? 'light'
+            : 'dark'
+          } 
+        />
+        <SafeAreaView className="flex-1">
+          <Stack screenOptions={{
+            headerShown: false
+          }} />
+          <PortalHost />
+        </SafeAreaView>
 
       </ConvexProvider>
 
