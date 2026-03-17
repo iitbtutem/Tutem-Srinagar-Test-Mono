@@ -23,7 +23,7 @@ const IMAGE_STYLE: ImageStyle = {
   width: 76,
 };
 
-export default function Screen() {
+export default function RootScreen() {
   const { colorScheme } = useColorScheme();
   return <Redirect href={'/(auth)/signin'} />;
   
