@@ -55,7 +55,7 @@ function OtpScreen() {
   };
 
   function resendOtp() {
-    setTimer(9)
+    setTimer(9);
   }
 
   function getOtpViaCall() {}
