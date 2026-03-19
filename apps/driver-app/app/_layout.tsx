@@ -3,7 +3,7 @@ import '@/global.css';
 import { NAV_THEME } from '@/lib/theme';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
-import { Stack } from 'expo-router';
+import { Slot, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
@@ -33,7 +33,7 @@ export default function RootLayout() {
           }
         />
         <SafeAreaView className="flex-1">
-          <Stack
+          <Slot
             screenOptions={{
               headerShown: false,
             }}

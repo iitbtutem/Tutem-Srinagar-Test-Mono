@@ -61,7 +61,7 @@ export default function Signin() {
                   const cleanedText = text.replace(/[^0-9]/g, '');
                   onChange(cleanedText);
                 }}
-                className="border-black bg-gray-100 pl-14 focus:border-2" // Add left padding
+                className="border-black bg-gray-100 pl-14" // Add left padding
                 value={value}
               />
             )}
