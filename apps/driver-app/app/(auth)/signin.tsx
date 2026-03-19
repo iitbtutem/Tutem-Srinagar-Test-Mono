@@ -2,36 +2,39 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { Mail, Search, TriangleAlert } from 'lucide-react-native';
-import { useState } from 'react';
 import { View } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useRouter } from 'expo-router';
+import { Controller, useForm } from 'react-hook-form';
+import z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const phoneNumberSchema = z.object({
+  phoneNumber: z
+    .string('Enter a valid phone number.')
+    .min(10, 'Phone number must be 10 digits long.'),
+});
 
 export default function Signin() {
-  const [number, setNumber] = useState('');
-  const [numberError, setNumberError] = useState('');
   const router = useRouter();
 
-  const handleChangeNumber = (input: string) => {
-    // Remove any non-numeric characters
-    const numericInput = input.replace(/[^0-9]/g, '');
-    // Limit to 10 digits
-    const truncated = numericInput.slice(0, 10);
-    if (numberError) {
-      setNumberError('');
-    }
-    setNumber(truncated);
-  };
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(phoneNumberSchema),
+    defaultValues: {
+      phoneNumber: '',
+    },
+  });
 
   const handleSignIn = () => {
-    if (number.length !== 10) {
-      setNumberError('Number must be 10 digit long.');
-      return;
-    }
     router.push({
       pathname: '/otp',
       params: {
-        phoneNumber: number,
+        phoneNumber: getValues('phoneNumber'),
       },
     });
   };
@@ -43,26 +46,39 @@ export default function Signin() {
       {/* mobile number input */}
       <View>
         <View className="relative">
-          <Input
-            inputMode="tel"
-            placeholder="Mobile number"
-            maxLength={10}
-            onChangeText={handleChangeNumber}
-            className="border-black bg-gray-100 pl-14 focus:border-2" // Add left padding
-            value={number}
+          <Controller
+            control={control}
+            rules={{
+              required: true,
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                inputMode="tel"
+                placeholder="Mobile number"
+                maxLength={10}
+                onBlur={onBlur}
+                onChangeText={(text) => {
+                  const cleanedText = text.replace(/[^0-9]/g, '');
+                  onChange(cleanedText);
+                }}
+                className="border-black bg-gray-100 pl-14" // Add left padding
+                value={value}
+              />
+            )}
+            name="phoneNumber"
           />
           <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+91</Text>
         </View>
-        {numberError && (
+        {errors.phoneNumber && (
           <View className="flex-row items-center gap-x-1">
             <TriangleAlert size={15} color={'red'} />
-            <Text className="text-md py-2 text-destructive">{numberError}</Text>
+            <Text className="text-md py-2 text-destructive">{errors.phoneNumber.message}</Text>
           </View>
         )}
       </View>
 
       {/* signin button */}
-      <Button size="lg" onPress={handleSignIn}>
+      <Button size="lg" onPress={handleSubmit(handleSignIn)}>
         <Text className="text-base font-semibold">Continue</Text>
       </Button>
 

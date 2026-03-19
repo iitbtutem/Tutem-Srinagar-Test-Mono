@@ -1,6 +1,7 @@
 import CustomDatePicker from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { useState } from 'react';
 import { View } from 'react-native';
 import {
   Select,
@@ -15,53 +16,33 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '@tutem/api';
-import { useRouter } from 'expo-router';
-import { GENDER } from '@/constants';
 
-const formSchema = z.object({
-  firstName: z
-    .string('Enter a valid first name')
-    .min(2, 'First name must be atleast 2 characters long.'),
-  lastName: z.string('Enter a valid last name').optional(),
-  gender: z.enum(GENDER, 'Select gender'),
-  dob: z.date('Enter your DOB'),
-  licenseNumber: z.string().min(14, 'Invalid License number.'),
-  organizationId: z.string().min(1, 'Select an organization.'),
+const vehicleSchema = z.object({
+  registrationNumber: z.string(),
+  type: z.enum(['Hatchback', 'Sedan', 'Suv', 'Auto', 'Bike']),
+  model: z.string(),
+  fuelType: z.enum(['petrol', 'diesel', 'env']),
+  color: z.string(),
+  seatingCapacity: z.string(),
+  class: z.enum(['premium', 'luxury', 'standard']),
 });
 
-export default function Signup() {
+export default function VehicleRegistration() {
+    return;
   // const [date, setDate] = useState<Date | null>(null);
-  const router = useRouter();
-
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addUser = useMutation(api.routes.user.addUser);
-
   const {
+    register,
     handleSubmit,
     control,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      dob: undefined,
-      licenseNumber: '',
-      organizationId: '',
-      gender: 'Male',
-    },
+    defaultValues: {},
   });
-
-  const onSubmit = (data: z.infer<typeof formSchema>) =>
-    addUser({ ...data, dob: String(data.dob) });
-
-  if (organizations === undefined) {
-    return;
-    return router.push('/error');
-  }
-
+  const onSubmit = (data: z.infer<typeof formSchema>) => console.log(data);
+  // const date = getValues("dob")
   return (
     <View className="p-3">
       <Text className="my-4 text-lg font-semibold">Fill in your details</Text>
@@ -141,12 +122,7 @@ export default function Signup() {
           render={({ field }) => (
             <Select
               onValueChange={(option) => field.onChange(option?.value)}
-              value={{
-                label:
-                  organizations.find((org) => org._id === field.value)?.name ??
-                  'Select organization',
-                value: field.value,
-              }}>
+              value={organizations.find((el) => el.value === field.value)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Organization" />
               </SelectTrigger>
@@ -154,8 +130,8 @@ export default function Signup() {
                 <SelectGroup>
                   <SelectLabel>Organization</SelectLabel>
                   {organizations.map((org) => (
-                    <SelectItem key={org._id} label={org.name} value={org._id}>
-                      {org.name}
+                    <SelectItem key={org.value} label={org.label} value={org.value}>
+                      {org.label}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -182,7 +158,7 @@ export default function Signup() {
               <SelectContent className="w-10/12">
                 <SelectGroup>
                   <SelectLabel>Gender</SelectLabel>
-                  {GENDER.map((gender) => (
+                  {['male', 'female', 'other'].map((gender) => (
                     <SelectItem key={gender} label={gender} value={gender}>
                       {gender}
                     </SelectItem>
