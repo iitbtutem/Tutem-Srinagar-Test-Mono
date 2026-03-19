@@ -19,6 +19,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
 import { useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
+import { useToast } from '@/components/CustomToast';
 
 const formSchema = z.object({
   firstName: z
@@ -54,8 +55,16 @@ export default function Signup() {
     },
   });
 
-  const onSubmit = (data: z.infer<typeof formSchema>) =>
-    addUser({ ...data, dob: String(data.dob) });
+  const showToast = useToast();
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      const user = await addUser({ ...data, dob: String(data.dob) });
+      showToast({ title: 'Success', description: 'Form submitted successfully', type: 'success' });
+    } catch (error) {
+      console.log(error);
+      showToast({ title: 'Error', description: 'Form failed to submit', type: 'error' });
+    }
+  };
 
   if (organizations === undefined) {
     return;

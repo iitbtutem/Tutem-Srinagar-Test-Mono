@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ToastProvider } from '@/components/CustomToast';
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -21,26 +22,28 @@ export default function RootLayout() {
   const { colorScheme } = useColorScheme();
 
   return (
-    <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
-      <ConvexProvider client={convex}>
-        <StatusBar
-          backgroundColor="#edeef0"
-          style={
-            colorScheme === 'dark'
-              ? 'light'
-              : // : 'dark'
-                'light'
-          }
-        />
-        <SafeAreaView className="flex-1">
-          <Slot
-            screenOptions={{
-              headerShown: false,
-            }}
+    <ToastProvider>
+      <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
+        <ConvexProvider client={convex}>
+          <StatusBar
+            backgroundColor="#edeef0"
+            style={
+              colorScheme === 'dark'
+                ? 'light'
+                : // : 'dark'
+                  'light'
+            }
           />
-        </SafeAreaView>
-        <PortalHost />
-      </ConvexProvider>
-    </ThemeProvider>
+          <SafeAreaView className="flex-1">
+            <Slot
+              screenOptions={{
+                headerShown: false,
+              }}
+            />
+          </SafeAreaView>
+          <PortalHost />
+        </ConvexProvider>
+      </ThemeProvider>
+  </ToastProvider>
   );
 }
