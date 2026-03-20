@@ -55,7 +55,7 @@ export default function Signup() {
     },
   });
 
-  const showToast = useToast();
+  const { showToast } = useToast();
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       const user = await addUser({ ...data, dob: String(data.dob) });
