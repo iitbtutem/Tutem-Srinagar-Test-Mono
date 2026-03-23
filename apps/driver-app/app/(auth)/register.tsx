@@ -33,7 +33,6 @@ const formSchema = z.object({
 });
 
 export default function Signup() {
-  // const [date, setDate] = useState<Date | null>(null);
   const router = useRouter();
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
@@ -56,13 +55,16 @@ export default function Signup() {
   });
 
   const { showToast } = useToast();
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      const user = await addUser({ ...data, dob: String(data.dob) });
-      showToast({ title: 'Success', description: 'Form submitted successfully', type: 'success' });
+      await addUser({ ...data, dob: String(data.dob) });
+      showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
+      // Navigate to the main app after profile completion
+      router.replace('/(protected)/(tabs)');
     } catch (error) {
       console.log(error);
-      showToast({ title: 'Error', description: 'Form failed to submit', type: 'error' });
+      showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
     }
   };
 
