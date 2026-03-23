@@ -1,7 +1,5 @@
-import CustomDatePicker from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { useState } from 'react';
 import { View } from 'react-native';
 import {
   Select,
@@ -16,86 +14,43 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
+import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 
 const vehicleSchema = z.object({
-  registrationNumber: z.string(),
-  type: z.enum(['Hatchback', 'Sedan', 'Suv', 'Auto', 'Bike']),
-  model: z.string(),
-  fuelType: z.enum(['petrol', 'diesel', 'env']),
-  color: z.string(),
-  seatingCapacity: z.string(),
-  class: z.enum(['premium', 'luxury', 'standard']),
+  registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
+  type: z.enum(VEHICLE_TYPE),
+  model: z.string().min(2, 'Model name must be atleast 2 characters long.'),
+  fuelType: z.enum(FUEL_TYPE),
+  color: z.string().min(3, 'Color must be atleast 3 characters long.'),
+  seatingCapacity: z.number().min(2, 'Seating capacity must be atleast 2.'),
+  class: z.enum(VEHICLE_CLASS),
 });
 
 export default function VehicleRegistration() {
-    return;
-  // const [date, setDate] = useState<Date | null>(null);
   const {
-    register,
     handleSubmit,
     control,
-    setValue,
-    getValues,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {},
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: {
+      registrationNumber: '',
+      type: undefined,
+      model: '',
+      fuelType: undefined,
+      color: '',
+      seatingCapacity: undefined,
+      class: undefined,
+    },
   });
-  const onSubmit = (data: z.infer<typeof formSchema>) => console.log(data);
-  // const date = getValues("dob")
+
+  const onSubmit = (data: z.infer<typeof vehicleSchema>) => console.log(data);
+
   return (
     <View className="p-3">
-      <Text className="my-4 text-lg font-semibold">Fill in your details</Text>
+      <Text className="my-4 text-lg font-semibold">Fill in your vehicle details</Text>
       <View className="gap-3 px-3 py-6">
-        {/* First name  */}
-        <Controller
-          control={control}
-          rules={{
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input placeholder="First name" onBlur={onBlur} onChangeText={onChange} value={value} />
-          )}
-          name="firstName"
-        />
-        {errors.firstName && (
-          <Text className="text-md text-destructive">{errors.firstName.message}</Text>
-        )}
-
-        {/* Last name */}
-        <Controller
-          control={control}
-          rules={{
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input placeholder="Last name" onBlur={onBlur} onChangeText={onChange} value={value} />
-          )}
-          name="lastName"
-        />
-        {errors.lastName && (
-          <Text className="text-md text-destructive">{errors.lastName.message}</Text>
-        )}
-
-        <Controller
-          name="dob"
-          control={control}
-          render={({ field, fieldState }) => (
-            <>
-              <CustomDatePicker
-                title="Choose DOB"
-                date={field.value}
-                setDate={(date) => field.onChange(date)}
-              />
-
-              {fieldState.error && (
-                <Text className="text-md text-destructive">{fieldState.error.message}</Text>
-              )}
-            </>
-          )}
-        />
-
-        {/* License number */}
+        {/* Registration Number */}
         <Controller
           control={control}
           rules={{
@@ -103,64 +58,35 @@ export default function VehicleRegistration() {
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              placeholder="License Number"
+              placeholder="Registration Number"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
             />
           )}
-          name="licenseNumber"
+          name="registrationNumber"
         />
-        {errors.licenseNumber && (
-          <Text className="text-md text-destructive">{errors.licenseNumber.message}</Text>
+        {errors.registrationNumber && (
+          <Text className="text-md text-destructive">{errors.registrationNumber.message}</Text>
         )}
 
-        {/* Organizations Select */}
+        {/* Type */}
         <Controller
-          name="organizationId"
-          control={control}
-          render={({ field }) => (
-            <Select
-              onValueChange={(option) => field.onChange(option?.value)}
-              value={organizations.find((el) => el.value === field.value)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Organization" />
-              </SelectTrigger>
-              <SelectContent className="w-10/12">
-                <SelectGroup>
-                  <SelectLabel>Organization</SelectLabel>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.value} label={org.label} value={org.value}>
-                      {org.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
-        />
-
-        {errors.organizationId && (
-          <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
-        )}
-
-        {/* Organizations Select */}
-        <Controller
-          name="gender"
+          name="type"
           control={control}
           render={({ field }) => (
             <Select
               onValueChange={(option) => field.onChange(option?.value)}
               value={{ label: field.value, value: field.value }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Gender" />
+                <SelectValue placeholder="Select Vehicle Type" />
               </SelectTrigger>
               <SelectContent className="w-10/12">
                 <SelectGroup>
-                  <SelectLabel>Gender</SelectLabel>
-                  {['male', 'female', 'other'].map((gender) => (
-                    <SelectItem key={gender} label={gender} value={gender}>
-                      {gender}
+                  <SelectLabel>Vehicle Type</SelectLabel>
+                  {VEHICLE_TYPE.map((type) => (
+                    <SelectItem key={type} label={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -168,8 +94,117 @@ export default function VehicleRegistration() {
             </Select>
           )}
         />
+        {errors.type && <Text className="text-md text-destructive">{errors.type.message}</Text>}
 
-        {errors.gender && <Text className="text-md text-destructive">{errors.gender.message}</Text>}
+        {/* Model */}
+        <Controller
+          control={control}
+          rules={{
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              placeholder="Vehicle Model"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+            />
+          )}
+          name="model"
+        />
+        {errors.model && <Text className="text-md text-destructive">{errors.model.message}</Text>}
+
+        {/* Fuel Type */}
+        <Controller
+          name="fuelType"
+          control={control}
+          render={({ field }) => (
+            <Select
+              onValueChange={(option) => field.onChange(option?.value)}
+              value={{ label: field.value, value: field.value }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Fuel Type" />
+              </SelectTrigger>
+              <SelectContent className="w-10/12">
+                <SelectGroup>
+                  <SelectLabel>Fuel Type</SelectLabel>
+                  {FUEL_TYPE.map((type) => (
+                    <SelectItem key={type} label={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.fuelType && (
+          <Text className="text-md text-destructive">{errors.fuelType.message}</Text>
+        )}
+
+        {/* Color */}
+        <Controller
+          control={control}
+          rules={{
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input placeholder="Color" onBlur={onBlur} onChangeText={onChange} value={value} />
+          )}
+          name="color"
+        />
+        {errors.color && <Text className="text-md text-destructive">{errors.color.message}</Text>}
+
+        {/* Seating Capacity */}
+        <Controller
+          control={control}
+          rules={{
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              inputMode="numeric"
+              keyboardType="number-pad"
+              placeholder="Seating Capacity"
+              onBlur={onBlur}
+              onChangeText={(text) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                onChange(numeric === '' ? '' : Number(numeric));
+              }}
+              value={value?.toString() ?? ''}
+            />
+          )}
+          name="seatingCapacity"
+        />
+        {errors.seatingCapacity && (
+          <Text className="text-md text-destructive">{errors.seatingCapacity.message}</Text>
+        )}
+
+        {/* Class */}
+        <Controller
+          name="class"
+          control={control}
+          render={({ field }) => (
+            <Select
+              onValueChange={(option) => field.onChange(option?.value)}
+              value={{ label: field.value, value: field.value }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Vehicle Class" />
+              </SelectTrigger>
+              <SelectContent className="w-10/12">
+                <SelectGroup>
+                  <SelectLabel>Vehicle Class</SelectLabel>
+                  {VEHICLE_CLASS.map((type) => (
+                    <SelectItem key={type} label={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.class && <Text className="text-md text-destructive">{errors.class.message}</Text>}
 
         <Button onPress={handleSubmit(onSubmit)}>
           <Text>Submit</Text>
