@@ -26,8 +26,7 @@ const IMAGE_STYLE: ImageStyle = {
 export default function RootScreen() {
   const { colorScheme } = useColorScheme();
   return <Redirect href={'/(auth)/vehicleRegistration'} />;
-  
-  // return <Redirect href="/(tabs)" />;
+
 
   return (
     <>
