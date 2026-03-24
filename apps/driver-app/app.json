@@ -36,7 +36,8 @@
       "expo-router",
       "@react-native-community/datetimepicker",
       "@clerk/expo",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

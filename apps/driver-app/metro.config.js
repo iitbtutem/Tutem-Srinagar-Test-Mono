@@ -6,9 +6,11 @@ const config = getDefaultConfig(__dirname);
 
 // Watch all files within the monorepo root
 const workspaceRoot = path.resolve(__dirname, '../..');
-config.watchFolders = [workspaceRoot];
+// Merge our workspaceRoot with the existing watchFolders
+config.watchFolders = [...(config.watchFolders || []), workspaceRoot];
 // Resolve node modules from both project and workspace root
 config.resolver.nodeModulesPaths = [
+  ...(config.resolver.nodeModulesPaths || []),
   path.resolve(__dirname, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
