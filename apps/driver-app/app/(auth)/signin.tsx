@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { Mail, TriangleAlert } from 'lucide-react-native';
+import { TriangleAlert } from 'lucide-react-native';
 import { View, ActivityIndicator } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
@@ -20,9 +20,8 @@ export default function Signin() {
   const router = useRouter();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { isSignedIn, isLoaded } = useAuth()
-  const { isAuthenticated, isLoading } = useConvexAuth()
-
+  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
@@ -48,13 +47,11 @@ export default function Signin() {
       });
       // User exists — send OTP to the email
       if (error) {
-
         if ((error as any).errors[0].code === 'form_identifier_not_found') {
           try {
-            await signUp.create({ emailAddress: email })
-
+            await signUp.create({ emailAddress: email });
           } catch (err) {
-            showToast({ title: "Error", type: "error", description: "Failed to Sign Up" })
+            showToast({ title: 'Error', type: 'error', description: 'Failed to Sign Up' });
           }
 
           await signUp.verifications.sendEmailCode();
@@ -63,7 +60,7 @@ export default function Signin() {
             pathname: '/otp',
             params: { email, mode: 'signup' },
           });
-          return
+          return;
         }
       }
 
@@ -74,11 +71,8 @@ export default function Signin() {
         pathname: '/otp',
         params: { email, mode: 'signin' },
       });
-
     } catch (signInError: any) {
-
-      showToast({ title: "Error", type: "error", description: "Failed to Sign In" })
-
+      showToast({ title: 'Error', type: 'error', description: 'Failed to Sign In' });
     } finally {
       setLoading(false);
     }
@@ -104,7 +98,7 @@ export default function Signin() {
                 placeholder="Email address"
                 onBlur={onBlur}
                 onChangeText={onChange}
-                className="border-black bg-gray-100 pl-4"
+                className="pl-4"
                 value={value}
               />
             )}
@@ -129,8 +123,8 @@ export default function Signin() {
       </Button>
 
       <Text className="mt-3 text-xs text-gray-600">
-        By continuing, you agree to our Terms of Service and Privacy Policy. A one-time
-        verification code will be sent to your email.
+        By continuing, you agree to our Terms of Service and Privacy Policy. A one-time verification
+        code will be sent to your email.
       </Text>
     </View>
   );
