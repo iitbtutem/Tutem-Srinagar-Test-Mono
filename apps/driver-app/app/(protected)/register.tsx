@@ -1,7 +1,8 @@
-import CustomDatePicker from '@/components/DatePicker';
+import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
+import { useRef } from 'react';
 import {
   Select,
   SelectContent,
@@ -17,9 +18,11 @@ import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
+import { useAuth } from '@clerk/expo';
+import ErrorScreen from '@/components/ErrorScreen';
 
 const formSchema = z.object({
   firstName: z
@@ -28,15 +31,25 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  licenseNumber: z.string().min(14, 'Invalid License number.'),
+  licenseNumber: z.string('License number is required.').min(14, 'Invalid license number'),
   organizationId: z.string().min(1, 'Select an organization.'),
+  phoneNumber: z.string().min(1, "Phone number is required").max(10, "Invalid phone number")
 });
 
 export default function Signup() {
   const router = useRouter();
+  const { userId, signOut } = useAuth()
+  const { showToast } = useToast();
+
+  const lastNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const dobRef = useRef<CustomDatePickerHandle>(null);
+  const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addUser = useMutation(api.routes.user.addUser);
+  const addUser = useMutation(api.routes.user.addDriver);
+  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? "" })
+
 
   const {
     handleSubmit,
@@ -48,29 +61,38 @@ export default function Signup() {
       firstName: '',
       lastName: '',
       dob: undefined,
-      licenseNumber: '',
       organizationId: '',
       gender: 'Male',
+      phoneNumber: "",
     },
   });
 
-  const { showToast } = useToast();
-
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      await addUser({ ...data, dob: String(data.dob) });
+      if (!userId) {
+        showToast({ title: 'Error', description: 'User not found', type: 'error' });
+        return;
+      }
+
+      await addUser({ ...data, dob: String(data.dob), clerkId: userId });
+
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
+
       // Navigate to the main app after profile completion
       router.replace('/(protected)/(tabs)');
     } catch (error) {
-      console.log(error);
       showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
     }
-  };
+  });
 
-  if (organizations === undefined) {
-    return;
-    return router.push('/error');
+  if (user === undefined) return <ActivityIndicator />
+
+  if (user && userId) return <Redirect href="/" />
+
+  if (organizations === undefined) return <ActivityIndicator />
+
+  if (organizations.length === 0) {
+    return <ErrorScreen message="No organizations found" />;
   }
 
   return (
@@ -80,11 +102,17 @@ export default function Signup() {
         {/* First name  */}
         <Controller
           control={control}
-          rules={{
-            required: true,
-          }}
+          rules={{ required: true }}
           render={({ field: { onChange, onBlur, value } }) => (
-            <Input placeholder="First name" onBlur={onBlur} onChangeText={onChange} value={value} />
+            <Input
+              placeholder="First name"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              returnKeyType="next"
+              onSubmitEditing={() => lastNameRef.current?.focus()}
+              blurOnSubmit={false}
+            />
           )}
           name="firstName"
         />
@@ -94,17 +122,49 @@ export default function Signup() {
 
         {/* Last name */}
         <Controller
-          control={control}
-          rules={{
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input placeholder="Last name" onBlur={onBlur} onChangeText={onChange} value={value} />
-          )}
           name="lastName"
+          control={control}
+          rules={{ required: true }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              ref={lastNameRef}
+              placeholder="Last name"
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              returnKeyType="next"
+              onSubmitEditing={() => phoneRef.current?.focus()}
+            />
+          )}
         />
         {errors.lastName && (
           <Text className="text-md text-destructive">{errors.lastName.message}</Text>
+        )}
+
+        {/* Phone number */}
+        <Controller
+          name="phoneNumber"
+          control={control}
+          rules={{ required: true }}
+          render={({ field: { onChange, value } }) => (
+            <View className="relative">
+              <Input
+                ref={phoneRef}
+                inputMode="tel"
+                placeholder="Mobile number"
+                maxLength={10}
+                onChangeText={onChange}
+                className=" pl-14 "
+                value={value}
+                returnKeyType="next"
+                onSubmitEditing={() => dobRef.current?.open()}
+              />
+              <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+91</Text>
+            </View>
+          )}
+        />
+        {errors.phoneNumber && (
+          <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
         )}
 
         <Controller
@@ -113,9 +173,10 @@ export default function Signup() {
           render={({ field, fieldState }) => (
             <>
               <CustomDatePicker
+                ref={dobRef}
                 title="Choose DOB"
                 date={field.value}
-                setDate={(date) => field.onChange(date)}
+                setDate={(date) => { field.onChange(date); licenseRef.current?.focus(); }}
               />
 
               {fieldState.error && (
@@ -128,15 +189,16 @@ export default function Signup() {
         {/* License number */}
         <Controller
           control={control}
-          rules={{
-            required: true,
-          }}
+          rules={{ required: true }}
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
+              ref={licenseRef}
               placeholder="License Number"
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
+              returnKeyType="done"
+              onSubmitEditing={() => onSubmit()}
             />
           )}
           name="licenseNumber"
@@ -206,10 +268,14 @@ export default function Signup() {
 
         {errors.gender && <Text className="text-md text-destructive">{errors.gender.message}</Text>}
 
-        <Button onPress={handleSubmit(onSubmit)}>
+        <Button onPress={onSubmit}>
           <Text>Submit</Text>
         </Button>
       </View>
+
+      <Button onPress={async () => await signOut()}>
+        <Text>Logout</Text>
+      </Button>
     </View>
   );
 }
