@@ -1,17 +1,15 @@
 import '@/global.css';
 
-import { NAV_THEME } from '@/lib/theme';
-import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
 import { ConvexReactClient } from 'convex/react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/CustomToast';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colorScheme } from 'nativewind';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -34,27 +32,25 @@ const tokenCache = {
   async saveToken(key: string, value: string) {
     try {
       await SecureStore.setItemAsync(key, value);
-    } catch { }
+    } catch {}
   },
 };
 
 export default function RootLayout() {
-  console.log("i am reloading")
+  const theme = colorScheme.get();
 
   return (
     <ClerkProvider
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      tokenCache={tokenCache}
-    >
+      tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-
         <ToastProvider>
-
           <StatusBar
-            backgroundColor="#edeef0"
+            style={theme === 'dark' ? 'light' : 'dark'}
+            backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
           />
           <SafeAreaView className="flex-1">
-            <Slot
+            <Stack
               screenOptions={{
                 headerShown: false,
               }}
@@ -62,8 +58,7 @@ export default function RootLayout() {
           </SafeAreaView>
           <PortalHost />
         </ToastProvider>
-
       </ConvexProviderWithClerk>
-    </ClerkProvider >
+    </ClerkProvider>
   );
 }

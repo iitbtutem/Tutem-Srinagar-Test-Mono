@@ -2,9 +2,8 @@ import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from './ui/button';
 import { Text } from './ui/text';
-import { Feather } from "@expo/vector-icons"
+import { Feather } from '@expo/vector-icons';
 import { cn } from '@/lib/utils';
-import { View } from 'react-native';
 
 type CustomDatePickerProps = {
   title?: string;
@@ -17,7 +16,7 @@ export type CustomDatePickerHandle = {
 };
 
 const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProps>(
-  ({ title = "Choose Date", date, setDate }, ref) => {
+  ({ title = 'Choose Date', date, setDate }, ref) => {
     const [show, setShow] = useState(false);
 
     useImperativeHandle(ref, () => ({
@@ -28,11 +27,12 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
       <>
         <Button
           onPress={() => setShow(true)}
-          variant={'outline'}
-          className='justify-start'
-        >
+          className="justify-start bg-muted-foreground/10 dark:bg-input/80">
           <Feather name="calendar" size={18} color="gray" />
-          <Text className={cn("pl-1 text-sm font-medium text-muted-foreground/50", { "text-primary": !!date })}>
+          <Text
+            className={cn('pl-1 text-sm font-medium text-muted-foreground/50', {
+              'text-primary': !!date,
+            })}>
             {date?.toLocaleDateString() ?? title}
           </Text>
         </Button>
@@ -41,7 +41,7 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
             onBlur={() => console.log('leave')}
             onChange={(e) => {
               setShow(false);
-              if (e.type === "dismissed") return;
+              if (e.type === 'dismissed') return;
               setDate(new Date(e.nativeEvent.timestamp));
             }}
             value={new Date()}

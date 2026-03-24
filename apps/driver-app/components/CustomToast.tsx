@@ -89,10 +89,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               toast.type === 'success'
                 ? 'bg-green-500'
                 : toast.type === 'error'
-                ? 'bg-red-500'
-                : 'bg-gray-800'
+                  ? 'bg-red-500'
+                  : 'bg-gray-800'
             }`}>
-            
             {/* ✅ FIX: actually render icon */}
             <AnimatedIonicons
               key={toast.type} // 🔥 ensures animation retriggers
@@ -104,10 +103,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
             {/* Text */}
             <View className="flex-1">
-              <Text className="font-semibold text-white">{toast.title}</Text>
+              <Text className="truncate font-semibold text-white" numberOfLines={1}>
+                {toast.title}
+              </Text>
 
               {toast.description && (
-                <Text className="mt-1 text-sm text-white/90">
+                <Text className="mt-1 truncate text-sm text-white/90" numberOfLines={1}>
                   {toast.description}
                 </Text>
               )}
