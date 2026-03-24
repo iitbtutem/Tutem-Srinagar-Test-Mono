@@ -12,6 +12,7 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/CustomToast';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -39,7 +40,6 @@ const tokenCache = {
 };
 
 export default function RootLayout() {
-  console.log("i am reloading")
 
   return (
     <ClerkProvider
@@ -48,20 +48,24 @@ export default function RootLayout() {
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
 
-        <ToastProvider>
+        <GestureHandlerRootView className='flex-1'>
 
-          <StatusBar
-            backgroundColor="#edeef0"
-          />
-          <SafeAreaView className="flex-1">
-            <Slot
-              screenOptions={{
-                headerShown: false,
-              }}
+          <ToastProvider>
+
+            <StatusBar
+              backgroundColor="#edeef0"
             />
-          </SafeAreaView>
-          <PortalHost />
-        </ToastProvider>
+            <SafeAreaView className="flex-1">
+              <Slot
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+            </SafeAreaView>
+            <PortalHost />
+          </ToastProvider>
+
+        </GestureHandlerRootView>
 
       </ConvexProviderWithClerk>
     </ClerkProvider >

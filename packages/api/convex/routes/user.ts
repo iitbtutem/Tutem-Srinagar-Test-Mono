@@ -7,6 +7,8 @@ export const addDriver = mutation({
     lastName: v.optional(v.string()),
     dob: v.string(),
     licenseNumber: v.string(),
+    licenseImageFrontKey: v.optional(v.string()),
+    licenseImageBackKey: v.optional(v.string()),
     organizationId: v.string(),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
