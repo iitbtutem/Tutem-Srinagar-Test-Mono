@@ -1,7 +1,7 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
 import { useRef } from 'react';
 import {
   Select,
@@ -22,10 +22,8 @@ import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth, useUser } from '@clerk/expo';
-import ErrorScreen from '@/components/ErrorScreen';
-import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInRight } from 'react-native-reanimated';
-import type { Id } from '@tutem/api/convex/_generated/dataModel';
+import { Feather } from '@expo/vector-icons';
 
 const formSchema = z.object({
   firstName: z
@@ -34,27 +32,20 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  licenseNumber: z
-    .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
-  organizationId: z.string().min(1, 'Select an organization.'),
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 
-export default function Signup() {
+export default function Register() {
   const router = useRouter();
-  const { userId, signOut } = useAuth();
+  const { userId } = useAuth();
   const { user: clerkUser } = useUser();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
-  const licenseRef = useRef<TextInput>(null);
 
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addUser = useMutation(api.routes.user.addDriver);
+  const addUser = useMutation(api.routes.user.addRider);
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
   const {
@@ -67,7 +58,6 @@ export default function Signup() {
       firstName: '',
       lastName: '',
       dob: undefined,
-      organizationId: '',
       gender: undefined,
       phoneNumber: '',
     },
@@ -80,15 +70,14 @@ export default function Signup() {
         return;
       }
 
-      await addUser({ ...data, dob: String(data.dob), clerkId: userId, organizationId: data.organizationId as Id<'organization'> });
+      await addUser({ ...data, dob: String(data.dob), clerkId: userId });
       
       await clerkUser?.update({
-        unsafeMetadata: { role: 'driver' }
+        unsafeMetadata: { role: 'rider' }
       });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
-      // Navigate to the main app after profile completion
       router.replace('/(protected)/(tabs)');
     } catch (error) {
       showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
@@ -98,12 +87,6 @@ export default function Signup() {
   if (user === undefined) return <ActivityIndicator />;
 
   if (user && userId) return <Redirect href="/" />;
-
-  if (organizations === undefined) return <ActivityIndicator />;
-
-  if (organizations.length === 0) {
-    return <ErrorScreen message="No organizations found" />;
-  }
 
   return (
     <Animated.ScrollView
@@ -122,7 +105,7 @@ export default function Signup() {
             rules={{ required: true }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                placeholder="Virat"
+                placeholder="John"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -146,11 +129,10 @@ export default function Signup() {
           <Controller
             name="lastName"
             control={control}
-            rules={{ required: true }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 ref={lastNameRef}
-                placeholder="Kholi"
+                placeholder="Doe"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -213,7 +195,6 @@ export default function Signup() {
                   date={field.value}
                   setDate={(date) => {
                     field.onChange(date);
-                    licenseRef.current?.focus();
                   }}
                 />
                 {fieldState.error && (
@@ -222,65 +203,6 @@ export default function Signup() {
               </>
             )}
           />
-        </View>
-
-        {/* License number */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="credit-card" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">License Number</Text>
-          </View>
-          <Controller
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                ref={licenseRef}
-                placeholder="DL-1234567890123"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                returnKeyType="done"
-                onSubmitEditing={() => onSubmit()}
-              />
-            )}
-            name="licenseNumber"
-          />
-          {errors.licenseNumber && (
-            <Text className="text-md text-destructive">{errors.licenseNumber.message}</Text>
-          )}
-        </View>
-
-        {/* Organization */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="briefcase" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
-          </View>
-          <Controller
-            name="organizationId"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={(option) => field.onChange(option?.value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Organization" />
-                </SelectTrigger>
-                <SelectContent className="w-10/12">
-                  <SelectGroup>
-                    <SelectLabel>Organization</SelectLabel>
-                    {organizations.map((org) => (
-                      <SelectItem key={org._id} label={org.name} value={org._id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.organizationId && (
-            <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
-          )}
         </View>
 
         {/* Gender */}
@@ -293,7 +215,7 @@ export default function Signup() {
             name="gender"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={(option) => field.onChange(option?.value)}>
+              <Select onValueChange={(option: any) => field.onChange(option?.value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>

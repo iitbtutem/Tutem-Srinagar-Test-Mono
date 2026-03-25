@@ -23,11 +23,11 @@ export default function ProtectedLayout() {
     });
   }
 
-  // Role check: If a rider tries to use the driver app
-  if (clerkUser?.unsafeMetadata?.role === 'rider' || user?.type === 'Rider') {
+  // Role check: If a driver tries to use the rider app
+  if (clerkUser?.unsafeMetadata?.role === 'driver' || user?.type === 'Driver') {
     return (
       <ErrorScreen
-        message="Access Denied: Rider account detected. This application is for registered drivers only. Please use the Tutem Rider app to book rides, or log out to sign in with a driver account."
+        message="Access Denied: Driver account detected. This application is exclusively for riders. Please use the Tutem Driver app to manage your rides, or log out to sign in with a rider account."
         actionText="Logout"
         onAction={async () => {
           await signOut();
@@ -42,7 +42,6 @@ export default function ProtectedLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={protectedGuard}>
         <Stack.Screen name="(tabs)/index" />
-        <Stack.Screen name="vehicleRegistration" />
         <Stack.Screen
           name="editProfile"
           options={{

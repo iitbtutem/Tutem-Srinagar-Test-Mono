@@ -65,7 +65,7 @@ export default function EditProfile() {
   const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const updateUser = useMutation(api.routes.user.updateUser);
+  const updateUser = useMutation(api.routes.user.updateDriver);
 
   const {
     handleSubmit,
