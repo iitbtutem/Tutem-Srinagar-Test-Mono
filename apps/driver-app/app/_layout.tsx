@@ -45,20 +45,22 @@ export default function RootLayout() {
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ToastProvider>
-          <StatusBar
-            style={theme === 'dark' ? 'light' : 'dark'}
-            backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
-          />
-          <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-              }}
+        <GestureHandlerRootView className="flex-1">
+          <ToastProvider>
+            <StatusBar
+              style={theme === 'dark' ? 'light' : 'dark'}
+              backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
             />
-          </SafeAreaView>
-          <PortalHost />
-        </ToastProvider>
+            <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+            </SafeAreaView>
+            <PortalHost />
+          </ToastProvider>
+        </GestureHandlerRootView>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
