@@ -1,7 +1,6 @@
 import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { SelectSeparator } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Profile() {
   const { userId } = useAuth();
@@ -26,17 +24,17 @@ export default function Profile() {
 
   if (!userId) return <ErrorScreen message="User not found" />;
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
-  console.log('User', user);
 
   if (user === undefined) return <ActivityIndicator />;
 
   const theme = colorScheme.get();
 
+
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <StatusBar
         translucent={false}
-        backgroundColor={theme === 'dark' ? 'white' : 'black'}
+        backgroundColor={theme === 'dark' ? '#09090b' : 'black'}
         style={theme === 'dark' ? 'light' : 'dark'}
       />
 
@@ -101,51 +99,51 @@ export default function Profile() {
         contentContainerClassName="px-5 pt-6 pb-10 gap-4"
         showsVerticalScrollIndicator={false}>
         {/* Personal Info Card */}
-        <View className="overflow-hidden rounded-2xl bg-white shadow-md shadow-slate-200">
-          <View className="border-b border-slate-100 px-6 py-4">
-            <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <View className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 shadow-md shadow-slate-200 dark:shadow-none">
+          <View className="border-b border-slate-100 dark:border-zinc-800 px-6 py-4">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
               Personal Information
             </Text>
           </View>
 
           {/* DOB */}
           <View className="flex-row items-center gap-4 px-6 py-4">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-purple-50">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-purple-50 dark:bg-purple-900/30">
               <MaterialIcons name="cake" size={20} color="#9333ea" />
             </View>
             <View className="flex-1">
-              <Text className="mb-0.5 text-xs font-medium text-slate-400">Date of Birth</Text>
-              <Text className="text-sm font-semibold tracking-wide text-slate-800">
+              <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">Date of Birth</Text>
+              <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
                 {new Date(user?.dob ?? '').toLocaleDateString()}
               </Text>
             </View>
           </View>
 
-          <View className="mx-6 h-px bg-slate-100" />
+          <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
 
           {/* Gender */}
           <View className="flex-row items-center gap-4 px-6 py-4">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50 dark:bg-pink-900/30">
               <MaterialIcons name="wc" size={20} color="#ec4899" />
             </View>
             <View className="flex-1">
-              <Text className="mb-0.5 text-xs font-medium text-slate-400">Gender</Text>
-              <Text className="text-sm font-semibold tracking-wide text-slate-800">
+              <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">Gender</Text>
+              <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
                 {user?.gender}
               </Text>
             </View>
           </View>
 
-          <View className="mx-6 h-px bg-slate-100" />
+          <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
 
           {/* Phone */}
           <View className="flex-row items-center gap-4 px-6 py-4">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
               <MaterialIcons name="phone" size={20} color="#16a34a" />
             </View>
             <View className="flex-1">
-              <Text className="mb-0.5 text-xs font-medium text-slate-400">Phone Number</Text>
-              <Text className="text-sm font-semibold tracking-wide text-slate-800">
+              <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">Phone Number</Text>
+              <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
                 {user?.phoneNumber}
               </Text>
             </View>
@@ -153,40 +151,40 @@ export default function Profile() {
         </View>
 
         {/* Professional Info Card */}
-        <View className="overflow-hidden rounded-2xl bg-white shadow-md shadow-slate-200">
-          <View className="border-b border-slate-100 px-6 py-4">
-            <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <View className="overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 shadow-md shadow-slate-200 dark:shadow-none">
+          <View className="border-b border-slate-100 dark:border-zinc-800 px-6 py-4">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
               Professional Information
             </Text>
           </View>
 
           {/* License Number */}
           <View className="flex-row items-center gap-4 px-6 py-4">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
               <MaterialIcons name="badge" size={20} color="#2563eb" />
             </View>
             <View className="flex-1">
-              <Text className="mb-0.5 text-xs font-medium text-slate-400">License Number</Text>
-              <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800">
+              <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">License Number</Text>
+              <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
                 {user?.licenseNumber}
               </Text>
             </View>
           </View>
 
-          <View className="mx-6 h-px bg-slate-100" />
+          <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
 
           {/* Organization ID */}
-          {/* <View className="flex-row items-center gap-4 px-6 py-4">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-orange-50">
+          <View className="flex-row items-center gap-4 px-6 py-4">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-900/30">
               <MaterialIcons name="corporate-fare" size={20} color="#ea580c" />
             </View>
             <View className="flex-1">
-              <Text className="mb-0.5 text-xs font-medium text-slate-400">Organization</Text>
-              <Text className="text-sm font-semibold tracking-wide text-slate-800">
-                {user?.organizationId}
+              <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">Organization</Text>
+              <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                {user.organization?.name}
               </Text>
             </View>
-          </View> */}
+          </View>
         </View>
 
         {/* Edit Profile Button */}
@@ -195,14 +193,15 @@ export default function Profile() {
           href={{
             pathname: '/editProfile',
             params: {
-              userId: user?._id,
-              firstName: user?.firstName,
-              lastName: user?.lastName,
-              dob: user?.dob,
-              phoneNumber: user?.phoneNumber,
-              licenseNumber: user?.licenseNumber,
-              gender: user?.gender,
-              organizationId: user?.organizationId,
+              userId: user._id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              dob: user.dob,
+              phoneNumber: user.phoneNumber,
+              licenseNumber: user.licenseNumber ?? "",
+              gender: user.gender,
+              organizationId: user.organizationId ?? "",
+              clerkId: user.clerkId,
             },
           }}>
           <Button variant={'secondary'} onPress={() => router.push('/(protected)/editProfile')}>

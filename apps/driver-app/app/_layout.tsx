@@ -49,7 +49,7 @@ export default function RootLayout() {
             style={theme === 'dark' ? 'light' : 'dark'}
             backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
           />
-          <SafeAreaView className="flex-1">
+          <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
             <Stack
               screenOptions={{
                 headerShown: false,

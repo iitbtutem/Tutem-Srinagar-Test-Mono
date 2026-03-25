@@ -7,7 +7,7 @@ export const addDriver = mutation({
     lastName: v.optional(v.string()),
     dob: v.string(),
     licenseNumber: v.string(),
-    organizationId: v.string(),
+    organizationId: v.id("organization"),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
@@ -63,14 +63,14 @@ export const getUser = query({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if(existingUser === null) throw new Error("User not found");
+    if (existingUser === null) throw new Error("User not found");
 
     const organization = await ctx.db
-    .query("organization")
-    .filter((q) => q.eq(q.field("_id"), existingUser.organizationId))
-    .first()
+      .query("organization")
+      .filter((q) => q.eq(q.field("_id"), existingUser.organizationId))
+      .first()
 
-    return {...existingUser, organization: organization};
+    return { ...existingUser, organization: organization };
   },
 });
 
@@ -80,7 +80,7 @@ export const updateUser = mutation({
     lastName: v.optional(v.string()),
     dob: v.string(),
     licenseNumber: v.string(),
-    organizationId: v.string(),
+    organizationId: v.id("organization"),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),

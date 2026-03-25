@@ -1,7 +1,7 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 import { useRef } from 'react';
 import {
   Select,
@@ -18,13 +18,13 @@ import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
 import { Feather } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import type { Id } from '@tutem/api/convex/_generated/dataModel';
 
 const formSchema = z.object({
   firstName: z
@@ -41,24 +41,23 @@ const formSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 
-// export default function EditProfile(){
-//     return <Text className='text-primary-fore'> Hello</Text>
-// }
-
 export default function EditProfile() {
   const router = useRouter();
-  const { userId, firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId } =
-    useLocalSearchParams<{
-      firstName: string;
-      lastName: string;
-      userId: string;
-      dob: string;
-      phoneNumber: string;
-      licenseNumber: string;
-      gender: 'Male' | 'Female' | 'Other';
-      organizationId: string;
-    }>();
   const { showToast } = useToast();
+
+  const { userId, firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } = useLocalSearchParams<{
+    firstName: string;
+    lastName?: string;
+    userId: string;
+    dob: string;
+    phoneNumber: string;
+    licenseNumber?: string;
+    gender: 'Male' | 'Female' | 'Other';
+    organizationId: string;
+    clerkId: string
+  }>();
+
+
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -66,8 +65,7 @@ export default function EditProfile() {
   const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addUser = useMutation(api.routes.user.addDriver);
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const updateUser = useMutation(api.routes.user.updateUser);
 
   const {
     handleSubmit,
@@ -93,20 +91,15 @@ export default function EditProfile() {
         return;
       }
 
-      await addUser({ ...data, dob: String(data.dob), clerkId: userId });
+      await updateUser({ ...data, dob: String(data.dob), clerkId: clerkId, organizationId: data.organizationId as Id<"organization"> });
 
-      showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
+      showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
-      // Navigate to the main app after profile completion
-      router.replace('/(protected)/(tabs)');
+      router.replace('/(protected)/(tabs)/profile');
     } catch (error) {
-      showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
+      showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
     }
   });
-
-  if (user === undefined) return <ActivityIndicator />;
-
-  //   if (user && userId) return <Redirect href="/" />;
 
   if (organizations === undefined) return <ActivityIndicator />;
 
@@ -271,6 +264,22 @@ export default function EditProfile() {
             control={control}
             render={({ field }) => (
               <Select
+                defaultValue={
+                  field.value
+                    ? {
+                      value: field.value,
+                      label: organizations?.find((org) => org._id === field.value)?.name || field.value,
+                    }
+                    : undefined
+                }
+                value={
+                  field.value
+                    ? {
+                      value: field.value,
+                      label: organizations?.find((org) => org._id === field.value)?.name || field.value,
+                    }
+                    : undefined
+                }
                 onValueChange={(option) => field.onChange(option?.value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Organization" />
@@ -303,7 +312,24 @@ export default function EditProfile() {
             name="gender"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={(option) => field.onChange(option?.value)}>
+              <Select
+                defaultValue={
+                  field.value
+                    ? {
+                      value: field.value,
+                      label: field.value,
+                    }
+                    : undefined
+                }
+                value={
+                  field.value
+                    ? {
+                      value: field.value,
+                      label: field.value,
+                    }
+                    : undefined
+                }
+                onValueChange={(option) => field.onChange(option?.value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>
