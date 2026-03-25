@@ -1,7 +1,16 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, TextInput, View, TouchableOpacity, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  ActivityIndicator,
+  TextInput,
+  View,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -27,7 +36,8 @@ import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
-import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import type { Id } from '@tutem/api/convex/_generated/dataModel';
 
 const formSchema = z.object({
   firstName: z
@@ -48,7 +58,9 @@ const formSchema = z.object({
 
 export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<'licenseImageFrontKey' | 'licenseImageBackKey' | null>(null);
+  const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
+    'licenseImageFrontKey' | 'licenseImageBackKey' | null
+  >(null);
 
   const router = useRouter();
   const { userId } = useAuth();
@@ -63,8 +75,7 @@ export default function Register() {
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const addUser = useMutation(api.routes.user.addDriver);
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? "" })
-
+  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
   const {
     handleSubmit,
@@ -79,7 +90,7 @@ export default function Register() {
       dob: undefined,
       licenseImageFrontKey: undefined,
       licenseImageBackKey: undefined,
-      organizationId: '',
+      organizationId: undefined,
       gender: undefined,
       phoneNumber: '',
     },
@@ -98,11 +109,21 @@ export default function Register() {
     let result;
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') return showToast({ type: "error", title: "Permission needed", description: "Camera permissions are required." });
+      if (status !== 'granted')
+        return showToast({
+          type: 'error',
+          title: 'Permission needed',
+          description: 'Camera permissions are required.',
+        });
       result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') return showToast({ type: "error", title: "Permission needed", description: "Camera roll permissions are required." });
+      if (status !== 'granted')
+        return showToast({
+          type: 'error',
+          title: 'Permission needed',
+          description: 'Camera roll permissions are required.',
+        });
       result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
     }
 
@@ -119,7 +140,11 @@ export default function Register() {
         return;
       }
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
-        showToast({ title: 'Error', description: 'Please upload both front and back of your license', type: 'error' });
+        showToast({
+          title: 'Error',
+          description: 'Please upload both front and back of your license',
+          type: 'error',
+        });
         return;
       }
 
@@ -136,13 +161,13 @@ export default function Register() {
 
         const { url: presignedUrl, key } = await getPresignedUrl({
           key: fileKey,
-          contentType: blob.type
+          contentType: blob.type,
         });
 
         const uploadResponse = await fetch(presignedUrl, {
           method: 'PUT',
           body: blob,
-          headers: { 'Content-Type': blob.type }
+          headers: { 'Content-Type': blob.type },
         });
 
         if (!uploadResponse.ok) throw new Error(`Failed to upload ${prefix} image to MinIO`);
@@ -154,10 +179,11 @@ export default function Register() {
 
       await addUser({
         ...data,
+        organizationId: data.organizationId as Id<'organization'>,
         dob: String(data.dob),
         clerkId: userId,
         licenseImageFrontKey: uploadedFrontKey,
-        licenseImageBackKey: uploadedBackKey
+        licenseImageBackKey: uploadedBackKey,
       });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
@@ -165,7 +191,11 @@ export default function Register() {
       // Navigate to the main app after profile completion
       router.replace('/(protected)/(tabs)');
     } catch (error: any) {
-      showToast({ title: 'Error', description: error.message || 'Failed to save profile', type: 'error' });
+      showToast({
+        title: 'Error',
+        description: error.message || 'Failed to save profile',
+        type: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,211 +214,239 @@ export default function Register() {
   return (
     <KeyboardAvoidingView
       className="flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        className="p-3 mb-4"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Animated.ScrollView
+        entering={FadeInRight.delay(300).duration(400)}
+        className="flex-1 bg-background p-3"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-      >
-        <Text className="my-4 text-lg font-semibold">Fill in your details</Text>
-        <View className="gap-3 px-3 py-6">
-
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
+        <Text className="my-4 mb-2 text-lg font-semibold">Fill in your details</Text>
+        <View className="gap-3 px-3 pb-20 pt-2">
           {/* Organizations Select */}
-          <Controller
-            name="organizationId"
-            control={control}
-            render={({ field }) => (
-              <Select
-                onValueChange={(option) => field.onChange(option?.value)}
-                value={{
-                  label:
-                    organizations.find((org) => org._id === field.value)?.name ??
-                    'Select organization',
-                  value: field.value,
-                }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Organization" />
-                </SelectTrigger>
-                <SelectContent className="w-10/12">
-                  <SelectGroup>
-                    <SelectLabel>Organization</SelectLabel>
-                    {organizations.map((org) => (
-                      <SelectItem key={org._id} label={org.name} value={org._id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-          />
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="briefcase" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
+            </View>
+            <Controller
+              name="organizationId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onValueChange={(option) => field.onChange(option?.value)}
+                  value={{
+                    label:
+                      organizations.find((org) => org._id === field.value)?.name ??
+                      'Select organization',
+                    value: field.value,
+                  }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Organization" />
+                  </SelectTrigger>
+                  <SelectContent className="w-10/12">
+                    <SelectGroup>
+                      <SelectLabel>Organization</SelectLabel>
+                      {organizations.map((org) => (
+                        <SelectItem key={org._id} label={org.name} value={org._id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+            />
 
-          {errors.organizationId && (
-            <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
-          )}
+            {errors.organizationId && (
+              <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
+            )}
+          </View>
+
           {/* First name  */}
-          <Controller
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                placeholder="First name"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                returnKeyType="next"
-                onSubmitEditing={() => lastNameRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-            )}
-            name="firstName"
-          />
-          {errors.firstName && (
-            <Text className="text-md text-destructive">{errors.firstName.message}</Text>
-          )}
-
-        {/* Last name */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="user" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">Last Name</Text>
-          </View>
-          <Controller
-            name="lastName"
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                ref={lastNameRef}
-                placeholder="Kholi"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                returnKeyType="next"
-                onSubmitEditing={() => phoneRef.current?.focus()}
-              />
-            )}
-          />
-          {errors.lastName && (
-            <Text className="text-md text-destructive">{errors.lastName.message}</Text>
-          )}
-        </View>
-
-        {/* Phone number */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="phone" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
-          </View>
-          <Controller
-            name="phoneNumber"
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <View className="relative">
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="user" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">First Name</Text>
+            </View>
+            <Controller
+              control={control}
+              rules={{ required: true }}
+              render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  ref={phoneRef}
-                  inputMode="tel"
-                  placeholder="9876543210"
-                  maxLength={10}
+                  placeholder="First name"
+                  onBlur={onBlur}
                   onChangeText={onChange}
-                  className="pl-14"
                   value={value}
                   returnKeyType="next"
-                  onSubmitEditing={() => dobRef.current?.open()}
+                  onSubmitEditing={() => lastNameRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
-                <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+91</Text>
-              </View>
+              )}
+              name="firstName"
+            />
+            {errors.firstName && (
+              <Text className="text-md text-destructive">{errors.firstName.message}</Text>
             )}
-          />
-          {errors.phoneNumber && (
-            <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
-          )}
-        </View>
-
-        {/* DOB */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="calendar" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">Date of Birth</Text>
           </View>
-          <Controller
-            name="dob"
-            control={control}
-            render={({ field, fieldState }) => (
-              <>
-                <CustomDatePicker
-                  ref={dobRef}
-                  title="Choose DOB"
-                  date={field.value}
-                  setDate={(date) => {
-                    field.onChange(date);
-                    licenseRef.current?.focus();
-                  }}
+
+          {/* Last name */}
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="user" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">Last Name</Text>
+            </View>
+            <Controller
+              name="lastName"
+              control={control}
+              rules={{ required: true }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  ref={lastNameRef}
+                  placeholder="Kholi"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  returnKeyType="next"
+                  onSubmitEditing={() => phoneRef.current?.focus()}
                 />
-                {fieldState.error && (
-                  <Text className="text-md text-destructive">{fieldState.error.message}</Text>
-                )}
-              </>
+              )}
+            />
+            {errors.lastName && (
+              <Text className="text-md text-destructive">{errors.lastName.message}</Text>
             )}
-          />
-        </View>
+          </View>
+
+          {/* Phone number */}
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="phone" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
+            </View>
+            <Controller
+              name="phoneNumber"
+              control={control}
+              rules={{ required: true }}
+              render={({ field: { onChange, value } }) => (
+                <View className="relative">
+                  <Input
+                    ref={phoneRef}
+                    inputMode="tel"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    onChangeText={onChange}
+                    className="pl-14"
+                    value={value}
+                    returnKeyType="next"
+                    onSubmitEditing={() => dobRef.current?.open()}
+                  />
+                  <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    +91
+                  </Text>
+                </View>
+              )}
+            />
+            {errors.phoneNumber && (
+              <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
+            )}
+          </View>
+
+          {/* DOB */}
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="calendar" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">Date of Birth</Text>
+            </View>
+            <Controller
+              name="dob"
+              control={control}
+              render={({ field, fieldState }) => (
+                <>
+                  <CustomDatePicker
+                    ref={dobRef}
+                    title="Choose DOB"
+                    date={field.value}
+                    setDate={(date) => {
+                      field.onChange(date);
+                      licenseRef.current?.focus();
+                    }}
+                  />
+                  {fieldState.error && (
+                    <Text className="text-md text-destructive">{fieldState.error.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
 
           {/* gender Select */}
-          <Controller
-            name="gender"
-            control={control}
-            render={({ field }) => (
-              <Select
-                onValueChange={(option) => field.onChange(option?.value)}
-                value={{ label: field.value, value: field.value }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent className="w-10/12">
-                  <SelectGroup>
-                    <SelectLabel>Gender</SelectLabel>
-                    {GENDER.map((gender) => (
-                      <SelectItem key={gender} label={gender} value={gender}>
-                        {gender}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-          />
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="users" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">Gender</Text>
+            </View>
+            <Controller
+              name="gender"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onValueChange={(option) => field.onChange(option?.value)}
+                  value={{ label: field.value, value: field.value }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Gender" />
+                  </SelectTrigger>
+                  <SelectContent className="w-10/12">
+                    <SelectGroup>
+                      <SelectLabel>Gender</SelectLabel>
+                      {GENDER.map((gender) => (
+                        <SelectItem key={gender} label={gender} value={gender}>
+                          {gender}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+            />
 
-          {errors.gender && <Text className="text-md text-destructive">{errors.gender.message}</Text>}
+            {errors.gender && (
+              <Text className="text-md text-destructive">{errors.gender.message}</Text>
+            )}
+          </View>
 
           {/* License number */}
-          <Controller
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                ref={licenseRef}
-                placeholder="License Number"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                returnKeyType="done"
-                onSubmitEditing={() => onSubmit()}
-              />
+          <View>
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <Feather name="credit-card" size={14} color="gray" />
+              <Text className="text-sm font-medium text-muted-foreground">License Number</Text>
+            </View>
+            <Controller
+              control={control}
+              rules={{ required: true }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  ref={licenseRef}
+                  placeholder="License Number"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  returnKeyType="done"
+                  onSubmitEditing={() => onSubmit()}
+                />
+              )}
+              name="licenseNumber"
+            />
+            {errors.licenseNumber && (
+              <Text className="text-md text-destructive">{errors.licenseNumber.message}</Text>
             )}
-            name="licenseNumber"
-          />
-          {errors.licenseNumber && (
-            <Text className="text-md text-destructive">{errors.licenseNumber.message}</Text>
-          )}
+          </View>
 
           {/* License Upload Buttons */}
           {requiresLicenseImage && (
             <View className="mb-2 mt-2 gap-4">
               {(['licenseImageFrontKey', 'licenseImageBackKey'] as const).map((fieldKey) => {
-                const label = fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License';
+                const label =
+                  fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License';
 
                 return (
                   <Controller
@@ -399,33 +457,39 @@ export default function Register() {
                       <View className="items-start">
                         <Text className="mb-2 text-sm font-medium">{label}</Text>
                         {value ? (
-                          <View className="bg-background w-full h-40 rounded-lg  shadow-black relative">
-                            <Image source={{ uri: value }} className="w-full h-full rounded-lg" resizeMode="cover" />
+                          <View className="relative h-40 w-full rounded-lg bg-background shadow-black">
+                            <Image
+                              source={{ uri: value }}
+                              className="h-full w-full rounded-lg"
+                              resizeMode="cover"
+                            />
                             <TouchableOpacity
                               disabled={isSubmitting}
-                              className="bg-slate-100 rounded-tr-lg p-1 border border-slate-200 absolute top-0 right-0"
-                              onPress={() => onChange(undefined)}
-                            >
+                              className="absolute right-0 top-0 rounded-tr-lg border border-slate-200 bg-slate-100 p-1"
+                              onPress={() => onChange(undefined)}>
                               <MaterialIcons name="delete-outline" size={24} color="red" />
                             </TouchableOpacity>
                           </View>
                         ) : (
                           <TouchableOpacity
                             disabled={isSubmitting}
-                            className={cn("bg-background w-full h-16 rounded-lg  flex-row items-center justify-center gap-4 border border-gray-300")}
+                            className={cn(
+                              'h-16 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-300 bg-background'
+                            )}
                             onPress={() => {
                               setCurrentFieldToUpdate(fieldKey);
                               bottomSheetRef.current?.expand();
-                            }}
-                          >
+                            }}>
                             <Feather name="upload" size={24} color="gray" />
-                            <Text className="text-gray-500 font-bold tracking-wider">Select Image</Text>
+                            <Text className="font-bold tracking-wider text-gray-500">
+                              Select Image
+                            </Text>
                           </TouchableOpacity>
                         )}
                       </View>
                     )}
                   />
-                )
+                );
               })}
             </View>
           )}
@@ -434,8 +498,7 @@ export default function Register() {
             {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
           </Button>
         </View>
-
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Image Picker Bottom Sheet */}
       <BottomSheet
@@ -445,31 +508,27 @@ export default function Register() {
         enablePanDownToClose={true}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-        )}
-      >
-        <BottomSheetView className="p-6 gap-6">
-          <Text className="text-xl font-bold text-center">Select Image Source</Text>
+        )}>
+        <BottomSheetView className="gap-6 p-6">
+          <Text className="text-center text-xl font-bold">Select Image Source</Text>
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="bg-gray-100 flex-1 mr-2 h-32 rounded-xl items-center justify-center gap-2 border border-gray-200"
-              onPress={() => handlePick('camera')}
-            >
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100"
+              onPress={() => handlePick('camera')}>
               <Feather name="camera" size={32} color="gray" />
               <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="bg-gray-100 flex-1 ml-2 h-32 rounded-xl items-center justify-center gap-2 border border-gray-200"
-              onPress={() => handlePick('gallery')}
-            >
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100"
+              onPress={() => handlePick('gallery')}>
               <Feather name="image" size={32} color="gray" />
               <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>
       </BottomSheet>
-
     </KeyboardAvoidingView>
   );
 }

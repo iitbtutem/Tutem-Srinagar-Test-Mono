@@ -60,19 +60,20 @@ export const getUser = query({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    const existingUser = await ctx.db
+    const user = await ctx.db
       .query("user")
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (existingUser === null) throw new Error("User not found");
+      let organization;
+      if(user){
+        organization = await ctx.db
+          .query("organization")
+          .filter((q) => q.eq(q.field("_id"), user.organizationId))
+          .first();
+      }
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), existingUser.organizationId))
-      .first()
-
-    return { ...existingUser, organization: organization };
+    return { ...user, organization: organization };
   },
 });
 
