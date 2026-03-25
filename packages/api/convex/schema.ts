@@ -8,12 +8,12 @@ export default defineSchema({
     lastName: v.optional(v.string()),
     dob: v.string(),
     licenseNumber: v.optional(v.string()),
-    organizationId: v.optional(v.string()),
+    organizationId: v.optional(v.id("organization")),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     type: v.union(v.literal("Driver"), v.literal("Rider"), v.literal("Admin")),
     phoneNumber: v.string(),
     clerkId: v.string(),
-  }),
+  }).index("by_organizition", ["organizationId"]),
 
   // Organizations
   organization: defineTable({
