@@ -24,7 +24,8 @@ import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
 import { Feather } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import type { Id } from '@tutem/api/convex/_generated/dataModel';
 
 const formSchema = z.object({
   firstName: z
@@ -78,7 +79,7 @@ export default function Signup() {
         return;
       }
 
-      await addUser({ ...data, dob: String(data.dob), clerkId: userId });
+      await addUser({ ...data, dob: String(data.dob), clerkId: userId, organizationId: data.organizationId as Id<'organization'> });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
