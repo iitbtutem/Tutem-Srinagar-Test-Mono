@@ -163,17 +163,17 @@ export default function Profile() {
           <View className="mx-6 h-px bg-slate-100" />
 
           {/* Organization ID */}
-          {/* <View className="flex-row items-center gap-4 px-6 py-4">
+          <View className="flex-row items-center gap-4 px-6 py-4">
             <View className="h-10 w-10 items-center justify-center rounded-full bg-orange-50">
               <MaterialIcons name="corporate-fare" size={20} color="#ea580c" />
             </View>
             <View className="flex-1">
               <Text className="mb-0.5 text-xs font-medium text-slate-400">Organization</Text>
               <Text className="text-sm font-semibold tracking-wide text-slate-800">
-                {user?.organizationId}
+                {user.}
               </Text>
             </View>
-          </View> */}
+          </View>
         </View>
 
         {/* Edit Profile Button */}
