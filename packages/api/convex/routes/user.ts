@@ -74,7 +74,7 @@ export const getUser = query({
   },
 });
 
-export const updateUser = mutation({
+export const updateDriver = mutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
@@ -91,7 +91,7 @@ export const updateUser = mutation({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (!user) {
+    if (!user || user.type !== "Driver") {
       throw new Error("User not found");
     }
 
@@ -122,7 +122,7 @@ export const updateRider = mutation({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (!user) {
+    if (!user || user.type !== "Rider") {
       throw new Error("User not found");
     }
 

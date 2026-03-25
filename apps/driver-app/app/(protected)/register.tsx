@@ -1,7 +1,7 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 import { useRef } from 'react';
 import {
   Select,
@@ -21,7 +21,7 @@ import { api } from '@tutem/api';
 import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInRight } from 'react-native-reanimated';
@@ -45,6 +45,7 @@ const formSchema = z.object({
 export default function Signup() {
   const router = useRouter();
   const { userId, signOut } = useAuth();
+  const { user: clerkUser } = useUser();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -80,6 +81,10 @@ export default function Signup() {
       }
 
       await addUser({ ...data, dob: String(data.dob), clerkId: userId, organizationId: data.organizationId as Id<'organization'> });
+      
+      await clerkUser?.update({
+        unsafeMetadata: { role: 'driver' }
+      });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 

@@ -4,7 +4,17 @@ import { Text } from './ui/text';
 import { Button } from './ui/button';
 import { router } from 'expo-router';
 
-export default function ErrorScreen({ code, message }: { code?: string; message: string }) {
+export default function ErrorScreen({
+  code,
+  message,
+  actionText,
+  onAction,
+}: {
+  code?: string;
+  message: string;
+  actionText?: string;
+  onAction?: () => void;
+}) {
   return (
     <View className="flex-1 items-center justify-center px-6">
       <View className="w-full items-center rounded-3xl bg-destructive/10 p-8">
@@ -18,7 +28,12 @@ export default function ErrorScreen({ code, message }: { code?: string; message:
           </View>
         )}
         <Text className="text-center text-base font-normal text-destructive/80">{message}</Text>
-        {router.canGoBack() && (
+        {onAction && actionText && (
+          <Button variant="outline" className="mt-6 border-destructive" onPress={onAction}>
+            <Text className="text-destructive font-semibold">{actionText}</Text>
+          </Button>
+        )}
+        {router.canGoBack() && !onAction && (
           <Button variant="outline" className="mt-6" onPress={() => router.back()}>
             <Text>Go Back</Text>
           </Button>

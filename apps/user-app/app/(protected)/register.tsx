@@ -21,7 +21,7 @@ import { api } from '@tutem/api';
 import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 
@@ -38,6 +38,7 @@ const formSchema = z.object({
 export default function Register() {
   const router = useRouter();
   const { userId } = useAuth();
+  const { user: clerkUser } = useUser();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -70,6 +71,10 @@ export default function Register() {
       }
 
       await addUser({ ...data, dob: String(data.dob), clerkId: userId });
+      
+      await clerkUser?.update({
+        unsafeMetadata: { role: 'rider' }
+      });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
