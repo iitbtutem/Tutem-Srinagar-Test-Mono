@@ -4,11 +4,13 @@ import React from 'react';
 
 export default function TabsLayout() {
   return (
-    // make profile tab (needs user icon) and home tab (needs map icon)
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: 'blue',
-        headerShown: false
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "orange"
+        }
       }}>
       <Tabs.Screen
         name="index"

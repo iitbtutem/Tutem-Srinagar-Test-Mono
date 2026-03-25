@@ -1,13 +1,15 @@
 import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { SelectSeparator } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { colorScheme } from 'nativewind';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -24,63 +26,74 @@ export default function Profile() {
 
   if (!userId) return <ErrorScreen message="User not found" />;
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  console.log('User', user);
 
   if (user === undefined) return <ActivityIndicator />;
 
+  const theme = colorScheme.get();
+
   return (
     <View className="flex-1 bg-slate-50">
-      <StatusBar translucent backgroundColor="transparent" style="light" />
+      <StatusBar
+        translucent={false}
+        backgroundColor={theme === 'dark' ? 'white' : 'black'}
+        style={theme === 'dark' ? 'light' : 'dark'}
+      />
 
       {/* Hero Header */}
       <View className="overflow-hidden rounded-b-[40px] bg-primary pb-8 shadow-xl shadow-primary/30">
-        <SafeAreaView>
-          {/* Back Button */}
-          <TouchableOpacity
-            className="mx-5 mt-2 flex-row items-center gap-1.5 self-start"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.push('/');
-            }}>
-            <MaterialIcons name="keyboard-backspace" size={20} color="white" />
-            <Text className="text-sm font-medium text-white opacity-90">Back</Text>
-          </TouchableOpacity>
+        {/* <SafeAreaView> */}
+        {/* Back Button */}
+        <TouchableOpacity
+          className="mx-5 mt-2 flex-row items-center gap-1.5 self-start"
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.push('/');
+          }}>
+          <MaterialIcons
+            name="keyboard-backspace"
+            size={20}
+            color={theme === 'dark' ? 'dark' : 'white'}
+          />
+          <Text className="text-sm font-medium text-primary-foreground opacity-90">Back</Text>
+        </TouchableOpacity>
 
-          {/* Profile Identity */}
-          <View className="mt-6 items-center gap-4">
-            <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
-              <Avatar alt="Profile pic" className="h-28 w-28">
-                <AvatarImage source={require('@/assets/images/avatar.jpg')} />
-                <AvatarFallback className="bg-white/20">
-                  <Text className="text-2xl font-bold text-white">
-                    {user?.firstName?.[0]}
-                    {user?.lastName?.[0]}
-                  </Text>
-                </AvatarFallback>
-              </Avatar>
-            </View>
+        {/* Profile Identity */}
+        <View className="mt-6 items-center gap-4">
+          <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
+            <Avatar alt="Profile pic" className="h-28 w-28">
+              <AvatarImage source={require('@/assets/images/avatar.jpg')} />
+              <AvatarFallback className="bg-white/20">
+                <Text className="text-2xl font-bold text-primary">
+                  {user?.firstName?.[0]}
+                  {user?.lastName?.[0]}
+                </Text>
+              </AvatarFallback>
+            </Avatar>
+          </View>
 
-            <View className="items-center gap-1">
-              <Text className="text-2xl font-bold tracking-wide text-white">
-                {user?.firstName} {user?.lastName}
-              </Text>
-              {/* Gender badge */}
-              <View className="flex-row items-center gap-1.5 rounded-full bg-white/15 px-3 py-1">
-                <MaterialIcons
-                  name={
-                    user?.gender === 'Male'
-                      ? 'male'
-                      : user?.gender === 'Female'
-                        ? 'female'
-                        : 'transgender'
-                  }
-                  size={13}
-                  color="rgba(255,255,255,0.8)"
-                />
-                <Text className="text-xs font-medium text-white/80">{user?.gender}</Text>
-              </View>
+          <View className="items-center gap-1">
+            <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
+              {user?.firstName} {user?.lastName}
+            </Text>
+            {/* Gender badge */}
+            <View className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
+              <MaterialIcons
+                name={
+                  user?.gender === 'Male'
+                    ? 'male'
+                    : user?.gender === 'Female'
+                      ? 'female'
+                      : 'transgender'
+                }
+                size={13}
+                color="rgba(255,255,255,0.8)"
+              />
+              <Text className="text-xs font-medium text-white">{user?.gender}</Text>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
+        {/* </SafeAreaView> */}
       </View>
 
       <ScrollView
@@ -177,10 +190,26 @@ export default function Profile() {
         </View>
 
         {/* Edit Profile Button */}
-        <TouchableOpacity className="flex-row items-center justify-center gap-2 rounded-2xl bg-primary py-4 shadow-md shadow-primary/25">
-          <MaterialIcons name="edit" size={18} color="white" />
-          <Text className="text-sm font-semibold text-white">Edit Profile</Text>
-        </TouchableOpacity>
+        <Link
+          asChild
+          href={{
+            pathname: '/editProfile',
+            params: {
+              userId: user?._id,
+              firstName: user?.firstName,
+              lastName: user?.lastName,
+              dob: user?.dob,
+              phoneNumber: user?.phoneNumber,
+              licenseNumber: user?.licenseNumber,
+              gender: user?.gender,
+              organizationId: user?.organizationId,
+            },
+          }}>
+          <Button variant={'secondary'} onPress={() => router.push('/(protected)/editProfile')}>
+            <MaterialIcons name="edit" size={18} color="white" />
+            <Text>Edit Profile</Text>
+          </Button>
+        </Link>
       </ScrollView>
     </View>
   );
