@@ -1374,13 +1374,13 @@
     viem "^2.31.7"
     zustand "5.0.3"
 
-"@clerk/clerk-js@^6.3.2":
-  version "6.3.2"
-  resolved "https://registry.yarnpkg.com/@clerk/clerk-js/-/clerk-js-6.3.2.tgz#7bef94683c7bf14a4dbbc4907f839173bc69d69c"
-  integrity sha512-pJiQPo5obSHEhBT/Io9irAyre5VAWbHP8mjb7+1a+WUPpWMg3Gl5z6xFcP8gg92Gswuzfv/F1PCtUIeURDuBSA==
+"@clerk/clerk-js@6.3.3-canary.v20260325025212":
+  version "6.3.3-canary.v20260325025212"
+  resolved "https://registry.yarnpkg.com/@clerk/clerk-js/-/clerk-js-6.3.3-canary.v20260325025212.tgz#5395649d61227e368403c5c93c685c19bcac7634"
+  integrity sha512-o8V0W7fbq73YcmGeuMTH72gRNxPw1V7CGjgHu5EjrM9gf0fu2E5KD3JrieRU7VnZaJnMvt6HAZRTZNBLQx5a7g==
   dependencies:
     "@base-org/account" "2.0.1"
-    "@clerk/shared" "^4.3.2"
+    "@clerk/shared" "4.3.3-canary.v20260325025212"
     "@coinbase/wallet-sdk" "4.3.0"
     "@solana/wallet-adapter-base" "0.9.27"
     "@solana/wallet-adapter-react" "0.15.39"
@@ -1397,30 +1397,30 @@
     crypto-js "^4.2.0"
     dequal "2.0.3"
 
-"@clerk/expo@^3.1.4":
-  version "3.1.4"
-  resolved "https://registry.yarnpkg.com/@clerk/expo/-/expo-3.1.4.tgz#5eed6962b051b836fca311a669f788dc30d059a2"
-  integrity sha512-EYe/J4jXsFuS3BTLjMDq+XkMFdJaDnpHGzBPv5XEnNFoS0BGwFl5ujo60WOdNQ+a+yVOnz+P8HnYX+q57GhCxA==
+"@clerk/expo@^3.1.5-canary.v20260325025212":
+  version "3.1.5-canary.v20260325025212"
+  resolved "https://registry.yarnpkg.com/@clerk/expo/-/expo-3.1.5-canary.v20260325025212.tgz#b3ca4e1656995a21a31c1b99bbddff56dc7b806f"
+  integrity sha512-VRYJYOzICGan0AQmCHtcrowMgFrLK8++ocpjVgEKxKRddNZsglrwgD34CvrBjyzLRFIbR2DBLIEtK1ASsLfyXg==
   dependencies:
-    "@clerk/clerk-js" "^6.3.2"
-    "@clerk/react" "^6.1.2"
-    "@clerk/shared" "^4.3.2"
+    "@clerk/clerk-js" "6.3.3-canary.v20260325025212"
+    "@clerk/react" "6.1.3-canary.v20260325025212"
+    "@clerk/shared" "4.3.3-canary.v20260325025212"
     base-64 "^1.0.0"
     react-native-url-polyfill "2.0.0"
     tslib "2.8.1"
 
-"@clerk/react@^6.1.2":
-  version "6.1.2"
-  resolved "https://registry.yarnpkg.com/@clerk/react/-/react-6.1.2.tgz#e96e12811de779ba2273a1809f38ebd4f34e5019"
-  integrity sha512-hqghETUo8LLG+7pJQoRylFadwGNDrnLzM8n36SXr8T/ZyFqEmS1XzmiEZRi9xnKit1iFExpyiyA2nQW3HSCcvA==
+"@clerk/react@6.1.3-canary.v20260325025212":
+  version "6.1.3-canary.v20260325025212"
+  resolved "https://registry.yarnpkg.com/@clerk/react/-/react-6.1.3-canary.v20260325025212.tgz#78107b389ec6bf20b891eab64cb03c0325f708c9"
+  integrity sha512-UVFcqFjvRGIgd6onv2IX+oAo5ZhxjM6s3bMp48RoNAby/mfCb0SZffC3joCaYK8sdqMc/fEAsLz4xzymZgzlkg==
   dependencies:
-    "@clerk/shared" "^4.3.2"
+    "@clerk/shared" "4.3.3-canary.v20260325025212"
     tslib "2.8.1"
 
-"@clerk/shared@^4.3.2":
-  version "4.3.2"
-  resolved "https://registry.yarnpkg.com/@clerk/shared/-/shared-4.3.2.tgz#04a30af5bd6cf39ed48171bfb69fd03dc701a766"
-  integrity sha512-tYYzdY4Fxb02TO4RHoLRFzEjXJn0iFDfoKhWtGyqf2AaIgkprTksunQtX0hnVssHMr3XD/E2S00Vrb+PzX3jCQ==
+"@clerk/shared@4.3.3-canary.v20260325025212":
+  version "4.3.3-canary.v20260325025212"
+  resolved "https://registry.yarnpkg.com/@clerk/shared/-/shared-4.3.3-canary.v20260325025212.tgz#13d1783f343cd48eaa630bc7d91f766670eb1536"
+  integrity sha512-fXgFqEpKe0sbhRzWWY94S1dsBbNGHCccIpjfjf6cLjXl97kY5V9HJo/cd984QQBd9+VVPEN3+Tm1lWXshGjvOw==
   dependencies:
     "@tanstack/query-core" "5.90.16"
     dequal "2.0.3"
@@ -2745,6 +2745,15 @@
   integrity sha512-1tJHg4KKRJuQ1/EvJxatrMef3NZXEPzwUIUZ3n1yJ2t7Q97siwRtbynRpQG9/69ebbtiZ8W3ScOZF/OmhvM4Rg==
   dependencies:
     nanoid "^3.3.11"
+
+"@rn-primitives/avatar@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@rn-primitives/avatar/-/avatar-1.2.0.tgz#ac6e419b5492c034cdf42cd58781ee94cb71e7d0"
+  integrity sha512-ic029KaJRADdjmjPzpaSaZ9QrtgGF8DnAA7TcQ/gYqUfLXjkbfzsjARKv7NtEoJLjWAcjIAK6R8JkcbMfPtYig==
+  dependencies:
+    "@rn-primitives/hooks" "1.3.0"
+    "@rn-primitives/slot" "1.2.0"
+    "@rn-primitives/types" "1.2.0"
 
 "@rn-primitives/hooks@1.3.0":
   version "1.3.0"

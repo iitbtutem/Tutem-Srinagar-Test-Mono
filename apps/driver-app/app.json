@@ -24,7 +24,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.yameenfarooq.driverapp"
     },
     "web": {
       "bundler": "metro",
@@ -35,10 +36,17 @@
       "expo-router",
       "@react-native-community/datetimepicker",
       "@clerk/expo",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7526ac0c-3fc5-4948-b8a3-9de609c43630"
+      }
     }
   }
 }

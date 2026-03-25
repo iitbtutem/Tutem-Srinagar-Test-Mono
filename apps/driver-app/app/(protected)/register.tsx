@@ -27,6 +27,7 @@ import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
+import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
 
 const formSchema = z.object({
   firstName: z
@@ -35,11 +36,14 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  licenseNumber: z.string('License number is required.').min(14, 'Invalid license number'),
+  licenseNumber: z
+    .string('License number is required.')
+    .min(14, 'Invalid license number')
+    .max(20, 'Invalid license number'),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
   organizationId: z.string().min(1, 'Select an organization.'),
-  phoneNumber: z.string().min(1, "Phone number is required").max(10, "Invalid phone number")
+  phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 
 export default function Register() {
@@ -47,7 +51,7 @@ export default function Register() {
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<'licenseImageFrontKey' | 'licenseImageBackKey' | null>(null);
 
   const router = useRouter();
-  const { userId } = useAuth()
+  const { userId } = useAuth();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -76,8 +80,8 @@ export default function Register() {
       licenseImageFrontKey: undefined,
       licenseImageBackKey: undefined,
       organizationId: '',
-      gender: 'Male',
-      phoneNumber: "",
+      gender: undefined,
+      phoneNumber: '',
     },
   });
 
@@ -167,11 +171,11 @@ export default function Register() {
     }
   });
 
-  if (user === undefined) return <ActivityIndicator />
+  if (user === undefined) return <ActivityIndicator />;
 
-  if (user && userId) return <Redirect href="/" />
+  if (user && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <ActivityIndicator />
+  if (organizations === undefined) return <ActivityIndicator />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
@@ -245,7 +249,12 @@ export default function Register() {
             <Text className="text-md text-destructive">{errors.firstName.message}</Text>
           )}
 
-          {/* Last name */}
+        {/* Last name */}
+        <View>
+          <View className="mb-1 flex-row items-center gap-1.5">
+            <Feather name="user" size={14} color="gray" />
+            <Text className="text-sm font-medium text-muted-foreground">Last Name</Text>
+          </View>
           <Controller
             name="lastName"
             control={control}
@@ -253,22 +262,26 @@ export default function Register() {
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 ref={lastNameRef}
-                placeholder="Last name"
+                placeholder="Kholi"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
                 returnKeyType="next"
                 onSubmitEditing={() => phoneRef.current?.focus()}
-                blurOnSubmit={false}
               />
             )}
           />
           {errors.lastName && (
             <Text className="text-md text-destructive">{errors.lastName.message}</Text>
           )}
+        </View>
 
-
-          {/* Phone number */}
+        {/* Phone number */}
+        <View>
+          <View className="mb-1 flex-row items-center gap-1.5">
+            <Feather name="phone" size={14} color="gray" />
+            <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
+          </View>
           <Controller
             name="phoneNumber"
             control={control}
@@ -278,10 +291,10 @@ export default function Register() {
                 <Input
                   ref={phoneRef}
                   inputMode="tel"
-                  placeholder="Mobile number"
+                  placeholder="9876543210"
                   maxLength={10}
                   onChangeText={onChange}
-                  className=" pl-14 "
+                  className="pl-14"
                   value={value}
                   returnKeyType="next"
                   onSubmitEditing={() => dobRef.current?.open()}
@@ -293,7 +306,14 @@ export default function Register() {
           {errors.phoneNumber && (
             <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
           )}
+        </View>
 
+        {/* DOB */}
+        <View>
+          <View className="mb-1 flex-row items-center gap-1.5">
+            <Feather name="calendar" size={14} color="gray" />
+            <Text className="text-sm font-medium text-muted-foreground">Date of Birth</Text>
+          </View>
           <Controller
             name="dob"
             control={control}
@@ -303,15 +323,18 @@ export default function Register() {
                   ref={dobRef}
                   title="Choose DOB"
                   date={field.value}
-                  setDate={(date) => field.onChange(date)}
+                  setDate={(date) => {
+                    field.onChange(date);
+                    licenseRef.current?.focus();
+                  }}
                 />
-
                 {fieldState.error && (
                   <Text className="text-md text-destructive">{fieldState.error.message}</Text>
                 )}
               </>
             )}
           />
+        </View>
 
           {/* gender Select */}
           <Controller
