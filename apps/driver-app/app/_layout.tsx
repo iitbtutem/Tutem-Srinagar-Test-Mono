@@ -9,7 +9,10 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colorScheme } from 'nativewind';
+import { View } from 'react-native';
+import { useColorScheme } from 'nativewind';
+import { cn } from '@/lib/utils';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -37,28 +40,32 @@ const tokenCache = {
 };
 
 export default function RootLayout() {
-  const theme = colorScheme.get();
+  const { colorScheme } = useColorScheme();
 
   return (
-    <ClerkProvider
-      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      tokenCache={tokenCache}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ToastProvider>
-          <StatusBar
-            style={theme === 'dark' ? 'light' : 'dark'}
-            backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
-          />
-          <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-              }}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider
+        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+        tokenCache={tokenCache}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <ToastProvider>
+            <StatusBar
+              style={colorScheme === 'dark' ? 'light' : 'dark'}
+              backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
             />
-          </SafeAreaView>
-          <PortalHost />
-        </ToastProvider>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+            <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
+              <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                />
+              </SafeAreaView>
+              <PortalHost />
+            </View>
+          </ToastProvider>
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

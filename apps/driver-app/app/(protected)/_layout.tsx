@@ -42,9 +42,22 @@ export default function ProtectedLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={protectedGuard}>
         <Stack.Screen name="(tabs)/index" />
-        <Stack.Screen name="vehicleRegistration" />
         <Stack.Screen
           name="editProfile"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="createVehicle"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="editVehicle"
           options={{
             presentation: 'modal',
             animation: 'slide_from_bottom',
