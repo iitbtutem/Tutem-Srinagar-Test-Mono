@@ -20,6 +20,7 @@
       "supportsTablet": true
     },
     "android": {
+      "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -34,6 +35,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       "@react-native-community/datetimepicker",
       "@clerk/expo",
       "expo-secure-store",

@@ -23,7 +23,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import type { Id } from '@tutem/api/convex/_generated/dataModel';
+import type { Id } from '@tutem/api';
+import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 
 const vehicleSchema = z.object({
     registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
@@ -103,21 +104,23 @@ export default function EditVehicle() {
     });
 
     return (
-        <Animated.ScrollView
-            entering={FadeIn.delay(300).duration(400)}
-            className="flex-1 bg-background p-3"
-        >
-            {/* Back button */}
-            <TouchableOpacity
-                className="flex-row items-center gap-1.5 self-start mb-2 mt-1"
-                onPress={() => router.back()}>
-                <MaterialIcons name="keyboard-backspace" size={20} color={isDark ? 'white' : 'black'} />
-                <Text className="text-sm font-medium text-foreground opacity-90">Back</Text>
-            </TouchableOpacity>
+        <View className="flex-1 bg-background">
+            <KeyboardAwareScrollView
+                bottomOffset={62}
+                className="flex-1"
+                contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
+                <Animated.View entering={FadeIn.delay(300).duration(400)}>
+                {/* Back button */}
+                <TouchableOpacity
+                    className="flex-row items-center gap-1.5 self-start mb-2 mt-1"
+                    onPress={() => router.back()}>
+                    <MaterialIcons name="keyboard-backspace" size={20} color={isDark ? 'white' : 'black'} />
+                    <Text className="text-sm font-medium text-foreground opacity-90">Back</Text>
+                </TouchableOpacity>
 
-            <Text className="my-4 mb-2 text-lg font-semibold text-foreground">Edit your vehicle details</Text>
+                <Text className="my-4 mb-2 text-lg font-semibold text-foreground px-3">Edit your vehicle details</Text>
 
-            <View className="gap-3 px-3 pb-20 pt-2">
+                <View className="gap-3 px-3 pb-20 pt-2">
                 {/* Registration Number */}
                 <View>
                     <View className="mb-1 flex-row items-center gap-1.5">
@@ -331,6 +334,9 @@ export default function EditVehicle() {
                     <Text>Save Changes</Text>
                 </Button>
             </View>
-        </Animated.ScrollView>
+            </Animated.View>
+            </KeyboardAwareScrollView>
+            <KeyboardToolbar />
+        </View>
     );
 }
