@@ -1,7 +1,8 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import LoadingScreen from '@/components/LoadingScreen';
 import { useRef } from 'react';
 import {
   Select,
@@ -96,11 +97,11 @@ export default function Signup() {
     }
   });
 
-  if (user === undefined) return <ActivityIndicator />;
+  if (user === undefined) return <LoadingScreen message="Loading registration..." />;
 
   if (user && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <ActivityIndicator />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;

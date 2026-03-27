@@ -1,7 +1,8 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, TextInput, TouchableOpacity, View } from 'react-native';
+import { TextInput, TouchableOpacity, View } from 'react-native';
+import LoadingScreen from '@/components/LoadingScreen';
 import { useRef } from 'react';
 import {
   Select,
@@ -104,7 +105,7 @@ export default function EditProfile() {
     }
   });
 
-  if (organizations === undefined) return <ActivityIndicator />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
