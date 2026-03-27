@@ -10,12 +10,7 @@ import { Link, Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colorScheme } from 'nativewind';
 import React from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 
 export default function Profile() {
   const { userId, signOut } = useAuth();
@@ -29,30 +24,56 @@ export default function Profile() {
 
   const theme = colorScheme.get();
 
+  const handleLogout = async () => {
+    await signOut();
+    router.replace('/(auth)/signin');
+  };
+
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <StatusBar
-        translucent={false}
-        backgroundColor={theme === 'dark' ? '#09090b' : 'black'}
         style={theme === 'dark' ? 'light' : 'dark'}
+        backgroundColor={theme === 'dark' ? '#000' : '#FFF'}
       />
 
       {/* Hero Header */}
       <View className="overflow-hidden rounded-b-[40px] bg-primary pb-8 shadow-xl shadow-primary/30">
         {/* Back Button */}
-        <TouchableOpacity
-          className="mx-5 mt-2 flex-row items-center gap-1.5 self-start"
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.push('/');
-          }}>
-          <MaterialIcons
-            name="keyboard-backspace"
-            size={20}
-            color={theme === 'dark' ? 'dark' : 'white'}
-          />
-          <Text className="text-sm font-medium text-primary-foreground opacity-90">Back</Text>
-        </TouchableOpacity>
+        <View className="mx-5 mt-2 flex-row items-center justify-end">
+          {/* Edit and logout user */}
+          <View className="flex-row items-center gap-4 pt-2">
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: '/editProfile',
+                  params: {
+                    userId: user?._id,
+                    firstName: user?.firstName,
+                    lastName: user?.lastName,
+                    dob: user?.dob,
+                    phoneNumber: user?.phoneNumber,
+                    licenseNumber: user?.licenseNumber ?? '',
+                    gender: user?.gender,
+                    organizationId: user?.organizationId ?? '',
+                    clerkId: user?.clerkId,
+                  },
+                })
+              }>
+              <MaterialIcons
+                name="edit"
+                size={22}
+                color={theme === 'dark' ? '#000000' : '#FFFFFF'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout}>
+              <MaterialIcons
+                name="logout"
+                size={22}
+                color={theme === 'dark' ? '#000000' : '#FFFFFF'}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Profile Identity */}
         <View className="mt-6 items-center gap-4">
@@ -152,37 +173,6 @@ export default function Profile() {
             </View>
           </View>
         </View>
-
-        {/* Edit Profile Button */}
-        <Link
-          asChild
-          href={{
-            pathname: '/editProfile',
-            params: {
-              userId: user._id,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              dob: user.dob,
-              phoneNumber: user.phoneNumber,
-              gender: user.gender,
-              clerkId: user.clerkId,
-            },
-          }}>
-
-          <Button variant={'secondary'} onPress={() => router.push('/(protected)/editProfile')}>
-            <MaterialIcons name="edit" size={18} color="white" />
-            <Text>Edit Profile</Text>
-          </Button>
-
-        </Link>
-
-        <Button variant={'destructive'} onPress={async () => {
-          await signOut()
-          router.replace('/(auth)/signin')
-        }}>
-          <MaterialIcons name="logout" size={18} color="white" />
-          <Text>Logout</Text>
-        </Button>
       </ScrollView>
     </View>
   );
