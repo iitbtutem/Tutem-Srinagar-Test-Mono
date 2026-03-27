@@ -2,7 +2,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { Redirect, Stack } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
+import LoadingScreen from '@/components/LoadingScreen';
 import ErrorScreen from '@/components/ErrorScreen';
 
 export default function ProtectedLayout() {
@@ -12,7 +12,7 @@ export default function ProtectedLayout() {
 
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
-  if (user === undefined || !isClerkUserLoaded) return <ActivityIndicator />;
+  if (user === undefined || !isClerkUserLoaded) return <LoadingScreen message="Authenticating..." />;
 
   if (!isAuthenticated || !isSignedIn) return <Redirect href={'/(auth)/signin'} />;
 

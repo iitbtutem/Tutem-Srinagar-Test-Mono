@@ -3,13 +3,14 @@ import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function Home() {
   const { userId } = useAuth();
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
-  if (user === undefined) return <ActivityIndicator />;
+  if (user === undefined) return <LoadingScreen message="Finding your account..." />;
 
   if (user === null && userId) return <Redirect href="/register" />;
 
