@@ -7,11 +7,14 @@
     "deploy": "convex deploy",
     "typecheck": "tsc --noEmit"
   },
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./convex/_generated/api.js",
-    "./convex/_generated/dataModel": "./convex/_generated/dataModel.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
   },
-  "types": "./convex/_generated/api.d.ts",
   "dependencies": {
     "convex": "^1.32.0"
   },

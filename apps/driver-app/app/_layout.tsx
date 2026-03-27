@@ -13,6 +13,7 @@ import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -35,7 +36,9 @@ const tokenCache = {
   async saveToken(key: string, value: string) {
     try {
       await SecureStore.setItemAsync(key, value);
-    } catch {}
+    } catch {
+      return
+    }
   },
 };
 
@@ -49,20 +52,22 @@ export default function RootLayout() {
         tokenCache={tokenCache}>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <ToastProvider>
-            <StatusBar
-              style={colorScheme === 'dark' ? 'light' : 'dark'}
-              backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
-            />
-            <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
-              <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                  }}
-                />
-              </SafeAreaView>
-              <PortalHost />
-            </View>
+            <KeyboardProvider>
+              <StatusBar
+                style={colorScheme === 'dark' ? 'light' : 'dark'}
+                backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
+              />
+              <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
+                <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                    }}
+                  />
+                </SafeAreaView>
+                <PortalHost />
+              </View>
+            </KeyboardProvider>
           </ToastProvider>
         </ConvexProviderWithClerk>
       </ClerkProvider>
