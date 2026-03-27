@@ -76,7 +76,7 @@ export const getUser = query({
   },
 });
 
-export const updateUser = mutation({
+export const updateDriver = mutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
@@ -93,7 +93,7 @@ export const updateUser = mutation({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (!user) {
+    if (!user || user.type !== "Driver") {
       throw new Error("User not found");
     }
 
@@ -103,6 +103,35 @@ export const updateUser = mutation({
       dob: args.dob,
       licenseNumber: args.licenseNumber,
       organizationId: args.organizationId,
+      gender: args.gender,
+      phoneNumber: args.phoneNumber,
+    });
+  },
+});
+
+export const updateRider = mutation({
+  args: {
+    firstName: v.string(),
+    lastName: v.optional(v.string()),
+    dob: v.string(),
+    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
+    phoneNumber: v.string(),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
+
+    if (!user || user.type !== "Rider") {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      firstName: args.firstName,
+      lastName: args.lastName,
+      dob: args.dob,
       gender: args.gender,
       phoneNumber: args.phoneNumber,
     });

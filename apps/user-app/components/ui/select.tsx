@@ -52,7 +52,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-12 flex-row items-center justify-between gap-2 rounded-md px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
+        'border-input dark:bg-input/30 dark:active:bg-input/50 bg-muted-foreground/10 flex h-12 flex-row items-center justify-between gap-2 rounded-md border px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
         Platform.select({
           web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-input/50 w-fit whitespace-nowrap text-sm outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0',
         }),
@@ -98,12 +98,12 @@ function SelectContent({
                     native: 'p-1',
                   }),
                   position === 'popper' &&
-                  Platform.select({
-                    web: cn(
-                      props.side === 'bottom' && 'translate-y-1',
-                      props.side === 'top' && '-translate-y-1'
-                    ),
-                  }),
+                    Platform.select({
+                      web: cn(
+                        props.side === 'bottom' && 'translate-y-1',
+                        props.side === 'top' && '-translate-y-1'
+                      ),
+                    }),
                   className
                 )}
                 position={position}
@@ -113,12 +113,12 @@ function SelectContent({
                   className={cn(
                     'p-1',
                     position === 'popper' &&
-                    cn(
-                      'w-full',
-                      Platform.select({
-                        web: 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]',
-                      })
-                    )
+                      cn(
+                        'w-full',
+                        Platform.select({
+                          web: 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]',
+                        })
+                      )
                   )}>
                   {children}
                 </SelectPrimitive.Viewport>
@@ -186,10 +186,6 @@ function SelectSeparator({
   );
 }
 
-/**
- * @platform Web only
- * Returns null on native platforms
- */
 function SelectScrollUpButton({
   className,
   ...props
@@ -206,10 +202,6 @@ function SelectScrollUpButton({
   );
 }
 
-/**
- * @platform Web only
- * Returns null on native platforms
- */
 function SelectScrollDownButton({
   className,
   ...props
@@ -225,8 +217,6 @@ function SelectScrollDownButton({
     </SelectPrimitive.ScrollDownButton>
   );
 }
-
-
 
 export {
   Select,

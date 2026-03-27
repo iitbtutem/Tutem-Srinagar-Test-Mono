@@ -34,7 +34,7 @@ import { api } from '@tutem/api';
 import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import type { Id } from '@tutem/api/convex/_generated/dataModel';
@@ -63,7 +63,8 @@ export default function Register() {
   >(null);
 
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId, signOut } = useAuth();
+  const { user: clerkUser } = useUser();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);

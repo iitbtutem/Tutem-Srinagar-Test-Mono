@@ -1,7 +1,7 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ActivityIndicator, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
 import { useRef } from 'react';
 import {
   Select,
@@ -18,14 +18,12 @@ import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import ErrorScreen from '@/components/ErrorScreen';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import type { Id } from '@tutem/api/convex/_generated/dataModel';
-import { colorScheme } from 'nativewind';
+import { useAuth, useUser } from '@clerk/expo';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import { Feather } from '@expo/vector-icons';
 
 const formSchema = z.object({
   firstName: z
@@ -34,40 +32,21 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  licenseNumber: z
-    .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
-  organizationId: z.string().min(1, 'Select an organization.'),
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 
-export default function EditProfile() {
+export default function Register() {
   const router = useRouter();
+  const { userId } = useAuth();
+  const { user: clerkUser } = useUser();
   const { showToast } = useToast();
-  const isDark = colorScheme.get() === 'dark';
-
-  const { userId, firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } = useLocalSearchParams<{
-    firstName: string;
-    lastName?: string;
-    userId: string;
-    dob: string;
-    phoneNumber: string;
-    licenseNumber?: string;
-    gender: 'Male' | 'Female' | 'Other';
-    organizationId: string;
-    clerkId: string
-  }>();
-
-
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
-  const licenseRef = useRef<TextInput>(null);
 
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const updateUser = useMutation(api.routes.user.updateDriver);
+  const addUser = useMutation(api.routes.user.addRider);
+  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
   const {
     handleSubmit,
@@ -76,13 +55,11 @@ export default function EditProfile() {
   } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: firstName,
-      lastName: lastName,
-      dob: new Date(dob),
-      organizationId: organizationId,
-      gender: gender,
-      phoneNumber: phoneNumber,
-      licenseNumber: licenseNumber,
+      firstName: '',
+      lastName: '',
+      dob: undefined,
+      gender: undefined,
+      phoneNumber: '',
     },
   });
 
@@ -93,35 +70,29 @@ export default function EditProfile() {
         return;
       }
 
-      await updateUser({ ...data, dob: String(data.dob), clerkId: clerkId, organizationId: data.organizationId as Id<"organization"> });
+      await addUser({ ...data, dob: String(data.dob), clerkId: userId });
+      
+      await clerkUser?.update({
+        unsafeMetadata: { role: 'rider' }
+      });
 
-      showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
+      showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
-      router.replace('/(protected)/(tabs)/profile');
+      router.replace('/(protected)/(tabs)');
     } catch (error) {
-      showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
+      showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
     }
   });
 
-  if (organizations === undefined) return <ActivityIndicator />;
+  if (user === undefined) return <ActivityIndicator />;
 
-  if (organizations.length === 0) {
-    return <ErrorScreen message="No organizations found" />;
-  }
+  if (user && userId) return <Redirect href="/" />;
 
   return (
     <Animated.ScrollView
-      entering={FadeIn.delay(300).duration(400)}
+      entering={FadeInRight.delay(300).duration(400)}
       className="flex-1 bg-background p-3">
-
-      <TouchableOpacity
-        className="flex-row items-center gap-1.5 self-start mb-2 mt-1"
-        onPress={() => router.back()}>
-        <MaterialIcons name="keyboard-backspace" size={20} color={isDark ? 'white' : 'black'} />
-        <Text className="text-sm font-medium text-foreground opacity-90">Back</Text>
-      </TouchableOpacity>
-
-      <Text className="my-4 mb-2 text-lg font-semibold">Edit your details below</Text>
+      <Text className="my-4 mb-2 text-lg font-semibold">Fill in your details</Text>
       <View className="gap-3 px-3 pb-20 pt-2">
         {/* First name */}
         <View>
@@ -134,7 +105,7 @@ export default function EditProfile() {
             rules={{ required: true }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                placeholder="Virat"
+                placeholder="John"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -158,11 +129,10 @@ export default function EditProfile() {
           <Controller
             name="lastName"
             control={control}
-            rules={{ required: true }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 ref={lastNameRef}
-                placeholder="Kholi"
+                placeholder="Doe"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -225,7 +195,6 @@ export default function EditProfile() {
                   date={field.value}
                   setDate={(date) => {
                     field.onChange(date);
-                    licenseRef.current?.focus();
                   }}
                 />
                 {fieldState.error && (
@@ -234,82 +203,6 @@ export default function EditProfile() {
               </>
             )}
           />
-        </View>
-
-        {/* License number */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="credit-card" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">License Number</Text>
-          </View>
-          <Controller
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                ref={licenseRef}
-                placeholder="DL-1234567890123"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                returnKeyType="done"
-                onSubmitEditing={() => onSubmit()}
-              />
-            )}
-            name="licenseNumber"
-          />
-          {errors.licenseNumber && (
-            <Text className="text-md text-destructive">{errors.licenseNumber.message}</Text>
-          )}
-        </View>
-
-        {/* Organization */}
-        <View>
-          <View className="mb-1 flex-row items-center gap-1.5">
-            <Feather name="briefcase" size={14} color="gray" />
-            <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
-          </View>
-          <Controller
-            name="organizationId"
-            control={control}
-            render={({ field }) => (
-              <Select
-                defaultValue={
-                  field.value
-                    ? {
-                      value: field.value,
-                      label: organizations?.find((org) => org._id === field.value)?.name || field.value,
-                    }
-                    : undefined
-                }
-                value={
-                  field.value
-                    ? {
-                      value: field.value,
-                      label: organizations?.find((org) => org._id === field.value)?.name || field.value,
-                    }
-                    : undefined
-                }
-                onValueChange={(option) => field.onChange(option?.value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Organization" />
-                </SelectTrigger>
-                <SelectContent className="w-10/12">
-                  <SelectGroup>
-                    <SelectLabel>Organization</SelectLabel>
-                    {organizations.map((org) => (
-                      <SelectItem key={org._id} label={org.name} value={org._id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.organizationId && (
-            <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
-          )}
         </View>
 
         {/* Gender */}
@@ -322,24 +215,7 @@ export default function EditProfile() {
             name="gender"
             control={control}
             render={({ field }) => (
-              <Select
-                defaultValue={
-                  field.value
-                    ? {
-                      value: field.value,
-                      label: field.value,
-                    }
-                    : undefined
-                }
-                value={
-                  field.value
-                    ? {
-                      value: field.value,
-                      label: field.value,
-                    }
-                    : undefined
-                }
-                onValueChange={(option) => field.onChange(option?.value)}>
+              <Select onValueChange={(option: any) => field.onChange(option?.value)}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>
