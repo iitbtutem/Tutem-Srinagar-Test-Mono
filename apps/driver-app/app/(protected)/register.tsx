@@ -50,8 +50,14 @@ const formSchema = z.object({
     .string('License number is required.')
     .min(14, 'Invalid license number')
     .max(20, 'Invalid license number'),
-  licenseImageFrontKey: z.string().optional(),
-  licenseImageBackKey: z.string().optional(),
+  licenseImageFrontKey: z.object({
+    fileUri: z.string().optional(),
+    uploadedKey: z.string().optional(),
+  }),
+  licenseImageBackKey: z.object({
+    fileUri: z.string().optional(),
+    uploadedKey: z.string().optional(),
+  }),
   organizationId: z.string().min(1, 'Select an organization.'),
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
@@ -63,8 +69,7 @@ export default function Register() {
   >(null);
 
   const router = useRouter();
-  const { userId, signOut } = useAuth();
-  const { user: clerkUser } = useUser();
+  const { userId } = useAuth();
   const { showToast } = useToast();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -74,7 +79,7 @@ export default function Register() {
   const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addUser = useMutation(api.routes.user.addDriver);
+  const addDriver = useMutation(api.routes.user.addDriver);
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
@@ -82,6 +87,7 @@ export default function Register() {
     handleSubmit,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
@@ -89,15 +95,24 @@ export default function Register() {
       firstName: '',
       lastName: '',
       dob: undefined,
-      licenseImageFrontKey: undefined,
-      licenseImageBackKey: undefined,
+      licenseImageFrontKey: {
+        fileUri: undefined,
+        uploadedKey: ""
+      },
+      licenseImageBackKey: {
+        fileUri: undefined,
+        uploadedKey: ""
+      },
       organizationId: undefined,
       gender: undefined,
       phoneNumber: '',
     },
   });
 
-  const selectedOrgId = useWatch({ control, name: 'organizationId' });
+  const selectedOrgId = useWatch({ 
+    control, 
+    name: 'organizationId' 
+  });
   const selectedOrganization = organizations?.find((org) => org._id === selectedOrgId);
   const requiresLicenseImage = selectedOrganization?.isLicenseVerficationRequired ?? false;
 
@@ -128,10 +143,41 @@ export default function Register() {
       result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
     }
 
-    if (result && !result.canceled) {
-      setValue(currentFieldToUpdate, result.assets[0].uri);
+    if (result && !result.canceled) {      
+      setValue(currentFieldToUpdate, {
+        ...getValues(currentFieldToUpdate),
+        fileUri: result.assets[0].uri,
+      } );
     }
     setCurrentFieldToUpdate(null);
+  };  
+
+  const processUpload = async (fileUri: string | undefined, prefix: string) => {
+    if (!fileUri || !fileUri.startsWith('file://')) return;
+
+    try {
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+      const extension = fileUri.split('.').pop() || 'jpg';
+      const fileKey = `licenses/${userId}-${prefix}-${Date.now()}.${extension}`;
+  
+      const { url: presignedUrl, key } = await getPresignedUrl({
+        key: fileKey,
+        contentType: blob.type,
+      });
+  
+      const uploadResponse = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': blob.type },
+      });
+      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
+        throw new Error("Couldn't upload license images");
+      }
+      return key;
+    } catch (error) {
+      throw new Error("Failed to upload license images")
+    }
   };
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
@@ -141,7 +187,7 @@ export default function Register() {
         return;
       }
       
-      if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
+      if (requiresLicenseImage && (!data.licenseImageFrontKey.fileUri || !data.licenseImageBackKey.fileUri)) {
         showToast({
           title: 'Error',
           description: 'Please upload both front and back of your license',
@@ -152,35 +198,14 @@ export default function Register() {
 
       setIsSubmitting(true);
 
-      const processUpload = async (fileUri: string | undefined, prefix: string) => {
-        if (!fileUri || !fileUri.startsWith('file://')) return fileUri;
+      showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-        showToast({ title: 'Info', description: `Uploading license ${prefix}...`, type: 'info' });
-        const response = await fetch(fileUri);
-        const blob = await response.blob();
-        const extension = fileUri.split('.').pop() || 'jpg';
-        const fileKey = `licenses/${userId}-${prefix}-${Date.now()}.${extension}`;
+      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey.fileUri, 'front');
+      const uploadedBackKey = await processUpload(data.licenseImageBackKey.fileUri, 'back');
 
-        const { url: presignedUrl, key } = await getPresignedUrl({
-          key: fileKey,
-          contentType: blob.type,
-        });
-
-        const uploadResponse = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: blob,
-          headers: { 'Content-Type': blob.type },
-        });
-
-        if (!uploadResponse.ok) throw new Error(`Failed to upload ${prefix} image to MinIO`);
-        return key;
-      };
-
-      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
-
-      await addUser({
-        ...data,
+      const { licenseImageBackKey, licenseImageFrontKey, ...restData} = data;
+      await addDriver({
+        ...restData,
         organizationId: data.organizationId as Id<'organization'>,
         dob: String(data.dob),
         clerkId: userId,
@@ -447,8 +472,6 @@ export default function Register() {
           {requiresLicenseImage && (
             <View className="mb-2 mt-2 gap-4">
               {(['licenseImageFrontKey', 'licenseImageBackKey'] as const).map((fieldKey) => {
-                const label =
-                  fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License';
 
                 return (
                   <Controller
@@ -457,26 +480,26 @@ export default function Register() {
                     name={fieldKey}
                     render={({ field: { value, onChange } }) => (
                       <View className="items-start">
-                        <Text className="mb-2 text-sm font-medium">{label}</Text>
-                        {value ? (
+                        <Text className="mb-2 text-sm font-medium">{fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License'}</Text>
+                        {value.fileUri ? (
                           <View className="relative h-40 w-full rounded-lg bg-background shadow-black">
                             <Image
-                              source={{ uri: value }}
+                              source={{ uri: value.fileUri }}
                               className="h-full w-full rounded-lg"
                               resizeMode="cover"
                             />
                             <TouchableOpacity
                               disabled={isSubmitting}
-                              className="absolute right-0 top-0 rounded-tr-lg border border-slate-200 bg-slate-100 p-1"
+                              className="absolute top-2 right-2 bg-background/90 rounded-full p-1.5 shadow-md"
                               onPress={() => onChange(undefined)}>
-                              <MaterialIcons name="delete-outline" size={24} color="red" />
+                              <MaterialIcons name="delete-outline" size={20} color="red" />
                             </TouchableOpacity>
                           </View>
                         ) : (
                           <TouchableOpacity
                             disabled={isSubmitting}
                             className={cn(
-                              'h-16 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-300 bg-background'
+                              'h-12 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-300 bg-background'
                             )}
                             onPress={() => {
                               setCurrentFieldToUpdate(fieldKey);

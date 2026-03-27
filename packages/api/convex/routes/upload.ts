@@ -19,7 +19,7 @@ export const getPresignedUrl = action({
     });
 
     // Generate the presigned URL valid for 1 hour
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
     return { url, key: args.key };
   },
