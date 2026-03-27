@@ -65,12 +65,12 @@ export const getUser = query({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-      if(user === null) return null;
-      
-      const organization = await ctx.db
-          .query("organization")
-          .filter((q) => q.eq(q.field("_id"), user.organizationId))
-          .first();
+    if (user === null) return null;
+
+    const organization = await ctx.db
+      .query("organization")
+      .filter((q) => q.eq(q.field("_id"), user.organizationId))
+      .first();
 
     return { ...user, organization: organization };
   },

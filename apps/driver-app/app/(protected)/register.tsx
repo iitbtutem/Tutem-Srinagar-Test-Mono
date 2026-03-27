@@ -140,6 +140,7 @@ export default function Register() {
         showToast({ title: 'Error', description: 'User not found', type: 'error' });
         return;
       }
+      
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
         showToast({
           title: 'Error',
