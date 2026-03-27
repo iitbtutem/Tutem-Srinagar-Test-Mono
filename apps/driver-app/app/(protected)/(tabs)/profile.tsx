@@ -6,7 +6,7 @@ import { useAuth } from '@clerk/expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
