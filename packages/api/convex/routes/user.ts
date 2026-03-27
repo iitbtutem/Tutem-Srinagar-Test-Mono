@@ -7,6 +7,8 @@ export const addDriver = mutation({
     lastName: v.optional(v.string()),
     dob: v.string(),
     licenseNumber: v.string(),
+    licenseImageFrontKey: v.optional(v.string()),
+    licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
@@ -58,19 +60,19 @@ export const getUser = query({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    const existingUser = await ctx.db
+    const user = await ctx.db
       .query("user")
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (existingUser === null) return null;
+    if (user === null) return null;
 
     const organization = await ctx.db
       .query("organization")
-      .filter((q) => q.eq(q.field("_id"), existingUser.organizationId))
+      .filter((q) => q.eq(q.field("_id"), user.organizationId))
       .first();
 
-    return { ...existingUser, organization: organization };
+    return { ...user, organization: organization };
   },
 });
 
