@@ -14,6 +14,7 @@ import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { cn } from '@/lib/utils';
+import { useColorScheme } from 'nativewind';
 import { useRef, useState, useMemo } from 'react';
 import {
   Select,
@@ -61,8 +62,10 @@ const formSchema = z.object({
   organizationId: z.string().min(1, 'Select an organization.'),
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
-
 export default function Register() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
@@ -148,7 +151,7 @@ export default function Register() {
       setValue(currentFieldToUpdate, {
         ...getValues(currentFieldToUpdate),
         fileUri: result.assets[0].uri,
-      } );
+      });
     }
     setCurrentFieldToUpdate(null);
   };  
@@ -177,7 +180,7 @@ export default function Register() {
       }
       return key;
     } catch (error) {
-      throw new Error("Failed to upload license images")
+      throw new Error("Failed to upload license images");
     }
   };
 
@@ -496,7 +499,7 @@ export default function Register() {
                                 <TouchableOpacity
                                   disabled={isSubmitting}
                                   className="absolute top-2 right-2 bg-background/90 rounded-full p-1.5 shadow-md"
-                                  onPress={() => onChange(undefined)}>
+                                  onPress={() => onChange({ fileUri: undefined, uploadedKey: "" })}>
                                   <MaterialIcons name="delete-outline" size={20} color="red" />
                                 </TouchableOpacity>
                               </View>
@@ -529,37 +532,40 @@ export default function Register() {
               </Button>
             </View>
           </Animated.View>
-
-        {/* Image Picker Bottom Sheet */}
-        <BottomSheet
-          ref={bottomSheetRef}
-          index={-1}
-          snapPoints={snapPoints}
-          enablePanDownToClose={true}
-          backdropComponent={(props: any) => (
-            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-          )}>
-          <BottomSheetView className="gap-6 p-6">
-            <Text className="text-center text-xl font-bold">Select Image Source</Text>
-
-            <View className="flex-row justify-between">
-              <TouchableOpacity
-                className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100"
-                onPress={() => handlePick('camera')}>
-                <Feather name="camera" size={32} color="gray" />
-                <Text className="font-semibold text-gray-600">Camera</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100"
-                onPress={() => handlePick('gallery')}>
-                <Feather name="image" size={32} color="gray" />
-                <Text className="font-semibold text-gray-600">Gallery</Text>
-              </TouchableOpacity>
-            </View>
-          </BottomSheetView>
-        </BottomSheet>
       </KeyboardAwareScrollView>
+
+      {/* Image Picker Bottom Sheet (Placed at root to avoid touch interference) */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        backgroundStyle={{ backgroundColor: isDark ? '#18181b' : '#FFFFFF' }}
+        handleIndicatorStyle={{ backgroundColor: isDark ? '#3f3f46' : '#E5E7EB' }}
+        backdropComponent={(props: any) => (
+          <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+        )}>
+        <BottomSheetView className="gap-6 p-6">
+          <Text className="text-center text-xl font-bold">Select Image Source</Text>
+
+          <View className="flex-row justify-between">
+            <TouchableOpacity
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              onPress={() => handlePick('camera')}>
+              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
+              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              onPress={() => handlePick('gallery')}>
+              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
+              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+            </TouchableOpacity>
+          </View>
+        </BottomSheetView>
+      </BottomSheet>
+
       <KeyboardToolbar />
     </View>
   );
