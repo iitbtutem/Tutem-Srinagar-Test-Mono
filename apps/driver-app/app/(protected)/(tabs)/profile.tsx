@@ -3,13 +3,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colorScheme } from 'nativewind';
-import React from 'react';
+import { useColorScheme } from 'nativewind';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   TouchableOpacity,
@@ -23,17 +23,25 @@ import Animated, {
   useSharedValue,
   Extrapolation,
 } from 'react-native-reanimated';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import { HorizontalRule } from '@/components/ui/seperator';
+import { Image } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
-const COLLAPSED_HEADER_HEIGHT = 130;
+const COLLAPSED_HEADER_HEIGHT = 100;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
 
-  const theme = colorScheme.get() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  const snapPoints = useMemo(() => ["50%", "80%"], []);
+  
+  const licenseBottomSheetRef = useRef<BottomSheet>(null);
+  
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
   const vehicle = useQuery(api.routes.vehicle.getVehicleByUserId, user?._id ? { userId: user._id } : 'skip');
 
@@ -41,8 +49,6 @@ export default function Profile() {
     await signOut();
     router.replace('/(auth)/signin');
   };
-
-
 
   const scrollY = useSharedValue(0);
 
@@ -76,21 +82,21 @@ export default function Profile() {
     const scale = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [1, 0.45],
+      [1, 0.35],
       Extrapolation.CLAMP
     );
 
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -85], // Shifted further left to compensate
+      [0, -150], // Shifted further left to compensate
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -42],
+      [0, -75],
       Extrapolation.CLAMP
     );
 
@@ -114,14 +120,14 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, 35], // Shifted less to the right to balance with avatar
+      [0, -50], // Shifted less to the right to balance with avatar
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -118],
+      [0, -155],
       Extrapolation.CLAMP
     );
 
@@ -155,52 +161,48 @@ export default function Profile() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <StatusBar
-        style={theme === 'dark' ? 'light' : 'dark'}
-        backgroundColor={theme === 'dark' ? '#000' : '#FFF'}
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={isDark ? '#000' : '#FFF'}
       />
 
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className="overflow-hidden bg-primary shadow-xl shadow-primary/30">
+        className="overflow-hidden bg-primary shadow-xl shadow-primary/30 pt-12">
 
-        {/* Header Action Buttons Container */}
-        <View className="mx-5 mt-2 flex-row items-center justify-end h-10">
-          <View className="flex-row items-center gap-4 pt-2">
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: '/editProfile',
-                  params: {
-                    userId: user?._id,
-                    firstName: user?.firstName,
-                    lastName: user?.lastName,
-                    dob: user?.dob,
-                    phoneNumber: user?.phoneNumber,
-                    licenseNumber: user?.licenseNumber ?? '',
-                    gender: user?.gender,
-                    organizationId: user?.organizationId ?? '',
-                    clerkId: user?.clerkId,
-                  },
-                })
-              }>
-              <MaterialIcons
-                name="edit"
-                size={22}
-                color={theme === 'dark' ? '#000000' : '#FFFFFF'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout}>
-              <MaterialIcons
-                name="logout"
-                size={22}
-                color={theme === 'dark' ? '#000000' : '#FFFFFF'}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Action Buttons — absolute, won't affect layout */}
+        <Animated.View
+          style={[badgeOpacityStyle, { position: 'absolute', top: 0, right: 0, zIndex: 10 }]}
+          className="flex-row items-center gap-1 pt-14 pr-4">
+          <TouchableOpacity
+            className="h-9 w-9 items-center justify-center rounded-full bg-white/15"
+            onPress={() =>
+              router.push({
+                pathname: '/editProfile',
+                params: {
+                  userId: user?._id,
+                  firstName: user?.firstName,
+                  lastName: user?.lastName,
+                  dob: user?.dob,
+                  phoneNumber: user?.phoneNumber,
+                  licenseNumber: user?.licenseNumber ?? '',
+                  gender: user?.gender,
+                  organizationId: user?.organizationId ?? '',
+                  clerkId: user?.clerkId,
+                },
+              })
+            }>
+            <MaterialIcons name="edit" size={18} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
 
-        {/* Profile Identity (Side-by-side transition) */}
+          <TouchableOpacity
+            className="h-9 w-9 items-center justify-center rounded-full bg-white/15"
+            onPress={handleLogout}>
+            <MaterialIcons name="logout" size={18} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Profile Identity — untouched, parallax works as before */}
         <View className="mt-6">
           <Animated.View style={avatarContainerStyle} className="items-center">
             <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
@@ -220,7 +222,6 @@ export default function Profile() {
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
               {user?.firstName} {user?.lastName}
             </Text>
-            {/* Gender badge */}
             <Animated.View
               style={badgeOpacityStyle}
               className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
@@ -274,7 +275,7 @@ export default function Profile() {
               </View>
             </View>
 
-            <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
+            <HorizontalRule className="mx-6" />
 
             {/* Gender */}
             <View className="flex-row items-center gap-4 px-6 py-4">
@@ -291,7 +292,7 @@ export default function Profile() {
               </View>
             </View>
 
-            <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
+            <HorizontalRule className="mx-6" />
 
             {/* Phone */}
             <View className="flex-row items-center gap-4 px-6 py-4">
@@ -318,21 +319,27 @@ export default function Profile() {
             </View>
 
             {/* License Number */}
-            <View className="flex-row items-center gap-4 px-6 py-4">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
-                <MaterialIcons name="badge" size={20} color="#2563eb" />
-              </View>
-              <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                  License Number
-                </Text>
-                <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.licenseNumber}
-                </Text>
-              </View>
+            <View className="px-6 py-4">
+              <TouchableOpacity 
+                className='flex-row items-center gap-4' 
+                onPress={() => {
+                  licenseBottomSheetRef.current?.snapToIndex(0)
+                }}>
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
+                  <Feather name="credit-card" size={14} color="#2563eb" />
+                </View>
+                <View className="flex-1">
+                  <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
+                    License Number
+                  </Text>
+                  <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                    {user?.licenseNumber}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
-            <View className="mx-6 h-px bg-slate-100 dark:bg-zinc-800" />
+            <HorizontalRule className="mx-6" />
 
             {/* Organization */}
             <View className="flex-row items-center gap-4 px-6 py-4">
@@ -369,7 +376,7 @@ export default function Profile() {
                         <MaterialIcons
                           name="directions-car"
                           size={20}
-                          color={theme === 'dark' ? '#818cf8' : '#4f46e5'}
+                          color={isDark ? '#818cf8' : '#4f46e5'}
                         />
                       </View>
                       <View>
@@ -396,7 +403,7 @@ export default function Profile() {
                       <MaterialIcons
                         name="local-gas-station"
                         size={13}
-                        color={theme === 'dark' ? '#a1a1aa' : '#64748b'}
+                        color={isDark ? '#a1a1aa' : '#64748b'}
                       />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.fuelType}
@@ -406,7 +413,7 @@ export default function Profile() {
                       <MaterialIcons
                         name="people"
                         size={13}
-                        color={theme === 'dark' ? '#a1a1aa' : '#64748b'}
+                        color={isDark ? '#a1a1aa' : '#64748b'}
                       />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.seatingCapacity} seats
@@ -416,7 +423,7 @@ export default function Profile() {
                       <MaterialIcons
                         name="category"
                         size={13}
-                        color={theme === 'dark' ? '#a1a1aa' : '#64748b'}
+                        color={isDark ? '#a1a1aa' : '#64748b'}
                       />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.type}
@@ -426,7 +433,7 @@ export default function Profile() {
                       <MaterialIcons
                         name="star"
                         size={13}
-                        color={theme === 'dark' ? '#a1a1aa' : '#64748b'}
+                        color={isDark ? '#a1a1aa' : '#64748b'}
                       />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.class}
@@ -436,7 +443,7 @@ export default function Profile() {
                       <MaterialIcons
                         name="palette"
                         size={13}
-                        color={theme === 'dark' ? '#a1a1aa' : '#64748b'}
+                        color={isDark ? '#a1a1aa' : '#64748b'}
                       />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.color}
@@ -467,7 +474,7 @@ export default function Profile() {
                     <MaterialIcons
                       name="edit"
                       size={15}
-                      color={theme === 'dark' ? 'black' : 'white'}
+                      color={isDark ? 'black' : 'white'}
                     />
                     <Text className="text-sm font-semibold text-white dark:text-black">
                       Edit Vehicle Details
@@ -481,7 +488,7 @@ export default function Profile() {
                   <MaterialIcons
                     name="directions-car"
                     size={24}
-                    color={theme === 'dark' ? '#71717a' : '#94a3b8'}
+                    color={isDark ? '#71717a' : '#94a3b8'}
                   />
                 </View>
                 <Text className="text-center text-sm text-slate-400 dark:text-zinc-500">
@@ -490,7 +497,7 @@ export default function Profile() {
                 <Button
                   className="flex-row items-center gap-2 rounded-xl bg-primary"
                   onPress={() => router.push('/(protected)/createVehicle')}>
-                  <MaterialIcons name="add" size={18} color={theme === 'dark' ? '#000' : '#fff'} />
+                  <MaterialIcons name="add" size={18} color={isDark ? '#000' : '#fff'} />
                   <Text className="text-sm font-bold text-primary-foreground">Register Vehicle</Text>
                 </Button>
               </View>
@@ -498,6 +505,130 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
+
+      <BottomSheet
+        ref={licenseBottomSheetRef}
+        index={-1}
+        animationConfigs={{ duration: 450 }}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        backgroundStyle={{ backgroundColor: isDark ? '#0f0f12' : '#FAFAFA' }}
+        handleIndicatorStyle={{ backgroundColor: isDark ? '#2a2a35' : '#D1D5DB' }}
+        backdropComponent={(props: any) => (
+          <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+        )}
+      >
+        <BottomSheetView className="pb-8">
+
+          {/* Header */}
+          <View className="flex-row items-center gap-3 px-6 pt-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+              <Feather name="credit-card" size={16} color="#fff" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-bold text-slate-900 dark:text-zinc-50 tracking-tight">
+                Driver's License
+              </Text>
+              <Text className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+                Verified identity document
+              </Text>
+            </View>
+            {/* Verified badge */}
+            <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1">
+              <Feather name="check-circle" size={11} color="#10b981" />
+              <Text className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Verified
+              </Text>
+            </View>
+          </View>
+
+          {/* License Number */}
+          <View className="mx-6 mt-3 flex-row items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3.5">
+            <View>
+              <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-1">
+                License No.
+              </Text>
+              <Text className="font-mono text-base font-bold text-slate-800 dark:text-zinc-100 tracking-wider">
+                {user?.licenseNumber ?? '—'}
+              </Text>
+            </View>
+            <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <Feather name="hash" size={14} color="#3b82f6" />
+            </View>
+          </View>
+
+          {/* Images */}
+          <View className="px-6 mt-3 gap-2">
+
+            <LicenseImageCard
+              label="Front Side"
+              uri={user.licenseImageFrontKey}
+              isDark={isDark}
+            />
+
+            <LicenseImageCard
+              label="Back Side"
+              uri={user.licenseImageBackKey}
+              isDark={isDark}
+            />
+
+          </View>
+        </BottomSheetView>
+      </BottomSheet>
     </View>
   );
 }
+
+const LicenseImageCard = ({
+  label,
+  uri,
+  isDark,
+}: {
+  label: string;
+  uri?: string | null;
+  isDark: boolean;
+}) => {
+  const [errored, setErrored] = useState(false);
+  const showFallback = !uri || errored;
+
+  return (
+    <View className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+      {/* Card label bar */}
+      <View className="flex-row items-center gap-2 px-3.5 py-2 bg-zinc-100 dark:bg-zinc-900">
+        <Feather
+          name={label === 'Front Side' ? 'maximize' : 'minimize'}
+          size={11}
+          color={isDark ? '#71717a' : '#9ca3af'}
+        />
+        <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+          {label}
+        </Text>
+      </View>
+
+      {/* Image or fallback */}
+      <View className="h-44 w-full bg-zinc-50 dark:bg-zinc-900/60 items-center justify-center">
+        {showFallback ? (
+          <View className="items-center gap-2">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <Feather
+                name="image"
+                size={20}
+                color={isDark ? '#52525b' : '#9ca3af'}
+              />
+            </View>
+            <Text className="text-xs text-slate-400 dark:text-zinc-600">
+              {!uri ? 'Image not available' : 'Failed to load'}
+            </Text>
+          </View>
+        ) : (
+          <Image
+            source={{ uri }}
+            className="h-full w-full"
+            resizeMode="cover"
+            onError={() => setErrored(true)}
+          />
+        )}
+      </View>
+    </View>
+  );
+};

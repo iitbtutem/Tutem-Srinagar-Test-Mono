@@ -1,5 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client } from "../s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const addDriver = mutation({
   args: {
@@ -67,12 +70,34 @@ export const getUser = query({
 
     if (user === null) return null;
 
+    let licenseFrontImageUri;
+    let licenseBackImageUri;
+    if (user.type === "Driver") {
+      const licenseFrontImageCommand = new GetObjectCommand({
+        Bucket: process.env.MINIO_BUCKET,
+        Key: user.licenseImageFrontKey,
+      });
+
+      const licenseBackImageCommand = new GetObjectCommand({
+        Bucket: process.env.MINIO_BUCKET,
+        Key: user.licenseImageBackKey, 
+      });
+
+      licenseFrontImageUri = await getSignedUrl(s3Client, licenseFrontImageCommand, { expiresIn: 300 });
+      licenseBackImageUri  = await getSignedUrl(s3Client, licenseBackImageCommand,  { expiresIn: 300 });
+    }
+
     const organization = await ctx.db
       .query("organization")
       .filter((q) => q.eq(q.field("_id"), user.organizationId))
       .first();
 
-    return { ...user, organization: organization };
+    return { 
+      ...user, 
+      organization: organization, 
+      licenseImageFrontKey: licenseFrontImageUri, 
+      licenseImageBackKey: licenseBackImageUri 
+    };
   },
 });
 

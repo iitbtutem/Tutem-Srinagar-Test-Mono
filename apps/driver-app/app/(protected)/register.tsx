@@ -39,6 +39,7 @@ import ErrorScreen from '@/components/ErrorScreen';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import type { Id } from '@tutem/api';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const formSchema = z.object({
   firstName: z
@@ -247,10 +248,12 @@ export default function Register() {
 
   return (
     <View className='flex-1 bg-background'>
+      <SafeAreaView className='bg-background' edges={['top', 'left', 'right']} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
-        contentContainerStyle= {{ flexGrow: 1, padding: 12 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle= {{ flexGrow: 1, }}
         >
           <Animated.View
             entering={FadeInRight.delay(300).duration(400)}
@@ -466,7 +469,6 @@ export default function Register() {
                       onChangeText={onChange}
                       value={value}
                       returnKeyType="done"
-                      onSubmitEditing={() => onSubmit()}
                     />
                   )}
                   name="licenseNumber"
@@ -488,7 +490,10 @@ export default function Register() {
                         name={fieldKey}
                         render={({ field: { value, onChange } }) => (
                           <View className="items-start">
-                            <Text className="mb-2 text-sm font-medium">{fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License'}</Text>
+                            <View className="mb-1 flex-row items-center gap-1.5">
+                              <Feather name="image" size={14} color="gray" />
+                              <Text className="text-sm font-medium text-muted-foreground">{fieldKey === 'licenseImageFrontKey' ? 'Front of License' : 'Back of License'}</Text>
+                            </View>
                             {value.fileUri ? (
                               <View className="relative h-40 w-full rounded-lg bg-background shadow-black">
                                 <Image

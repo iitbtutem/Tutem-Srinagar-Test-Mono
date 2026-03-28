@@ -58,13 +58,13 @@ export default function RootLayout() {
                 backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
               />
               <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
-                <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+                {/* <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}> */}
                   <Stack
                     screenOptions={{
                       headerShown: false,
                     }}
                   />
-                </SafeAreaView>
+                {/* </SafeAreaView> */}
                 <PortalHost />
               </View>
             </KeyboardProvider>
