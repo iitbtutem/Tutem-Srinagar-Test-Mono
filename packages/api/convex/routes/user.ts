@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { api } from '../_generated/api';
+import { action, mutation, query } from "../_generated/server";
+import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -72,20 +73,39 @@ export const getUser = query({
 
     let licenseFrontImageUri;
     let licenseBackImageUri;
+
     if (user.type === "Driver") {
-      const licenseFrontImageCommand = new GetObjectCommand({
-        Bucket: process.env.MINIO_BUCKET,
-        Key: user.licenseImageFrontKey,
-      });
+      licenseFrontImageUri = user.licenseImageFrontKey ? 
+        await getSignedUrl(
+          s3Client, 
+          new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.licenseImageFrontKey,
+        }),
+        { expiresIn: 300 }
+      ) : undefined;
+      
+      licenseBackImageUri  = user.licenseImageBackKey ?
+        await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.licenseImageBackKey, 
+        }),
+        { expiresIn: 300 }
+      ) : undefined
+    };
 
-      const licenseBackImageCommand = new GetObjectCommand({
-        Bucket: process.env.MINIO_BUCKET,
-        Key: user.licenseImageBackKey, 
-      });
-
-      licenseFrontImageUri = await getSignedUrl(s3Client, licenseFrontImageCommand, { expiresIn: 300 });
-      licenseBackImageUri  = await getSignedUrl(s3Client, licenseBackImageCommand,  { expiresIn: 300 });
-    }
+    const profilePictureUri = user.profilePictureKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: user.profilePictureKey,
+          }),
+          { expiresIn: 300 }
+        )
+      : undefined;
 
     const organization = await ctx.db
       .query("organization")
@@ -96,7 +116,8 @@ export const getUser = query({
       ...user, 
       organization: organization, 
       licenseImageFrontKey: licenseFrontImageUri, 
-      licenseImageBackKey: licenseBackImageUri 
+      licenseImageBackKey: licenseBackImageUri,
+      profilePictureKey: profilePictureUri,
     };
   },
 });
@@ -159,6 +180,45 @@ export const updateRider = mutation({
       dob: args.dob,
       gender: args.gender,
       phoneNumber: args.phoneNumber,
+    });
+  },
+});
+
+export const uploadProfilePicture = mutation({
+  args: {
+    clerkId: v.string(),
+    profilePictureKey: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    };
+    await ctx.db.patch(user._id, {
+      profilePictureKey: args.profilePictureKey
+    });
+
+  }
+});
+
+export const removeProfilePictureKey = mutation({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, {
+      profilePictureKey: undefined,
     });
   },
 });
