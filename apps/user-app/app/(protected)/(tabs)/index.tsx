@@ -3,8 +3,8 @@ import { useAuth } from '@clerk/expo';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { Redirect } from 'expo-router';
-import { ActivityIndicator, FlatList, ScrollView, View } from 'react-native';
+import { Redirect, router } from 'expo-router';
+import { ActivityIndicator, FlatList, ScrollView, View, TouchableOpacity } from 'react-native';
 
 export default function Home() {
   const { userId } = useAuth();
@@ -17,10 +17,14 @@ export default function Home() {
   return (
     <View className="flex-1 bg-background p-6">
       <View className='h-12 bg-muted/40 rounded-xl flex-row gap-2 items-center justify-between px-4 '>
-        <View className='flex-row gap-2 items-center'>
+        <TouchableOpacity
+          className='flex-row gap-2 items-center flex-1'
+          onPress={() => router.push('/whereto')}
+          activeOpacity={0.7}
+        >
           <Feather name="search" size={20} color="gray" />
           <Text className='text-muted-foreground font-semibold'>Where to?</Text>
-        </View>
+        </TouchableOpacity>
         <View className='h-8 bg-muted rounded-full flex-row gap-2 items-center px-4 hidden'>
           <Feather name="calendar" size={20} color="gray" />
           <Text className='text-muted-foreground font-semibold'>Later</Text>
