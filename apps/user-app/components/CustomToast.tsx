@@ -22,7 +22,7 @@ type Toast = {
 type ToastContextType = {
   showToast: (toast: Toast) => void;
 };
-
+// Type safety for toast
 const ToastContext = createContext<ToastContextType | null>(null);
 
 export const useToast = () => {
@@ -42,9 +42,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     transform: [{ scale: scale.value }],
   }));
 
+  // ✅ FIX: re-run animation whenever toast changes
   useEffect(() => {
     if (toast) {
-      scale.value = 0;
+      scale.value = 0; // reset
       scale.value = withSpring(1.5, {}, () => {
         scale.value = withSpring(1);
       });
@@ -81,7 +82,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           className={cn('absolute left-4 right-4', {
             'top-10': toast.position === 'top',
             'bottom-10': toast.position === 'bottom',
-            'top-1/2 -translate-y-1/2': toast.position === 'center',
+            'top-1/2 -translate-y-1/2': toast.position === 'center', // ✅ FIX center
           })}>
           <View
             className={`flex-row items-center gap-3 rounded-lg px-4 py-3 shadow-lg ${
@@ -91,14 +92,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   ? 'bg-red-500'
                   : 'bg-gray-800'
             }`}>
+            {/* ✅ FIX: actually render icon */}
             <AnimatedIonicons
-              key={toast.type}
+              key={toast.type} // 🔥 ensures animation retriggers
               name={getIconName()}
               size={26}
               color="white"
               style={animatedStyle}
             />
 
+            {/* Text */}
             <View className="flex-1">
               <Text className="truncate font-semibold text-white" numberOfLines={1}>
                 {toast.title}

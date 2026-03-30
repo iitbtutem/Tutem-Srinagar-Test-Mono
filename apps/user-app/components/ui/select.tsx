@@ -28,7 +28,7 @@ function SelectValue({
     <SelectPrimitive.Value
       ref={ref}
       className={cn(
-        'text-md line-clamp-1 flex flex-row items-center gap-2 text-foreground',
+        'text-foreground line-clamp-1 flex flex-row items-center gap-2 text-md',
         !value && 'text-muted-foreground/50',
         className
       )}
@@ -52,9 +52,9 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        'flex h-12 flex-row items-center justify-between gap-2 rounded-md border-primary bg-muted-foreground/10 px-3 py-2 shadow-sm shadow-black/5 dark:border-foreground/60 dark:bg-input/80 sm:h-9',
+        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-12 flex-row items-center justify-between gap-2 rounded-md px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
         Platform.select({
-          web: 'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive w-fit whitespace-nowrap text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+          web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-input/50 w-fit whitespace-nowrap text-sm outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0',
         }),
         props.disabled && 'opacity-50',
         size === 'sm' && 'h-10 py-2 sm:py-1.5',
@@ -62,7 +62,7 @@ function SelectTrigger({
       )}
       {...props}>
       <>{children}</>
-      <Icon as={ChevronDown} aria-hidden={true} className="size-4 text-muted-foreground" />
+      <Icon as={ChevronDown} aria-hidden={true} className="text-muted-foreground size-4" />
     </SelectPrimitive.Trigger>
   );
 }
@@ -88,22 +88,22 @@ function SelectContent({
             <NativeOnlyAnimatedView className="z-50" entering={FadeIn} exiting={FadeOut}>
               <SelectPrimitive.Content
                 className={cn(
-                  'relative z-50 min-w-[8rem] rounded-md border border-border bg-popover shadow-md shadow-black/5',
+                  ' bg-popover border-border relative z-50 min-w-[8rem] rounded-md border shadow-md shadow-black/5',
                   Platform.select({
                     web: cn(
-                      'origin-(--radix-select-content-transform-origin) max-h-52 overflow-y-auto overflow-x-hidden animate-in fade-in-0 zoom-in-95',
+                      'animate-in fade-in-0 zoom-in-95 origin-(--radix-select-content-transform-origin) max-h-52 overflow-y-auto overflow-x-hidden',
                       props.side === 'bottom' && 'slide-in-from-top-2',
                       props.side === 'top' && 'slide-in-from-bottom-2'
                     ),
                     native: 'p-1',
                   }),
                   position === 'popper' &&
-                    Platform.select({
-                      web: cn(
-                        props.side === 'bottom' && 'translate-y-1',
-                        props.side === 'top' && '-translate-y-1'
-                      ),
-                    }),
+                  Platform.select({
+                    web: cn(
+                      props.side === 'bottom' && 'translate-y-1',
+                      props.side === 'top' && '-translate-y-1'
+                    ),
+                  }),
                   className
                 )}
                 position={position}
@@ -113,12 +113,12 @@ function SelectContent({
                   className={cn(
                     'p-1',
                     position === 'popper' &&
-                      cn(
-                        'w-full',
-                        Platform.select({
-                          web: 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]',
-                        })
-                      )
+                    cn(
+                      'w-full',
+                      Platform.select({
+                        web: 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]',
+                      })
+                    )
                   )}>
                   {children}
                 </SelectPrimitive.Viewport>
@@ -138,7 +138,7 @@ function SelectLabel({
 }: SelectPrimitive.LabelProps & React.RefAttributes<SelectPrimitive.LabelRef>) {
   return (
     <SelectPrimitive.Label
-      className={cn('px-2 py-2 text-xs text-muted-foreground sm:py-1.5', className)}
+      className={cn('text-muted-foreground px-2 py-2 text-xs sm:py-1.5', className)}
       {...props}
     />
   );
@@ -152,9 +152,9 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        'group relative flex w-full flex-row items-center gap-2 rounded-sm py-2 pl-2 pr-8 active:bg-accent sm:py-1.5',
+        'active:bg-accent group relative flex w-full flex-row items-center gap-2 rounded-sm py-2 pl-2 pr-8 sm:py-1.5',
         Platform.select({
-          web: '*:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 cursor-default outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none [&_svg]:pointer-events-none',
+          web: 'focus:bg-accent focus:text-accent-foreground *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 cursor-default outline-none data-[disabled]:pointer-events-none [&_svg]:pointer-events-none',
         }),
         props.disabled && 'opacity-50',
         className
@@ -162,10 +162,10 @@ function SelectItem({
       {...props}>
       <View className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Icon as={Check} className="size-4 shrink-0 text-muted-foreground" />
+          <Icon as={Check} className="text-muted-foreground size-4 shrink-0" />
         </SelectPrimitive.ItemIndicator>
       </View>
-      <SelectPrimitive.ItemText className="select-none text-sm text-foreground group-active:text-accent-foreground" />
+      <SelectPrimitive.ItemText className="text-foreground group-active:text-accent-foreground select-none text-sm" />
     </SelectPrimitive.Item>
   );
 }
@@ -177,7 +177,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       className={cn(
-        '-mx-1 my-1 h-px bg-border',
+        'bg-border -mx-1 my-1 h-px',
         Platform.select({ web: 'pointer-events-none' }),
         className
       )}
@@ -186,6 +186,10 @@ function SelectSeparator({
   );
 }
 
+/**
+ * @platform Web only
+ * Returns null on native platforms
+ */
 function SelectScrollUpButton({
   className,
   ...props
@@ -202,6 +206,10 @@ function SelectScrollUpButton({
   );
 }
 
+/**
+ * @platform Web only
+ * Returns null on native platforms
+ */
 function SelectScrollDownButton({
   className,
   ...props
@@ -217,6 +225,8 @@ function SelectScrollDownButton({
     </SelectPrimitive.ScrollDownButton>
   );
 }
+
+
 
 export {
   Select,
