@@ -10,6 +10,7 @@ import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme } from 'nativewind';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -40,25 +41,25 @@ export default function RootLayout() {
   const theme = colorScheme.get();
 
   return (
-    <ClerkProvider
-      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      tokenCache={tokenCache}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ToastProvider>
-          <StatusBar
-            style={theme === 'dark' ? 'light' : 'dark'}
-            backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
-          />
-          <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider
+        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+        tokenCache={tokenCache}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <ToastProvider>
+            <StatusBar
+              style={theme === 'dark' ? 'light' : 'dark'}
+              backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
+            />
             <Stack
               screenOptions={{
                 headerShown: false,
               }}
             />
-          </SafeAreaView>
-          <PortalHost />
-        </ToastProvider>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+            <PortalHost />
+          </ToastProvider>
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }
