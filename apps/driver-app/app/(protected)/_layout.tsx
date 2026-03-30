@@ -41,7 +41,7 @@ export default function ProtectedLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={protectedGuard}>
-        <Stack.Screen name="(tabs)/index" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="editProfile"
           options={{

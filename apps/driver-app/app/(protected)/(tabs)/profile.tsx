@@ -3,10 +3,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
-import { useQuery } from 'convex/react';
-import { useRouter } from 'expo-router';
+import { useAction, useMutation, useQuery } from 'convex/react';
+import { useNavigation, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React, { useMemo, useRef, useState } from 'react';
@@ -22,10 +22,16 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   Extrapolation,
+  SharedValue,
 } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { HorizontalRule } from '@/components/ui/seperator';
 import { Image } from 'react-native';
+import { createBottomSheetTabBarHandlers } from '@/lib/utils';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import * as ImagePicker from 'expo-image-picker';
+import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
@@ -33,9 +39,13 @@ const COLLAPSED_HEADER_HEIGHT = 100;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
+  const [image, setImage] = useState("");
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const { onAnimate, onChange } = createBottomSheetTabBarHandlers(navigation);
+
 
   const isDark = colorScheme === 'dark';
   const snapPoints = useMemo(() => ["50%", "80%"], []);
@@ -49,6 +59,10 @@ export default function Profile() {
     await signOut();
     router.replace('/(auth)/signin');
   };
+
+  const handleUploadImage = (imageUri: string): void => {
+    setImage(imageUri);    
+  }
 
   const scrollY = useSharedValue(0);
 
@@ -161,7 +175,7 @@ export default function Profile() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <StatusBar
-        style={isDark ? 'light' : 'dark'}
+        style={isDark ? 'dark' : 'light'}
         backgroundColor={isDark ? '#000' : '#FFF'}
       />
 
@@ -207,27 +221,34 @@ export default function Profile() {
           <Animated.View style={avatarContainerStyle} className="items-center">
             <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
               <Avatar alt="Profile pic" className="h-28 w-28">
-                <AvatarImage source={require('@/assets/images/avatar.jpg')} />
+                <AvatarImage source={image ? { uri: image } : user.profilePictureKey ? { uri: user.profilePictureKey} : require('@/assets/images/avatar.jpg')} />
                 <AvatarFallback className="bg-white/20">
                   <Text className="text-2xl font-bold text-primary">
-                    {user?.firstName?.[0]}
+                    {user.firstName?.[0]}
                     {user?.lastName?.[0]}
                   </Text>
                 </AvatarFallback>
               </Avatar>
+              <ImagePickerDialog 
+                setImageUri={(newImageUri) => handleUploadImage(newImageUri)} 
+                clerkId={user.clerkId}
+                profilePictureKey= {user.profilePictureKey}
+                scrollY={scrollY}
+                scrollDistance={SCROLL_DISTANCE}
+                />
             </View>
           </Animated.View>
 
           <Animated.View style={nameContainerStyle} className="items-center gap-1">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
-              {user?.firstName} {user?.lastName}
+              {user.firstName} {user.lastName}
             </Text>
             <Animated.View
               style={badgeOpacityStyle}
               className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
               <MaterialIcons
                 name={
-                  user?.gender === 'Male'
+                  user.gender === 'Male'
                     ? 'male'
                     : user?.gender === 'Female'
                       ? 'female'
@@ -236,12 +257,13 @@ export default function Profile() {
                 size={13}
                 color="rgba(255,255,255,0.8)"
               />
-              <Text className="text-xs font-medium text-white">{user?.gender}</Text>
+              <Text className="text-xs font-medium text-white">{user.gender}</Text>
             </Animated.View>
           </Animated.View>
         </View>
       </Animated.View>
 
+      {/* information cards */}
       <Animated.ScrollView
         onScroll={scrollHandler}
         scrollEventThrottle={16}
@@ -507,13 +529,15 @@ export default function Profile() {
       </Animated.ScrollView>
 
       <BottomSheet
+        onChange={onChange}
+        onAnimate={onAnimate}
         ref={licenseBottomSheetRef}
         index={-1}
         animationConfigs={{ duration: 450 }}
         snapPoints={snapPoints}
         enablePanDownToClose={true}
-        backgroundStyle={{ backgroundColor: isDark ? '#0f0f12' : '#FAFAFA' }}
-        handleIndicatorStyle={{ backgroundColor: isDark ? '#2a2a35' : '#D1D5DB' }}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
         )}
@@ -631,4 +655,115 @@ const LicenseImageCard = ({
       </View>
     </View>
   );
+};
+
+function ImagePickerDialog(
+  { 
+    clerkId,
+    profilePictureKey, 
+    setImageUri,
+    scrollY,
+    scrollDistance,
+  }: 
+  { 
+    clerkId: string, 
+    profilePictureKey: string | undefined, 
+    setImageUri: (uri: string) => void,
+    scrollY: SharedValue<number>,
+    scrollDistance: number,
+  }
+) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { userId } = useAuth();
+  const uploadProfilePicture = useMutation(api.routes.user.uploadProfilePicture);
+  const removeProfilePictureKey = useMutation(api.routes.user.removeProfilePictureKey);
+
+  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  async function processUpload (fileUri: string | undefined, fileKey: string) {
+    if (!fileUri || !fileUri.startsWith('file://')) return;
+
+    try {
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+      const extension = fileUri.split('.').pop() || 'jpg';
+
+      const { url: presignedUrl, key } = await getPresignedUrl({
+        key: `${fileKey}-${Date.now()}.${extension}`,
+        contentType: blob.type,
+      });
+
+      const uploadResponse = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': blob.type },
+      });
+      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
+        throw new Error("Couldn't upload image");
+      }
+      return key;
+    } catch (error) {
+      throw new Error("Failed to upload image");
+    }
+  };
+  const handleUpload = async ( newImgUri: string) => {
+    setIsOpen(false);
+    if(newImgUri === "") return;
+    setImageUri(newImgUri);
+    const profilePictureKey = await processUpload(newImgUri, `profilePicture/${userId}}`);
+    await uploadProfilePicture({ clerkId, profilePictureKey });
+  };
+
+  const handleDelete = async () => {
+    setIsOpen(false);
+    if(profilePictureKey === undefined) return;
+    await removeProfilePictureKey({ clerkId });
+  }
+
+  const uploadBtnOpacity = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, scrollDistance / 2],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+    return { opacity };
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Animated.View style={uploadBtnOpacity} className="absolute -bottom-1 -right-1">
+        <DialogTrigger asChild>
+          <TouchableOpacity className="rounded-full w-10 h-10 bg-teal-800 items-center justify-center border-2 border-white">
+            <Feather name="camera" size={20} color="white" />
+          </TouchableOpacity>
+        </DialogTrigger>
+      </Animated.View>
+      <DialogContent>
+        <DialogTitle>
+          <Text className="text-lg text-primary">Choose an option</Text>
+        </DialogTitle>
+        <DialogHeader className="items-center">
+          <View className="flex-row w-11/12 justify-around">
+            <TouchableOpacity onPress={async () => {
+              const result = await ImagePicker.launchCameraAsync({ quality: 0.3 })
+              if (result.canceled) return;
+              handleUpload(result.assets[0].uri);
+            }} >
+              <Feather name="camera" size={30} color="orange" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: false, quality: 0.3 })
+              if (result.canceled) return;
+              handleUpload(result.assets[0].uri);
+            }} >
+              <FontAwesome name="photo" size={30} color="orange" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} >
+              <MaterialIcons name="delete-outline" size={30} color="red" />
+            </TouchableOpacity>
+          </View>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
+  )
 };
