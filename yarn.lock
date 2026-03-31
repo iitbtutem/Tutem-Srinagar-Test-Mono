@@ -2303,7 +2303,7 @@
   resolved "https://registry.npmjs.org/@radix-ui/react-context/-/react-context-1.1.2.tgz"
   integrity sha512-jCi/QKUM2r1Ju5a3J64TH2A5SpKAgh0LpknyqdQ4m6DCV0xJ2HG1xARRwNGPQfi1SLdLWZ1OJz6F4OMBBNiGJA==
 
-"@radix-ui/react-dialog@^1.1.1", "@radix-ui/react-dialog@^1.1.14":
+"@radix-ui/react-dialog@^1.1.1", "@radix-ui/react-dialog@^1.1.14", "@radix-ui/react-dialog@^1.1.15":
   version "1.1.15"
   resolved "https://registry.npmjs.org/@radix-ui/react-dialog/-/react-dialog-1.1.15.tgz"
   integrity sha512-TCglVRtzlffRNxRMEyR36DGBLJpeusFcgMVD9PZEzAKnUs1lKCgX5u9BmC2Yg+LL9MgZDugFFs1Vl+Jp4t/PGw==
@@ -2786,12 +2786,29 @@
     "@rn-primitives/slot" "1.2.0"
     "@rn-primitives/types" "1.2.0"
 
+"@rn-primitives/dialog@^1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@rn-primitives/dialog/-/dialog-1.4.0.tgz#27161604444b97b4b6117afb8da6c10011594b41"
+  integrity sha512-3/5WANCb8QFMMcOAWpNwjbvTtWG9z/Nizlm3HS5wqOsBnKcPx3VsYKPCkxH4+Rq8oXEY5hG+MSrTalgBgAsaBg==
+  dependencies:
+    "@radix-ui/react-dialog" "^1.1.15"
+    "@rn-primitives/hooks" "1.4.0"
+    "@rn-primitives/slot" "1.4.0"
+    "@rn-primitives/types" "1.4.0"
+
 "@rn-primitives/hooks@1.3.0":
   version "1.3.0"
   resolved "https://registry.yarnpkg.com/@rn-primitives/hooks/-/hooks-1.3.0.tgz#5e6ad5a96b520582b3a896581651064ea2292de8"
   integrity sha512-BR97reSu7uVDpyMeQdRJHT0w8KdS6jdYnOL6xQtqS2q3H6N7vXBlX4LFERqJZphD+aziJFIAJ3HJF1vtt6XlpQ==
   dependencies:
     "@rn-primitives/types" "1.2.0"
+
+"@rn-primitives/hooks@1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@rn-primitives/hooks/-/hooks-1.4.0.tgz#218686be433ecf39f22c55959ed86e198d367a8b"
+  integrity sha512-uzu4NrThR5BEy+MHvTwHCs+KUXTmTLZrSzPHL9L8q5uGXv/BIxYJdpvlodn+DnxgTMzdul+H8rpqPLjyYQEyKw==
+  dependencies:
+    "@rn-primitives/types" "1.4.0"
 
 "@rn-primitives/portal@~1.3.0":
   version "1.3.0"
@@ -2824,7 +2841,7 @@
   resolved "https://registry.npmjs.org/@rn-primitives/slot/-/slot-1.2.0.tgz"
   integrity sha512-cpbn+JLjSeq3wcA4uqgFsUimMrWYWx2Ks7r5rkwd1ds1utxynsGkLOKpYVQkATwWrYhtcoF1raxIKEqXuMN+/w==
 
-"@rn-primitives/slot@1.4.0":
+"@rn-primitives/slot@1.4.0", "@rn-primitives/slot@^1.4.0":
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/@rn-primitives/slot/-/slot-1.4.0.tgz#2e1cdf5ec70ec1c0f23147fd2261b0ebd74f2a3e"
   integrity sha512-p8qIYH44HgXDbsxPFIbRS/IrKWOqb2/JDT8ivFAfhL8QSW0gtVZZo8I/wFip1vV9vRl8D3zMHUBB/PrzrN0Qww==

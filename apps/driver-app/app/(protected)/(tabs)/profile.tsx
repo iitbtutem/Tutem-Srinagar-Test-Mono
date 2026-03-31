@@ -10,11 +10,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React, { useMemo, useRef, useState } from 'react';
-import {
-  Dimensions,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Dimensions, TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
@@ -29,9 +25,20 @@ import { HorizontalRule } from '@/components/ui/seperator';
 import { Image } from 'react-native';
 import { createBottomSheetTabBarHandlers } from '@/lib/utils';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
-import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
+import {
+  BottomSheetBackgroundColor,
+  BottomSheetIndicatorColor,
+  iconBackgroundColor,
+  iconColor,
+} from '@/constants/colors';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
@@ -39,21 +46,23 @@ const COLLAPSED_HEADER_HEIGHT = 100;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
-  const [image, setImage] = useState("");
+  const [image, setImage] = useState('');
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { onAnimate, onChange } = createBottomSheetTabBarHandlers(navigation);
 
-
   const isDark = colorScheme === 'dark';
-  const snapPoints = useMemo(() => ["50%", "80%"], []);
-  
+  const snapPoints = useMemo(() => ['50%', '80%'], []);
+
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
-  
+
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
-  const vehicle = useQuery(api.routes.vehicle.getVehicleByUserId, user?._id ? { userId: user._id } : 'skip');
+  const vehicle = useQuery(
+    api.routes.vehicle.getVehicleByUserId,
+    user?._id ? { userId: user._id } : 'skip'
+  );
 
   const handleLogout = async () => {
     await signOut();
@@ -61,8 +70,8 @@ export default function Profile() {
   };
 
   const handleUploadImage = (imageUri: string): void => {
-    setImage(imageUri);    
-  }
+    setImage(imageUri);
+  };
 
   const scrollY = useSharedValue(0);
 
@@ -93,12 +102,7 @@ export default function Profile() {
   });
 
   const avatarContainerStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [1, 0.35],
-      Extrapolation.CLAMP
-    );
+    const scale = interpolate(scrollY.value, [0, SCROLL_DISTANCE], [1, 0.35], Extrapolation.CLAMP);
 
     const translateX = interpolate(
       scrollY.value,
@@ -115,21 +119,12 @@ export default function Profile() {
     );
 
     return {
-      transform: [
-        { translateX },
-        { translateY },
-        { scale },
-      ],
+      transform: [{ translateX }, { translateY }, { scale }],
     };
   });
 
   const nameContainerStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [1, 0.8],
-      Extrapolation.CLAMP
-    );
+    const scale = interpolate(scrollY.value, [0, SCROLL_DISTANCE], [1, 0.8], Extrapolation.CLAMP);
 
     const translateX = interpolate(
       scrollY.value,
@@ -146,11 +141,7 @@ export default function Profile() {
     );
 
     return {
-      transform: [
-        { translateX },
-        { translateY },
-        { scale },
-      ],
+      transform: [{ translateX }, { translateY }, { scale }],
     };
   });
 
@@ -167,29 +158,25 @@ export default function Profile() {
     };
   });
 
-
   if (!userId) return <ErrorScreen message="User not found" />;
   if (user === undefined) return <LoadingScreen message="Loading profile..." />;
   if (user === null) return <ErrorScreen message="User not found" />;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
-      <StatusBar
-        style={isDark ? 'dark' : 'light'}
-        backgroundColor={isDark ? '#000' : '#FFF'}
-      />
+      <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
 
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className="overflow-hidden bg-primary shadow-xl shadow-primary/30 pt-12">
-
+        className="overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30">
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, right: 0, zIndex: 10 }]}
-          className="flex-row items-center gap-1 pt-14 pr-4">
+          className="flex-row items-center gap-1 pr-4 pt-14">
           <TouchableOpacity
-            className="h-9 w-9 items-center justify-center rounded-full bg-white/15"
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: iconBackgroundColor }}
             onPress={() =>
               router.push({
                 pathname: '/editProfile',
@@ -206,13 +193,14 @@ export default function Profile() {
                 },
               })
             }>
-            <MaterialIcons name="edit" size={18} color="rgba(255,255,255,0.9)" />
+            <MaterialIcons name="edit" size={18} color={iconColor} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="h-9 w-9 items-center justify-center rounded-full bg-white/15"
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: iconBackgroundColor }}
             onPress={handleLogout}>
-            <MaterialIcons name="logout" size={18} color="rgba(255,255,255,0.9)" />
+            <MaterialIcons name="logout" size={18} color={iconColor} />
           </TouchableOpacity>
         </Animated.View>
 
@@ -221,7 +209,15 @@ export default function Profile() {
           <Animated.View style={avatarContainerStyle} className="items-center">
             <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
               <Avatar alt="Profile pic" className="h-28 w-28">
-                <AvatarImage source={image ? { uri: image } : user.profilePictureKey ? { uri: user.profilePictureKey} : require('@/assets/images/avatar.jpg')} />
+                <AvatarImage
+                  source={
+                    image
+                      ? { uri: image }
+                      : user.profilePictureKey
+                        ? { uri: user.profilePictureKey }
+                        : require('@/assets/images/avatar.jpg')
+                  }
+                />
                 <AvatarFallback className="bg-white/20">
                   <Text className="text-2xl font-bold text-primary">
                     {user.firstName?.[0]}
@@ -229,13 +225,13 @@ export default function Profile() {
                   </Text>
                 </AvatarFallback>
               </Avatar>
-              <ImagePickerDialog 
-                setImageUri={(newImageUri) => handleUploadImage(newImageUri)} 
+              <ImagePickerDialog
+                setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
                 clerkId={user.clerkId}
-                profilePictureKey= {user.profilePictureKey}
+                profilePictureKey={user.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
-                />
+              />
             </View>
           </Animated.View>
 
@@ -342,10 +338,10 @@ export default function Profile() {
 
             {/* License Number */}
             <View className="px-6 py-4">
-              <TouchableOpacity 
-                className='flex-row items-center gap-4' 
+              <TouchableOpacity
+                className="flex-row items-center gap-4"
                 onPress={() => {
-                  licenseBottomSheetRef.current?.snapToIndex(0)
+                  licenseBottomSheetRef.current?.snapToIndex(0);
                 }}>
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
                   <Feather name="credit-card" size={14} color="#2563eb" />
@@ -452,11 +448,7 @@ export default function Profile() {
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 dark:bg-zinc-800">
-                      <MaterialIcons
-                        name="star"
-                        size={13}
-                        color={isDark ? '#a1a1aa' : '#64748b'}
-                      />
+                      <MaterialIcons name="star" size={13} color={isDark ? '#a1a1aa' : '#64748b'} />
                       <Text className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                         {vehicle.class}
                       </Text>
@@ -493,11 +485,7 @@ export default function Profile() {
                         },
                       })
                     }>
-                    <MaterialIcons
-                      name="edit"
-                      size={15}
-                      color={isDark ? 'black' : 'white'}
-                    />
+                    <MaterialIcons name="edit" size={15} color={isDark ? 'black' : 'white'} />
                     <Text className="text-sm font-semibold text-white dark:text-black">
                       Edit Vehicle Details
                     </Text>
@@ -520,7 +508,9 @@ export default function Profile() {
                   className="flex-row items-center gap-2 rounded-xl bg-primary"
                   onPress={() => router.push('/(protected)/createVehicle')}>
                   <MaterialIcons name="add" size={18} color={isDark ? '#000' : '#fff'} />
-                  <Text className="text-sm font-bold text-primary-foreground">Register Vehicle</Text>
+                  <Text className="text-sm font-bold text-primary-foreground">
+                    Register Vehicle
+                  </Text>
                 </Button>
               </View>
             )}
@@ -540,25 +530,23 @@ export default function Profile() {
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-        )}
-      >
+        )}>
         <BottomSheetView className="pb-8">
-
           {/* Header */}
-          <View className="flex-row items-center gap-3 px-6 pt-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+          <View className="flex-row items-center gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
             <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
               <Feather name="credit-card" size={16} color="#fff" />
             </View>
             <View className="flex-1">
-              <Text className="text-base font-bold text-slate-900 dark:text-zinc-50 tracking-tight">
+              <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
                 Driver's License
               </Text>
-              <Text className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+              <Text className="mt-0.5 text-xs text-slate-400 dark:text-zinc-500">
                 Verified identity document
               </Text>
             </View>
             {/* Verified badge */}
-            <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1">
+            <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 dark:bg-emerald-900/30">
               <Feather name="check-circle" size={11} color="#10b981" />
               <Text className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 Verified
@@ -567,12 +555,12 @@ export default function Profile() {
           </View>
 
           {/* License Number */}
-          <View className="mx-6 mt-3 flex-row items-center justify-between rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3.5">
+          <View className="mx-6 mt-3 flex-row items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
             <View>
-              <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-1">
+              <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                 License No.
               </Text>
-              <Text className="font-mono text-base font-bold text-slate-800 dark:text-zinc-100 tracking-wider">
+              <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
                 {user?.licenseNumber ?? '—'}
               </Text>
             </View>
@@ -582,20 +570,10 @@ export default function Profile() {
           </View>
 
           {/* Images */}
-          <View className="px-6 mt-3 gap-2">
+          <View className="mt-3 gap-2 px-6">
+            <LicenseImageCard label="Front Side" uri={user.licenseImageFrontKey} isDark={isDark} />
 
-            <LicenseImageCard
-              label="Front Side"
-              uri={user.licenseImageFrontKey}
-              isDark={isDark}
-            />
-
-            <LicenseImageCard
-              label="Back Side"
-              uri={user.licenseImageBackKey}
-              isDark={isDark}
-            />
-
+            <LicenseImageCard label="Back Side" uri={user.licenseImageBackKey} isDark={isDark} />
           </View>
         </BottomSheetView>
       </BottomSheet>
@@ -618,7 +596,7 @@ const LicenseImageCard = ({
   return (
     <View className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
       {/* Card label bar */}
-      <View className="flex-row items-center gap-2 px-3.5 py-2 bg-zinc-100 dark:bg-zinc-900">
+      <View className="flex-row items-center gap-2 bg-zinc-100 px-3.5 py-2 dark:bg-zinc-900">
         <Feather
           name={label === 'Front Side' ? 'maximize' : 'minimize'}
           size={11}
@@ -630,15 +608,11 @@ const LicenseImageCard = ({
       </View>
 
       {/* Image or fallback */}
-      <View className="h-44 w-full bg-zinc-50 dark:bg-zinc-900/60 items-center justify-center">
+      <View className="h-44 w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900/60">
         {showFallback ? (
           <View className="items-center gap-2">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <Feather
-                name="image"
-                size={20}
-                color={isDark ? '#52525b' : '#9ca3af'}
-              />
+              <Feather name="image" size={20} color={isDark ? '#52525b' : '#9ca3af'} />
             </View>
             <Text className="text-xs text-slate-400 dark:text-zinc-600">
               {!uri ? 'Image not available' : 'Failed to load'}
@@ -657,29 +631,26 @@ const LicenseImageCard = ({
   );
 };
 
-function ImagePickerDialog(
-  { 
-    clerkId,
-    profilePictureKey, 
-    setImageUri,
-    scrollY,
-    scrollDistance,
-  }: 
-  { 
-    clerkId: string, 
-    profilePictureKey: string | undefined, 
-    setImageUri: (uri: string) => void,
-    scrollY: SharedValue<number>,
-    scrollDistance: number,
-  }
-) {
+function ImagePickerDialog({
+  clerkId,
+  profilePictureKey,
+  setImageUri,
+  scrollY,
+  scrollDistance,
+}: {
+  clerkId: string;
+  profilePictureKey: string | undefined;
+  setImageUri: (uri: string) => void;
+  scrollY: SharedValue<number>;
+  scrollDistance: number;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const { userId } = useAuth();
   const uploadProfilePicture = useMutation(api.routes.user.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.user.removeProfilePictureKey);
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  async function processUpload (fileUri: string | undefined, fileKey: string) {
+  async function processUpload(fileUri: string | undefined, fileKey: string) {
     if (!fileUri || !fileUri.startsWith('file://')) return;
 
     try {
@@ -702,12 +673,12 @@ function ImagePickerDialog(
       }
       return key;
     } catch (error) {
-      throw new Error("Failed to upload image");
+      throw new Error('Failed to upload image');
     }
-  };
-  const handleUpload = async ( newImgUri: string) => {
+  }
+  const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
-    if(newImgUri === "") return;
+    if (newImgUri === '') return;
     setImageUri(newImgUri);
     const profilePictureKey = await processUpload(newImgUri, `profilePicture/${userId}}`);
     await uploadProfilePicture({ clerkId, profilePictureKey });
@@ -715,9 +686,9 @@ function ImagePickerDialog(
 
   const handleDelete = async () => {
     setIsOpen(false);
-    if(profilePictureKey === undefined) return;
+    if (profilePictureKey === undefined) return;
     await removeProfilePictureKey({ clerkId });
-  }
+  };
 
   const uploadBtnOpacity = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -733,7 +704,7 @@ function ImagePickerDialog(
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <Animated.View style={uploadBtnOpacity} className="absolute -bottom-1 -right-1">
         <DialogTrigger asChild>
-          <TouchableOpacity className="rounded-full w-10 h-10 bg-teal-800 items-center justify-center border-2 border-white">
+          <TouchableOpacity className="h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-teal-800">
             <Feather name="camera" size={20} color="white" />
           </TouchableOpacity>
         </DialogTrigger>
@@ -743,27 +714,32 @@ function ImagePickerDialog(
           <Text className="text-lg text-primary">Choose an option</Text>
         </DialogTitle>
         <DialogHeader className="items-center">
-          <View className="flex-row w-11/12 justify-around">
-            <TouchableOpacity onPress={async () => {
-              const result = await ImagePicker.launchCameraAsync({ quality: 0.3 })
-              if (result.canceled) return;
-              handleUpload(result.assets[0].uri);
-            }} >
+          <View className="w-11/12 flex-row justify-around">
+            <TouchableOpacity
+              onPress={async () => {
+                const result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
+                if (result.canceled) return;
+                handleUpload(result.assets[0].uri);
+              }}>
               <Feather name="camera" size={30} color="orange" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={async () => {
-              const result = await ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection: false, quality: 0.3 })
-              if (result.canceled) return;
-              handleUpload(result.assets[0].uri);
-            }} >
+            <TouchableOpacity
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  allowsMultipleSelection: false,
+                  quality: 0.3,
+                });
+                if (result.canceled) return;
+                handleUpload(result.assets[0].uri);
+              }}>
               <FontAwesome name="photo" size={30} color="orange" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} >
+            <TouchableOpacity onPress={handleDelete}>
               <MaterialIcons name="delete-outline" size={30} color="red" />
             </TouchableOpacity>
           </View>
         </DialogHeader>
       </DialogContent>
     </Dialog>
-  )
-};
+  );
+}
