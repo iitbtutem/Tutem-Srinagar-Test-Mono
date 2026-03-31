@@ -354,6 +354,7 @@ export default function Profile() {
                     {user?.licenseNumber}
                   </Text>
                 </View>
+                <Feather name="chevron-right" size={16} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
@@ -388,7 +389,7 @@ export default function Profile() {
                 {/* Compact vehicle details */}
                 <View className="gap-3 px-6 py-4">
                   {/* Model + Reg Number Row */}
-                  <View className="flex-row items-center justify-between">
+                  <TouchableOpacity className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
                       <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/30">
                         <MaterialIcons
@@ -406,12 +407,8 @@ export default function Profile() {
                         </Text>
                       </View>
                     </View>
-                    <View className="rounded-lg bg-emerald-50 px-2.5 py-1 dark:bg-emerald-900/30">
-                      <Text className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
-                        Active
-                      </Text>
-                    </View>
-                  </View>
+                    <Feather name="chevron-right" size={16} color="#94a3b8" />
+                  </TouchableOpacity>
 
                   <View className="mx-1 h-px bg-slate-100 dark:bg-zinc-800" />
 

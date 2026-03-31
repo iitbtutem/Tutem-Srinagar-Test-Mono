@@ -20,10 +20,7 @@ import Animated, {
   Extrapolation,
   SharedValue,
 } from 'react-native-reanimated';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { HorizontalRule } from '@/components/ui/seperator';
-import { Image } from 'react-native';
-import { createBottomSheetTabBarHandlers } from '@/lib/utils';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import {
   Dialog,
@@ -34,8 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
 import {
-  BottomSheetBackgroundColor,
-  BottomSheetIndicatorColor,
+ 
   iconBackgroundColor,
   iconColor,
 } from '@/constants/colors';
@@ -50,12 +46,9 @@ export default function Profile() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const { onAnimate, onChange } = createBottomSheetTabBarHandlers(navigation);
 
   const isDark = colorScheme === 'dark';
-  const snapPoints = useMemo(() => ['50%', '80%'], []);
 
-  const licenseBottomSheetRef = useRef<BottomSheet>(null);
 
   const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
 
@@ -324,119 +317,9 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-
-      <BottomSheet
-        onChange={onChange}
-        onAnimate={onAnimate}
-        ref={licenseBottomSheetRef}
-        index={-1}
-        animationConfigs={{ duration: 450 }}
-        snapPoints={snapPoints}
-        enablePanDownToClose={true}
-        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
-        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
-        backdropComponent={(props: any) => (
-          <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-        )}>
-        <BottomSheetView className="pb-8">
-          {/* Header */}
-          <View className="flex-row items-center gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
-              <Feather name="credit-card" size={16} color="#fff" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
-                Driver's License
-              </Text>
-              <Text className="mt-0.5 text-xs text-slate-400 dark:text-zinc-500">
-                Verified identity document
-              </Text>
-            </View>
-            {/* Verified badge */}
-            <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 dark:bg-emerald-900/30">
-              <Feather name="check-circle" size={11} color="#10b981" />
-              <Text className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                Verified
-              </Text>
-            </View>
-          </View>
-
-          {/* License Number */}
-          <View className="mx-6 mt-3 flex-row items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
-            <View>
-              <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
-                License No.
-              </Text>
-              <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
-                {user?.licenseNumber ?? '—'}
-              </Text>
-            </View>
-            <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
-              <Feather name="hash" size={14} color="#3b82f6" />
-            </View>
-          </View>
-
-          {/* Images */}
-          <View className="mt-3 gap-2 px-6">
-            <LicenseImageCard label="Front Side" uri={user.licenseImageFrontKey} isDark={isDark} />
-
-            <LicenseImageCard label="Back Side" uri={user.licenseImageBackKey} isDark={isDark} />
-          </View>
-        </BottomSheetView>
-      </BottomSheet>
     </View>
   );
 }
-
-const LicenseImageCard = ({
-  label,
-  uri,
-  isDark,
-}: {
-  label: string;
-  uri?: string | null;
-  isDark: boolean;
-}) => {
-  const [errored, setErrored] = useState(false);
-  const showFallback = !uri || errored;
-
-  return (
-    <View className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-      {/* Card label bar */}
-      <View className="flex-row items-center gap-2 bg-zinc-100 px-3.5 py-2 dark:bg-zinc-900">
-        <Feather
-          name={label === 'Front Side' ? 'maximize' : 'minimize'}
-          size={11}
-          color={isDark ? '#71717a' : '#9ca3af'}
-        />
-        <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
-          {label}
-        </Text>
-      </View>
-
-      {/* Image or fallback */}
-      <View className="h-44 w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900/60">
-        {showFallback ? (
-          <View className="items-center gap-2">
-            <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <Feather name="image" size={20} color={isDark ? '#52525b' : '#9ca3af'} />
-            </View>
-            <Text className="text-xs text-slate-400 dark:text-zinc-600">
-              {!uri ? 'Image not available' : 'Failed to load'}
-            </Text>
-          </View>
-        ) : (
-          <Image
-            source={{ uri }}
-            className="h-full w-full"
-            resizeMode="cover"
-            onError={() => setErrored(true)}
-          />
-        )}
-      </View>
-    </View>
-  );
-};
 
 function ImagePickerDialog({
   clerkId,

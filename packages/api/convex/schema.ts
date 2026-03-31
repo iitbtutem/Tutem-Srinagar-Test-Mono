@@ -30,13 +30,13 @@ export default defineSchema({
   //vehciles
   vehicle: defineTable({
     registrationNumber: v.string(),
+    rcImageKey: v.optional(v.string()),
     model: v.string(),
-    type: v.union(...(VEHICLE_TYPE.map(type => v.literal(type)))),
-    fuelType: v.union(...(FUEL_TYPE.map(type => v.literal(type)))),
-    class: v.union(...(VEHICLE_CLASS.map(type => v.literal(type)))),
+    type: v.union(...VEHICLE_TYPE.map((type) => v.literal(type))),
+    fuelType: v.union(...FUEL_TYPE.map((type) => v.literal(type))),
+    class: v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),
     color: v.string(),
     seatingCapacity: v.number(),
     ownerId: v.id("user"),
-  }).index("by_owner", ["ownerId"])
-
+  }).index("by_owner", ["ownerId"]),
 });
