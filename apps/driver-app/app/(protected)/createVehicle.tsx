@@ -152,6 +152,7 @@ export default function CreateVehicle() {
   };
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  
   async function processUpload(fileUri: string | undefined, fileKey: string) {
     if (!fileUri || !fileUri.startsWith('file://')) return;
 

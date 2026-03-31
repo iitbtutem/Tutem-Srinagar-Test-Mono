@@ -1,6 +1,9 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from "../CONSTANTS";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3Client } from "../s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 
 export const getVehicleByUserId = query({
   args: { userId: v.id("user") },
@@ -10,7 +13,20 @@ export const getVehicleByUserId = query({
       .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
       .first();
 
-    return vehicle;
+    if (vehicle === null) return vehicle;
+
+    const rcImageKey = vehicle.rcImageKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: vehicle.rcImageKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
+
+    return { ...vehicle, rcImageKey };
   },
 });
 
@@ -77,6 +93,7 @@ export const updateVehicle = mutation({
     class: v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),
     color: v.string(),
     seatingCapacity: v.number(),
+    rcImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
