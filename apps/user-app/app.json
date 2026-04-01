@@ -17,7 +17,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rayees.userapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs to access your location to pick you up and track your ride.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs to access your location to pick you up and track your ride."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
@@ -25,7 +30,13 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.rayees.userapp"
+      "package": "com.rayees.userapp",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -37,7 +48,13 @@
       "@react-native-community/datetimepicker",
       "@clerk/expo",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
