@@ -57,11 +57,12 @@ export default function Profile() {
   const snapPoints = useMemo(() => ['50%', '80%'], []);
 
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
+  const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
   const vehicle = useQuery(
-    api.routes.vehicle.getVehicleByUserId,
-    user?._id ? { userId: user._id } : 'skip'
+    api.routes.vehicle.getVehicleByDriverId,
+    driver?._id ? { driverId: driver._id } : 'skip'
   );
 
   const handleLogout = async () => {
@@ -158,9 +159,9 @@ export default function Profile() {
     };
   });
 
-  if (!userId) return <ErrorScreen message="User not found" />;
-  if (user === undefined) return <LoadingScreen message="Loading profile..." />;
-  if (user === null) return <ErrorScreen message="User not found" />;
+  if (!userId) return <ErrorScreen message="Account not found" />;
+  if (driver === undefined) return <LoadingScreen message="Loading profile..." />;
+  if (driver === null) return <ErrorScreen message="Account not found" />;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
@@ -181,15 +182,14 @@ export default function Profile() {
               router.push({
                 pathname: '/editProfile',
                 params: {
-                  userId: user?._id,
-                  firstName: user?.firstName,
-                  lastName: user?.lastName,
-                  dob: user?.dob,
-                  phoneNumber: user?.phoneNumber,
-                  licenseNumber: user?.licenseNumber ?? '',
-                  gender: user?.gender,
-                  organizationId: user?.organizationId ?? '',
-                  clerkId: user?.clerkId,
+                  firstName: driver.firstName,
+                  lastName: driver?.lastName,
+                  dob: driver.dob,
+                  phoneNumber: driver.phoneNumber,
+                  licenseNumber: driver.licenseNumber,
+                  gender: driver.gender,
+                  organizationId: driver.organizationId,
+                  clerkId: driver.clerkId,
                 },
               })
             }>
@@ -213,22 +213,22 @@ export default function Profile() {
                   source={
                     image
                       ? { uri: image }
-                      : user.profilePictureKey
-                        ? { uri: user.profilePictureKey }
+                      : driver.profilePictureKey
+                        ? { uri: driver.profilePictureKey }
                         : require('@/assets/images/avatar.jpg')
                   }
                 />
                 <AvatarFallback className="bg-white/20">
                   <Text className="text-2xl font-bold text-primary">
-                    {user.firstName?.[0]}
-                    {user?.lastName?.[0]}
+                    {driver.firstName?.[0]}
+                    {driver?.lastName?.[0]}
                   </Text>
                 </AvatarFallback>
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                clerkId={user.clerkId}
-                profilePictureKey={user.profilePictureKey}
+                clerkId={driver.clerkId}
+                profilePictureKey={driver.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
               />
@@ -237,23 +237,23 @@ export default function Profile() {
 
           <Animated.View style={nameContainerStyle} className="items-center gap-1">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
-              {user.firstName} {user.lastName}
+              {driver.firstName} {driver.lastName}
             </Text>
             <Animated.View
               style={badgeOpacityStyle}
               className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
               <MaterialIcons
                 name={
-                  user.gender === 'Male'
+                  driver.gender === 'Male'
                     ? 'male'
-                    : user?.gender === 'Female'
+                    : driver?.gender === 'Female'
                       ? 'female'
                       : 'transgender'
                 }
                 size={13}
                 color="rgba(255,255,255,0.8)"
               />
-              <Text className="text-xs font-medium text-white">{user.gender}</Text>
+              <Text className="text-xs font-medium text-white">{driver.gender}</Text>
             </Animated.View>
           </Animated.View>
         </View>
@@ -261,6 +261,7 @@ export default function Profile() {
 
       {/* information cards */}
       <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         className="flex-1"
@@ -288,7 +289,7 @@ export default function Profile() {
                   Date of Birth
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {new Date(user?.dob ?? '').toLocaleDateString()}
+                  {new Date(driver.dob).toLocaleDateString()}
                 </Text>
               </View>
             </View>
@@ -305,7 +306,7 @@ export default function Profile() {
                   Gender
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.gender}
+                  {driver.gender}
                 </Text>
               </View>
             </View>
@@ -322,7 +323,7 @@ export default function Profile() {
                   Phone Number
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.phoneNumber}
+                  {driver.phoneNumber}
                 </Text>
               </View>
             </View>
@@ -341,6 +342,12 @@ export default function Profile() {
               <TouchableOpacity
                 className="flex-row items-center gap-4"
                 onPress={() => {
+                  if (
+                    !driver.licenseImageFrontKey ||
+                    !driver.licenseImageBackKey ||
+                    !driver.organization?.isLicenseVerficationRequired
+                  )
+                    return;
                   licenseBottomSheetRef.current?.snapToIndex(0);
                 }}>
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
@@ -351,9 +358,14 @@ export default function Profile() {
                     License Number
                   </Text>
                   <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                    {user?.licenseNumber}
+                    {driver.licenseNumber}
                   </Text>
                 </View>
+                {!(
+                  !driver.licenseImageFrontKey ||
+                  !driver.licenseImageBackKey ||
+                  !driver.organization?.isLicenseVerficationRequired
+                ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
               </TouchableOpacity>
             </View>
 
@@ -369,7 +381,7 @@ export default function Profile() {
                   Organization
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.organization?.name}
+                  {driver.organization?.name}
                 </Text>
               </View>
             </View>
@@ -388,7 +400,13 @@ export default function Profile() {
                 {/* Compact vehicle details */}
                 <View className="gap-3 px-6 py-4">
                   {/* Model + Reg Number Row */}
-                  <View className="flex-row items-center justify-between">
+                  <TouchableOpacity
+                    onPress={() => {
+                      if(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) 
+                        return;
+                      vehicleBottomSheetRef.current?.snapToIndex(0);
+                    }}
+                    className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
                       <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/30">
                         <MaterialIcons
@@ -406,12 +424,9 @@ export default function Profile() {
                         </Text>
                       </View>
                     </View>
-                    <View className="rounded-lg bg-emerald-50 px-2.5 py-1 dark:bg-emerald-900/30">
-                      <Text className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
-                        Active
-                      </Text>
-                    </View>
-                  </View>
+                    {!(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) &&
+                    <Feather name="chevron-right" size={16} color="#94a3b8" />}
+                  </TouchableOpacity>
 
                   <View className="mx-1 h-px bg-slate-100 dark:bg-zinc-800" />
 
@@ -464,32 +479,6 @@ export default function Profile() {
                       </Text>
                     </View>
                   </View>
-                </View>
-
-                {/* Edit link */}
-                <View className="pb-3">
-                  <Button
-                    className="w-3/4 flex-row items-center justify-center gap-2 self-center"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/(protected)/editVehicle',
-                        params: {
-                          vehicleId: vehicle._id,
-                          registrationNumber: vehicle.registrationNumber,
-                          type: vehicle.type,
-                          model: vehicle.model,
-                          fuelType: vehicle.fuelType,
-                          color: vehicle.color,
-                          seatingCapacity: String(vehicle.seatingCapacity),
-                          vehicleClass: vehicle.class,
-                        },
-                      })
-                    }>
-                    <MaterialIcons name="edit" size={15} color={isDark ? 'black' : 'white'} />
-                    <Text className="text-sm font-semibold text-white dark:text-black">
-                      Edit Vehicle Details
-                    </Text>
-                  </Button>
                 </View>
               </>
             ) : (
@@ -561,7 +550,7 @@ export default function Profile() {
                 License No.
               </Text>
               <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
-                {user?.licenseNumber ?? '—'}
+                {driver.licenseNumber ?? '—'}
               </Text>
             </View>
             <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
@@ -571,17 +560,143 @@ export default function Profile() {
 
           {/* Images */}
           <View className="mt-3 gap-2 px-6">
-            <LicenseImageCard label="Front Side" uri={user.licenseImageFrontKey} isDark={isDark} />
+            <LicenseImageCard label="Front Side" uri={driver.licenseImageFrontKey} isDark={isDark} />
 
-            <LicenseImageCard label="Back Side" uri={user.licenseImageBackKey} isDark={isDark} />
+            <LicenseImageCard label="Back Side" uri={driver.licenseImageBackKey} isDark={isDark} />
           </View>
         </BottomSheetView>
       </BottomSheet>
+
+      {/* Registered Vehicle Bottomsheet */}
+
+      {vehicle && (
+        <BottomSheet
+          onChange={onChange}
+          onAnimate={onAnimate}
+          ref={vehicleBottomSheetRef}
+          index={-1}
+          animationConfigs={{ duration: 450 }}
+          snapPoints={snapPoints}
+          enablePanDownToClose={true}
+          backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
+          handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
+          backdropComponent={(props: any) => (
+            <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+          )}>
+          <BottomSheetView className="pb-8">
+            {/* Header */}
+            <View className="flex-row items-center gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+                <Feather name="credit-card" size={16} color="#fff" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
+                  Vehicle Details
+                </Text>
+              </View>
+              <TouchableOpacity
+                className="h-9 w-9 items-center justify-center rounded-full"
+                style={{ backgroundColor: iconBackgroundColor }}
+                onPress={() => {
+                  router.push({
+                    pathname: '/(protected)/editVehicle',
+                    params: {
+                      vehicleId: vehicle._id,
+                      registrationNumber: vehicle.registrationNumber,
+                      type: vehicle.type,
+                      model: vehicle.model,
+                      fuelType: vehicle.fuelType,
+                      color: vehicle.color,
+                      seatingCapacity: String(vehicle.seatingCapacity),
+                      vehicleClass: vehicle.class,
+                      rcImageKey: vehicle.rcImageKey,
+                      isRcRequired: driver.organization?.isVehicleRegistrationRequired
+                        ? 'true'
+                        : 'false',
+                    },
+                  });
+                }}>
+                <MaterialIcons name="edit" size={18} color={iconColor} />
+              </TouchableOpacity>
+            </View>
+
+            {/* License Number */}
+            <View className="mx-6 mt-3 flex-row items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
+              <View>
+                <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                  Registration Number
+                </Text>
+                <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
+                  {vehicle?.registrationNumber ?? '—'}
+                </Text>
+              </View>
+              <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <Feather name="hash" size={14} color="#3b82f6" />
+              </View>
+            </View>
+
+            {/* Images */}
+            <View className="mt-3 gap-2 px-6">
+              <RcImageCard label="RC Image" uri={vehicle?.rcImageKey} isDark={isDark} />
+            </View>
+          </BottomSheetView>
+        </BottomSheet>
+      )}
     </View>
   );
 }
 
 const LicenseImageCard = ({
+  label,
+  uri,
+  isDark,
+}: {
+  label: string;
+  uri?: string | null;
+  isDark: boolean;
+}) => {
+  const [errored, setErrored] = useState(false);
+  const showFallback = !uri || errored;
+
+  return (
+    <View className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+      {/* Card label bar */}
+      <View className="flex-row items-center gap-2 bg-zinc-100 px-3.5 py-2 dark:bg-zinc-900">
+        <Feather
+          name={label === 'Front Side' ? 'maximize' : 'minimize'}
+          size={11}
+          color={isDark ? '#71717a' : '#9ca3af'}
+        />
+        <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+          {label}
+        </Text>
+      </View>
+
+      {/* Image or fallback */}
+      <View className="h-44 w-full items-center justify-center bg-zinc-50 dark:bg-zinc-900/60">
+        {showFallback ? (
+          <View className="items-center gap-2">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <Feather name="image" size={20} color={isDark ? '#52525b' : '#9ca3af'} />
+            </View>
+            <Text className="text-xs text-slate-400 dark:text-zinc-600">
+              {!uri ? 'Image not available' : 'Failed to load'}
+            </Text>
+          </View>
+        ) : (
+          <Image
+            source={{ uri }}
+            className="h-full w-full"
+            resizeMode="cover"
+            onError={() => setErrored(true)}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+const RcImageCard = ({
   label,
   uri,
   isDark,
@@ -646,8 +761,8 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { userId } = useAuth();
-  const uploadProfilePicture = useMutation(api.routes.user.uploadProfilePicture);
-  const removeProfilePictureKey = useMutation(api.routes.user.removeProfilePictureKey);
+  const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
+  const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   async function processUpload(fileUri: string | undefined, fileKey: string) {

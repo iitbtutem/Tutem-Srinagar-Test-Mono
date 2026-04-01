@@ -8,11 +8,11 @@ import LoadingScreen from '@/components/LoadingScreen';
 
 export default function Home() {
   const { userId } = useAuth();
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
 
-  if (user === undefined) return <LoadingScreen message="Finding your account..." />;
+  if (driver === undefined) return <LoadingScreen message="Finding your account..." />;
 
-  if (user === null && userId) return <Redirect href="/register" />;
+  if (driver === null && userId) return <Redirect href="/register" />;
 
   return (
     <View className="flex-1 items-center justify-center bg-background p-10">

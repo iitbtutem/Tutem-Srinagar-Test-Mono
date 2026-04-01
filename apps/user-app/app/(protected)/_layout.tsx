@@ -10,38 +10,18 @@ export default function ProtectedLayout() {
   const { isSignedIn, userId, signOut } = useAuth();
   const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
 
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const user = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
 
   if (user === undefined || !isClerkUserLoaded) return <ActivityIndicator />;
 
   if (!isAuthenticated || !isSignedIn) return <Redirect href={'/(auth)/signin'} />;
 
-  // Sync role to Clerk metadata if missing (for legacy or cross-app users)
-  if (user && !clerkUser?.unsafeMetadata?.role) {
-    clerkUser?.update({
-      unsafeMetadata: { role: user.type.toLowerCase() },
-    });
-  }
-
-  // Role check: If a driver tries to use the rider app
-  if (clerkUser?.unsafeMetadata?.role === 'driver' || user?.type === 'Driver') {
-    return (
-      <ErrorScreen
-        message="Access Denied: Driver account detected. This application is exclusively for riders. Please use the Tutem Driver app to manage your rides, or log out to sign in with a rider account."
-        actionText="Logout"
-        onAction={async () => {
-          await signOut();
-        }}
-      />
-    );
-  }
-
-  const protectedGuard = isAuthenticated && !!isSignedIn && !!userId && !!user;
+  const protectedGuard = isAuthenticated && !!isSignedIn && !!userId && !!user && !!user.rider;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={protectedGuard}>
-        <Stack.Screen name="(tabs)/index" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="editProfile"
           options={{
