@@ -5,12 +5,12 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 
-export const getVehicleByUserId = query({
-  args: { userId: v.id("user") },
+export const getVehicleByDriverId = query({
+  args: { driverId: v.id("driver") },
   handler: async (ctx, args) => {
     const vehicle = await ctx.db
       .query("vehicle")
-      .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.driverId))
       .first();
 
     if (vehicle === null) return vehicle;
@@ -39,32 +39,30 @@ export const addVehicle = mutation({
     class: v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),
     color: v.string(),
     seatingCapacity: v.number(),
-    ownerId: v.id("user"),
+    ownerId: v.id("driver"),
     rcImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.seatingCapacity < 2 || args.seatingCapacity > 50)
       throw new ConvexError("Invalid seating capacity");
 
-    const user = await ctx.db
-      .query("user")
+    const driver = await ctx.db
+      .query("driver")
       .filter((q) => q.eq(q.field("_id"), args.ownerId))
       .first();
 
-    if (user === null) throw new ConvexError("User not found.");
+    if (driver === null) throw new ConvexError("Driver not found.");
 
-    if (args.rcImageKey === undefined) {
-      const organization = await ctx.db
-        .query("organization")
-        .filter((q) => q.eq(q.field("_id"), user.organizationId))
-        .first();
+    const organization = await ctx.db
+      .query("organization")
+      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
+      .first();
 
-      if (organization === undefined)
-        throw new ConvexError("User not assigned organization.");
+    if (organization === null)
+      throw new ConvexError("Driver not assigned to any organization.");
 
-      if (organization?.isVehicleRegistrationRequired)
-        throw new ConvexError("RC image required.");
-    }
+    if (organization.isVehicleRegistrationRequired && !args.rcImageKey)
+      throw new ConvexError("Vehicle RC required");
 
     const existingVehicle = await ctx.db
       .query("vehicle")
@@ -77,7 +75,15 @@ export const addVehicle = mutation({
       throw new Error("Vehicle already exists");
     }
 
-    const newVehicle = await ctx.db.insert("vehicle", args);
+    const userExistingVehicle = await ctx.db.query("vehicle")
+    .filter(q => q.eq(q.field("ownerId"), driver._id))
+    .first();
+    if(userExistingVehicle !== null) throw new ConvexError("Vehicle already registered for the driver")
+
+    const newVehicle = await ctx.db.insert("vehicle", {
+      ...args,
+      isVerified: organization.isVehicleRegistrationRequired && organization.isVehicleRCVerificationRequired ? "Pending" : "Verified",
+    });
 
     return newVehicle;
   },
@@ -96,8 +102,29 @@ export const updateVehicle = mutation({
     rcImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
-    return id;
+    const vehicle = await ctx.db.query("vehicle")
+    .filter(q => q.eq(q.field("_id"), args.id))
+    .first();
+    if(vehicle === null) throw new ConvexError("Vehicle not found");
+
+    const driver = await ctx.db.query("driver")
+    .filter(q => q.eq(q.field("_id"), vehicle.ownerId))
+    .first();
+    if(driver === null) throw new ConvexError("Driver not found");
+
+    const organization = await ctx.db.query("organization")
+    .filter(q => q.eq(q.field("_id"), driver.organizationId))
+    .first();
+    if(organization === null) throw new ConvexError("Driver not assigned to any organization");
+    if(organization.canDriverEditVehicle === false) throw new ConvexError("Vehicle can't be updated");
+
+    if(organization.isVehicleRegistrationRequired && !args.rcImageKey)
+      throw new ConvexError("Vehicle RC is required");
+
+    await ctx.db.patch(vehicle._id, {
+      ...args,
+      isVerified: organization.isVehicleRegistrationRequired && organization.isVehicleRCVerificationRequired ? "Pending" : "Verified",
+      rcImageKey: organization.isVehicleRegistrationRequired ? args.rcImageKey : ""
+    })
   },
 });

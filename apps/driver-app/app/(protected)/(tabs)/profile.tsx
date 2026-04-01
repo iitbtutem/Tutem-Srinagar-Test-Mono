@@ -59,10 +59,10 @@ export default function Profile() {
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
   const vehicle = useQuery(
-    api.routes.vehicle.getVehicleByUserId,
-    user?._id ? { userId: user._id } : 'skip'
+    api.routes.vehicle.getVehicleByDriverId,
+    driver?._id ? { driverId: driver._id } : 'skip'
   );
 
   const handleLogout = async () => {
@@ -159,9 +159,9 @@ export default function Profile() {
     };
   });
 
-  if (!userId) return <ErrorScreen message="User not found" />;
-  if (user === undefined) return <LoadingScreen message="Loading profile..." />;
-  if (user === null) return <ErrorScreen message="User not found" />;
+  if (!userId) return <ErrorScreen message="Account not found" />;
+  if (driver === undefined) return <LoadingScreen message="Loading profile..." />;
+  if (driver === null) return <ErrorScreen message="Account not found" />;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
@@ -182,15 +182,14 @@ export default function Profile() {
               router.push({
                 pathname: '/editProfile',
                 params: {
-                  userId: user?._id,
-                  firstName: user?.firstName,
-                  lastName: user?.lastName,
-                  dob: user?.dob,
-                  phoneNumber: user?.phoneNumber,
-                  licenseNumber: user?.licenseNumber ?? '',
-                  gender: user?.gender,
-                  organizationId: user?.organizationId ?? '',
-                  clerkId: user?.clerkId,
+                  firstName: driver.firstName,
+                  lastName: driver?.lastName,
+                  dob: driver.dob,
+                  phoneNumber: driver.phoneNumber,
+                  licenseNumber: driver.licenseNumber,
+                  gender: driver.gender,
+                  organizationId: driver.organizationId,
+                  clerkId: driver.clerkId,
                 },
               })
             }>
@@ -214,22 +213,22 @@ export default function Profile() {
                   source={
                     image
                       ? { uri: image }
-                      : user.profilePictureKey
-                        ? { uri: user.profilePictureKey }
+                      : driver.profilePictureKey
+                        ? { uri: driver.profilePictureKey }
                         : require('@/assets/images/avatar.jpg')
                   }
                 />
                 <AvatarFallback className="bg-white/20">
                   <Text className="text-2xl font-bold text-primary">
-                    {user.firstName?.[0]}
-                    {user?.lastName?.[0]}
+                    {driver.firstName?.[0]}
+                    {driver?.lastName?.[0]}
                   </Text>
                 </AvatarFallback>
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                clerkId={user.clerkId}
-                profilePictureKey={user.profilePictureKey}
+                clerkId={driver.clerkId}
+                profilePictureKey={driver.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
               />
@@ -238,23 +237,23 @@ export default function Profile() {
 
           <Animated.View style={nameContainerStyle} className="items-center gap-1">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
-              {user.firstName} {user.lastName}
+              {driver.firstName} {driver.lastName}
             </Text>
             <Animated.View
               style={badgeOpacityStyle}
               className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
               <MaterialIcons
                 name={
-                  user.gender === 'Male'
+                  driver.gender === 'Male'
                     ? 'male'
-                    : user?.gender === 'Female'
+                    : driver?.gender === 'Female'
                       ? 'female'
                       : 'transgender'
                 }
                 size={13}
                 color="rgba(255,255,255,0.8)"
               />
-              <Text className="text-xs font-medium text-white">{user.gender}</Text>
+              <Text className="text-xs font-medium text-white">{driver.gender}</Text>
             </Animated.View>
           </Animated.View>
         </View>
@@ -290,7 +289,7 @@ export default function Profile() {
                   Date of Birth
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {new Date(user?.dob ?? '').toLocaleDateString()}
+                  {new Date(driver.dob).toLocaleDateString()}
                 </Text>
               </View>
             </View>
@@ -307,7 +306,7 @@ export default function Profile() {
                   Gender
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.gender}
+                  {driver.gender}
                 </Text>
               </View>
             </View>
@@ -324,7 +323,7 @@ export default function Profile() {
                   Phone Number
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.phoneNumber}
+                  {driver.phoneNumber}
                 </Text>
               </View>
             </View>
@@ -343,6 +342,12 @@ export default function Profile() {
               <TouchableOpacity
                 className="flex-row items-center gap-4"
                 onPress={() => {
+                  if (
+                    !driver.licenseImageFrontKey ||
+                    !driver.licenseImageBackKey ||
+                    !driver.organization?.isLicenseVerficationRequired
+                  )
+                    return;
                   licenseBottomSheetRef.current?.snapToIndex(0);
                 }}>
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
@@ -353,10 +358,14 @@ export default function Profile() {
                     License Number
                   </Text>
                   <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                    {user?.licenseNumber}
+                    {driver.licenseNumber}
                   </Text>
                 </View>
-                <Feather name="chevron-right" size={16} color="#94a3b8" />
+                {!(
+                  !driver.licenseImageFrontKey ||
+                  !driver.licenseImageBackKey ||
+                  !driver.organization?.isLicenseVerficationRequired
+                ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
               </TouchableOpacity>
             </View>
 
@@ -372,7 +381,7 @@ export default function Profile() {
                   Organization
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.organization?.name}
+                  {driver.organization?.name}
                 </Text>
               </View>
             </View>
@@ -393,6 +402,8 @@ export default function Profile() {
                   {/* Model + Reg Number Row */}
                   <TouchableOpacity
                     onPress={() => {
+                      if(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) 
+                        return;
                       vehicleBottomSheetRef.current?.snapToIndex(0);
                     }}
                     className="flex-row items-center justify-between">
@@ -413,7 +424,8 @@ export default function Profile() {
                         </Text>
                       </View>
                     </View>
-                    <Feather name="chevron-right" size={16} color="#94a3b8" />
+                    {!(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) &&
+                    <Feather name="chevron-right" size={16} color="#94a3b8" />}
                   </TouchableOpacity>
 
                   <View className="mx-1 h-px bg-slate-100 dark:bg-zinc-800" />
@@ -468,32 +480,6 @@ export default function Profile() {
                     </View>
                   </View>
                 </View>
-
-                {/* Edit link */}
-                {/* <View className="pb-3">
-                  <Button
-                    className="w-3/4 flex-row items-center justify-center gap-2 self-center"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/(protected)/editVehicle',
-                        params: {
-                          vehicleId: vehicle._id,
-                          registrationNumber: vehicle.registrationNumber,
-                          type: vehicle.type,
-                          model: vehicle.model,
-                          fuelType: vehicle.fuelType,
-                          color: vehicle.color,
-                          seatingCapacity: String(vehicle.seatingCapacity),
-                          vehicleClass: vehicle.class,
-                        },
-                      })
-                    }>
-                    <MaterialIcons name="edit" size={15} color={isDark ? 'black' : 'white'} />
-                    <Text className="text-sm font-semibold text-white dark:text-black">
-                      Edit Vehicle Details
-                    </Text>
-                  </Button>
-                </View> */}
               </>
             ) : (
               <View className="items-center gap-3 px-6 py-6">
@@ -564,7 +550,7 @@ export default function Profile() {
                 License No.
               </Text>
               <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
-                {user?.licenseNumber ?? '—'}
+                {driver.licenseNumber ?? '—'}
               </Text>
             </View>
             <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
@@ -574,9 +560,9 @@ export default function Profile() {
 
           {/* Images */}
           <View className="mt-3 gap-2 px-6">
-            <LicenseImageCard label="Front Side" uri={user.licenseImageFrontKey} isDark={isDark} />
+            <LicenseImageCard label="Front Side" uri={driver.licenseImageFrontKey} isDark={isDark} />
 
-            <LicenseImageCard label="Back Side" uri={user.licenseImageBackKey} isDark={isDark} />
+            <LicenseImageCard label="Back Side" uri={driver.licenseImageBackKey} isDark={isDark} />
           </View>
         </BottomSheetView>
       </BottomSheet>
@@ -624,7 +610,7 @@ export default function Profile() {
                       seatingCapacity: String(vehicle.seatingCapacity),
                       vehicleClass: vehicle.class,
                       rcImageKey: vehicle.rcImageKey,
-                      isRcRequired: user.organization?.isVehicleRegistrationRequired
+                      isRcRequired: driver.organization?.isVehicleRegistrationRequired
                         ? 'true'
                         : 'false',
                     },
@@ -775,8 +761,8 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { userId } = useAuth();
-  const uploadProfilePicture = useMutation(api.routes.user.uploadProfilePicture);
-  const removeProfilePictureKey = useMutation(api.routes.user.removeProfilePictureKey);
+  const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
+  const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   async function processUpload(fileUri: string | undefined, fileKey: string) {

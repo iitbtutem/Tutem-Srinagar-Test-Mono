@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { ScrollView, View, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, Image } from 'react-native';
 import {
   Select,
   SelectContent,
@@ -59,7 +59,6 @@ export default function EditVehicle() {
     color,
     seatingCapacity,
     vehicleClass,
-    rcImageKey,
     isRcRequired,
   } = useLocalSearchParams<{
     vehicleId: string;
@@ -70,9 +69,13 @@ export default function EditVehicle() {
     color: string;
     seatingCapacity: string;
     vehicleClass: (typeof VEHICLE_CLASS)[number];
-    rcImageKey: string;
     isRcRequired: string;
   }>();
+  
+  if (!vehicleId) {
+    showToast({ title: 'Error', description: 'Vehicle not found', type: 'error' });
+    return router.back();
+  }
 
   const isVehicleRegistrationRequired = isRcRequired === 'true' ? true : false;
 
@@ -99,7 +102,7 @@ export default function EditVehicle() {
       color: color ?? '',
       seatingCapacity: seatingCapacity ? Number(seatingCapacity) : undefined,
       class: vehicleClass ?? undefined,
-      rcImageKey: rcImageKey ?? undefined,
+      rcImageKey: undefined,
     },
   });
 
@@ -107,11 +110,6 @@ export default function EditVehicle() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     try {
-      if (!vehicleId) {
-        showToast({ title: 'Error', description: 'Vehicle not found', type: 'error' });
-        return;
-      }
-
       const rcImageKey = await processUpload(
         data.rcImageKey,
         `vehicleRegisration/${currentUser.user?.id}}`

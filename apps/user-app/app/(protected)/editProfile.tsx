@@ -38,11 +38,10 @@ export default function EditProfile() {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const { userId, firstName, lastName, dob, phoneNumber, gender, clerkId } =
+  const { firstName, lastName, dob, phoneNumber, gender, clerkId } =
     useLocalSearchParams<{
       firstName: string;
       lastName?: string;
-      userId: string;
       dob: string;
       phoneNumber: string;
       gender: 'Male' | 'Female' | 'Other';
@@ -53,7 +52,7 @@ export default function EditProfile() {
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
 
-  const updateUser = useMutation(api.routes.user.updateRider);
+  const updateUser = useMutation(api.routes.rider.updateRider);
 
   const {
     handleSubmit,
@@ -72,11 +71,6 @@ export default function EditProfile() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!userId) {
-        showToast({ title: 'Error', description: 'User not found', type: 'error' });
-        return;
-      }
-
       await updateUser({ ...data, dob: String(data.dob), clerkId: clerkId });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });

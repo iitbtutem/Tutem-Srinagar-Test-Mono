@@ -7,7 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 export default function Home() {
   const { userId } = useAuth();
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const user = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
 
   if (user === undefined) return <ActivityIndicator />;
 

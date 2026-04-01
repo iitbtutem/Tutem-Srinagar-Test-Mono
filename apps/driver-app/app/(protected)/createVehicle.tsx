@@ -45,15 +45,13 @@ const vehicleSchema = z.object({
 });
 
 export default function CreateVehicle() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [imageUri, setImageUri] = useState('');
   const { user } = useUser();
   const router = useRouter();
   const { showToast } = useToast();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const currentUser = useQuery(api.routes.user.getUser, { clerkId: user?.id ?? '' });
+  const driver = useQuery(api.routes.driver.getDriver, { clerkId: user?.id ?? '' });
   const addVehicle = useMutation(api.routes.vehicle.addVehicle);
 
   const modelRef = useRef<TextInput>(null);
@@ -69,7 +67,7 @@ export default function CreateVehicle() {
     setValue,
     setError,
     clearErrors,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
@@ -84,18 +82,18 @@ export default function CreateVehicle() {
     },
   });
 
-  if (!currentUser) return;
+  if (!driver) return;
 
-  if (!currentUser.organization) return;
+  if (!driver.organization) return;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     try {
       const rcImageKey = await processUpload(
         data.rcImageKey,
-        `vehicleRegisration/${currentUser._id}}`
+        `vehicleRegisration/${driver._id}}`
       );
 
-      if (currentUser.organization?.isVehicleRegistrationRequired && rcImageKey === undefined) {
+      if (driver.organization?.isVehicleRegistrationRequired && rcImageKey === undefined) {
         setError('rcImageKey', {
           type: 'required',
           message: 'RC image required',
@@ -110,7 +108,7 @@ export default function CreateVehicle() {
 
       await addVehicle({
         ...data,
-        ownerId: currentUser._id,
+        ownerId: driver._id,
         rcImageKey,
       });
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
@@ -180,7 +178,7 @@ export default function CreateVehicle() {
     }
   }
 
-  const { isVehicleRegistrationRequired } = currentUser.organization;
+  const { isVehicleRegistrationRequired } = driver.organization;
 
   return (
     <View className="flex-1 bg-background pt-6">

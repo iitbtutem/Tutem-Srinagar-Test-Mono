@@ -50,7 +50,7 @@ export default function Profile() {
   const isDark = colorScheme === 'dark';
 
 
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
 
   const handleLogout = async () => {
     await signOut();
@@ -147,8 +147,8 @@ export default function Profile() {
   });
 
   if (!userId) return <ErrorScreen message="User not found" />;
-  if (user === undefined) return <LoadingScreen message="Loading profile..." />;
-  if (user === null) return <ErrorScreen message="User not found" />;
+  if (rider === undefined) return <LoadingScreen message="Loading profile..." />;
+  if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
@@ -169,15 +169,12 @@ export default function Profile() {
               router.push({
                 pathname: '/editProfile',
                 params: {
-                  userId: user?._id,
-                  firstName: user?.firstName,
-                  lastName: user?.lastName,
-                  dob: user?.dob,
-                  phoneNumber: user?.phoneNumber,
-                  licenseNumber: user?.licenseNumber ?? '',
-                  gender: user?.gender,
-                  organizationId: user?.organizationId ?? '',
-                  clerkId: user?.clerkId,
+                  firstName: rider.firstName,
+                  lastName: rider?.lastName,
+                  dob: rider.dob,
+                  phoneNumber: rider.phoneNumber,
+                  gender: rider.gender,
+                  clerkId: rider?.clerkId,
                 },
               })
             }>
@@ -201,22 +198,22 @@ export default function Profile() {
                   source={
                     image
                       ? { uri: image }
-                      : user.profilePictureKey
-                        ? { uri: user.profilePictureKey }
+                      : rider.profilePictureKey
+                        ? { uri: rider.profilePictureKey }
                         : require('@/assets/images/avatar.jpg')
                   }
                 />
                 <AvatarFallback className="bg-white/20">
                   <Text className="text-2xl font-bold text-primary">
-                    {user.firstName?.[0]}
-                    {user?.lastName?.[0]}
+                    {rider.firstName?.[0]}
+                    {rider?.lastName?.[0]}
                   </Text>
                 </AvatarFallback>
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                clerkId={user.clerkId}
-                profilePictureKey={user.profilePictureKey}
+                clerkId={rider.clerkId}
+                profilePictureKey={rider.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
               />
@@ -225,23 +222,23 @@ export default function Profile() {
 
           <Animated.View style={nameContainerStyle} className="items-center gap-1">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
-              {user.firstName} {user.lastName}
+              {rider.firstName} {rider.lastName}
             </Text>
             <Animated.View
               style={badgeOpacityStyle}
               className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
               <MaterialIcons
                 name={
-                  user.gender === 'Male'
+                  rider.gender === 'Male'
                     ? 'male'
-                    : user?.gender === 'Female'
+                    : rider?.gender === 'Female'
                       ? 'female'
                       : 'transgender'
                 }
                 size={13}
                 color="rgba(255,255,255,0.8)"
               />
-              <Text className="text-xs font-medium text-white">{user.gender}</Text>
+              <Text className="text-xs font-medium text-white">{rider.gender}</Text>
             </Animated.View>
           </Animated.View>
         </View>
@@ -276,7 +273,7 @@ export default function Profile() {
                   Date of Birth
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {new Date(user?.dob ?? '').toLocaleDateString()}
+                  {new Date(rider.dob).toLocaleDateString()}
                 </Text>
               </View>
             </View>
@@ -293,7 +290,7 @@ export default function Profile() {
                   Gender
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.gender}
+                  {rider.gender}
                 </Text>
               </View>
             </View>
@@ -310,7 +307,7 @@ export default function Profile() {
                   Phone Number
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {user?.phoneNumber}
+                  {rider.phoneNumber}
                 </Text>
               </View>
             </View>
@@ -336,8 +333,8 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { userId } = useAuth();
-  const uploadProfilePicture = useMutation(api.routes.user.uploadProfilePicture);
-  const removeProfilePictureKey = useMutation(api.routes.user.removeProfilePictureKey);
+  const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
+  const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   async function processUpload(fileUri: string | undefined, fileKey: string) {

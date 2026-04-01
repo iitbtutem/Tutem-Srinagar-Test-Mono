@@ -49,10 +49,9 @@ export default function EditProfile() {
   const { showToast } = useToast();
   const isDark = colorScheme.get() === 'dark';
 
-  const { userId, firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } = useLocalSearchParams<{
+  const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } = useLocalSearchParams<{
     firstName: string;
     lastName?: string;
-    userId: string;
     dob: string;
     phoneNumber: string;
     licenseNumber?: string;
@@ -69,7 +68,7 @@ export default function EditProfile() {
   const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const updateUser = useMutation(api.routes.user.updateDriver);
+  const updateDriver = useMutation(api.routes.driver.updateDriver);
 
   const {
     handleSubmit,
@@ -90,12 +89,7 @@ export default function EditProfile() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!userId) {
-        showToast({ title: 'Error', description: 'User not found', type: 'error' });
-        return;
-      }
-
-      await updateUser({ ...data, dob: String(data.dob), clerkId: clerkId, organizationId: data.organizationId as Id<"organization"> });
+      await updateDriver({ ...data, dob: String(data.dob), clerkId: clerkId, organizationId: data.organizationId as Id<"organization"> });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
