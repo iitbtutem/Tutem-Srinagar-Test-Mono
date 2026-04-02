@@ -25,6 +25,8 @@ export default function WhereTo() {
     const insets = useSafeAreaInsets();
     const bottomSheetRef = useRef<BottomSheet>(null);
     const mapRef = useRef<MapView>(null);
+    const pickupRef = useRef<any>(null);
+    const destinationRef = useRef<any>(null);
 
     // for bottom sheet
     const snapPoints = useMemo(() => ['40%', '90%'], []);
@@ -42,6 +44,7 @@ export default function WhereTo() {
     const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
 
 
+    // this is the effect for getting the current location of the user
     useEffect(() => {
         (async () => {
             setLocationLoading(true);
@@ -63,7 +66,8 @@ export default function WhereTo() {
             };
 
             const title = await getAddressFromCoords(location.coords.latitude, location.coords.longitude);
-
+            
+            pickupRef.current?.setAddressText(title);
             setPickupLocation({
                 title,
                 coords: { latitude: location.coords.latitude, longitude: location.coords.longitude }
@@ -75,7 +79,28 @@ export default function WhereTo() {
         })();
     }, []);
 
-    const handlePlaceSelect = async (data: any, details: any = null) => {
+
+    const handlePickupSelect = async (data: any, details: any = null) => {
+        if (details?.geometry?.location) {
+            const coords = {
+                latitude: details.geometry.location.lat,
+                longitude: details.geometry.location.lng,
+            };
+
+            setPickupLocation({
+                title: data.description || data.structured_formatting?.main_text || "Selected Location",
+                coords: coords
+            });
+
+            mapRef.current?.animateToRegion({
+                ...coords,
+                latitudeDelta: 0.015,
+                longitudeDelta: 0.015,
+            }, 1000);
+        }
+    };
+
+    const handleDestinationSelect = async (data: any, details: any = null) => {
         if (details?.geometry?.location) {
             const dropoffCoords = {
                 latitude: details.geometry.location.lat,
@@ -83,7 +108,7 @@ export default function WhereTo() {
             };
 
             setDestination({
-                title: data.description,
+                title: data.description || data.structured_formatting?.main_text || "Selected Destination",
                 coords: dropoffCoords
             });
 
@@ -152,6 +177,8 @@ export default function WhereTo() {
                     title,
                     coords: { latitude: region.latitude, longitude: region.longitude }
                 });
+                // Update the search input text as well
+                destinationRef.current?.setAddressText(title);
             } catch (error) {
                 console.error("Failed to update destination from map", error);
             } finally {
@@ -274,71 +301,69 @@ export default function WhereTo() {
                                         <View className="w-2 h-2 rounded-full bg-foreground" />
                                         <View className="w-0.5 h-10 bg-foreground" />
                                         <View className="w-2 h-2 bg-foreground" />
-                                    </View>
-
-                                    <View className="flex-1 border-2 border-foreground/20 rounded-xl bg-background relative">
-                                        {/* Pickup Location */}
-                                        <View className="flex-row items-center px-3 py-3 border-b-2 border-muted/50">
-                                            <Input
-                                                placeholder="Pickup location"
-                                                placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
-                                                value={pickupLocation?.title || ''}
-                                                onChangeText={(text) => setPickupLocation(prev => prev ? { ...prev, title: text } : { title: text, coords: { latitude: 0, longitude: 0 } })}
-                                                className="flex-1 font-semibold text-base text-foreground border-0 bg-transparent shadow-none"
-                                            />
-                                        </View>
-
-                                        {/* Destination Location (GooglePlacesAutocomplete) */}
-                                        <View className="flex-row items-center bg-muted/20 pb-0.5">
+                                    </View>                                    <View className="flex-1 border-2 border-foreground/20 rounded-xl bg-background overflow-hidden">
+                                        {/* Pickup Location Autocomplete */}
+                                        <View className="flex-row items-center border-b-2 border-muted/50 z-[1000]">
                                             <GooglePlacesAutocomplete
-                                                placeholder="Where to?"
+                                                ref={pickupRef}
+                                                placeholder="Pickup location"
                                                 fetchDetails={true}
-                                                onPress={handlePlaceSelect}
+                                                onPress={handlePickupSelect}
                                                 query={{
-                                                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '', // Insert your Google Maps API key in .env
+                                                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
                                                     language: 'en',
                                                 }}
                                                 enablePoweredByContainer={false}
                                                 styles={{
-                                                    container: { flex: 1 },
-                                                    textInputContainer: { backgroundColor: 'transparent', paddingHorizontal: 12 },
+                                                    container: { flex: 0, width: '100%' },
                                                     textInput: {
                                                         backgroundColor: 'transparent',
-                                                        height: 48,
+                                                        height: 50,
                                                         fontSize: 16,
                                                         fontWeight: '600',
-                                                        margin: 0,
-                                                        padding: 0,
                                                         color: isDark ? 'white' : 'black',
+                                                        paddingHorizontal: 12,
                                                     },
                                                     listView: {
-                                                        position: 'absolute',
-                                                        top: 50,
-                                                        left: -40, // Offsets the left timeline margin to look like full-width overlay
-                                                        width: '125%', // Expands to cover full screen width under inputs
+                                                        maxHeight: 200,
                                                         backgroundColor: isDark ? '#1C1C1E' : 'white',
-                                                        zIndex: 9999,
-                                                        elevation: 10,
-                                                        borderBottomLeftRadius: 16,
-                                                        borderBottomRightRadius: 16,
+                                                        borderBottomWidth: 1,
+                                                        borderColor: isDark ? '#3A3A3C' : '#E5E5E7',
                                                     },
-                                                    row: {
-                                                        padding: 16,
-                                                        height: 60,
-                                                        flexDirection: 'row',
-                                                        backgroundColor: isDark ? '#1C1C1E' : 'white',
-                                                    },
-                                                    description: {
-                                                        fontSize: 15,
+                                                    row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
+                                                    description: { color: isDark ? '#E5E5E7' : 'black' },
+                                                }}
+                                            />
+                                        </View>
+
+                                        {/* Destination Location Autocomplete */}
+                                        <View className="flex-row items-center bg-muted/20 z-[900]">
+                                            <GooglePlacesAutocomplete
+                                                ref={destinationRef}
+                                                placeholder="Where to?"
+                                                fetchDetails={true}
+                                                onPress={handleDestinationSelect}
+                                                query={{
+                                                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+                                                    language: 'en',
+                                                }}
+                                                enablePoweredByContainer={false}
+                                                styles={{
+                                                    container: { flex: 0, width: '100%' },
+                                                    textInput: {
+                                                        backgroundColor: 'transparent',
+                                                        height: 50,
+                                                        fontSize: 16,
                                                         fontWeight: '600',
-                                                        color: isDark ? '#E5E5E7' : 'black',
+                                                        color: isDark ? 'white' : 'black',
+                                                        paddingHorizontal: 12,
                                                     },
-                                                    predefinedPlacesDescription: {
-                                                        color: '#1faadb',
+                                                    listView: {
+                                                        maxHeight: 200,
+                                                        backgroundColor: isDark ? '#1C1C1E' : 'white',
                                                     },
-                                                    separator: {
-                                                        backgroundColor: isDark ? '#3A3A3C' : '#E5E5E7',
-                                                    }
+                                                    row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
+                                                    description: { color: isDark ? '#E5E5E7' : 'black' },
                                                 }}
                                             />
                                         </View>

@@ -1,7 +1,9 @@
 export async function getAddressFromCoords(latitude: number, longitude: number): Promise<string> {
 
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
     console.log(apiKey, "api key")
+
     if (!apiKey) {
         console.error("No Google Maps API Key found");
         return "Unnamed Road";
