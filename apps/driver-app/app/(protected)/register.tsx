@@ -2,7 +2,6 @@ import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/Date
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import {
- 
   TextInput,
   View,
   TouchableOpacity,

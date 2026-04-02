@@ -18,18 +18,20 @@ export const addDriver = mutation({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
+    let existingUser = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
 
-    let existingUser = await ctx.db.query("user").filter(q=> q.eq(q.field("clerkId"), args.clerkId)).first();
+    if (existingUser) {
+      const existingDriver = await ctx.db
+        .query("driver")
+        .filter((q) => q.eq(q.field("userId"), args.clerkId))
+        .first();
 
-    if(existingUser){
-        const existingDriver = await ctx.db
-          .query("driver")
-          .filter((q) => q.eq(q.field("userId"), args.clerkId))
-          .first();
-    
-        if (existingDriver) {
-          throw new ConvexError("Driver already Registered");
-        }
+      if (existingDriver) {
+        throw new ConvexError("Driver already Registered");
+      }
     }
 
     const organization = await ctx.db
@@ -40,20 +42,23 @@ export const addDriver = mutation({
     if (organization === null) throw new ConvexError("Organization not found");
 
     let userId = existingUser?._id;
-    if(existingUser === null){
-        userId = await ctx.db.insert("user", {
-            clerkId: args.clerkId,
-            firstName: args.firstName,
-            lastName: args.lastName,
-            dob: args.dob,
-            gender: args.gender,
-            phoneNumber: args.phoneNumber
-        });
-    };
+    if (existingUser === null) {
+      userId = await ctx.db.insert("user", {
+        clerkId: args.clerkId,
+        firstName: args.firstName,
+        lastName: args.lastName,
+        dob: args.dob,
+        gender: args.gender,
+        phoneNumber: args.phoneNumber,
+      });
+    }
 
-    if(userId === undefined) throw new ConvexError("Failed to create user")
+    if (userId === undefined) throw new ConvexError("Failed to create user");
 
-    await ctx.db.insert("userPermission", { userId: userId, permission: 'Driver'});
+    await ctx.db.insert("userPermission", {
+      userId: userId,
+      permission: "Driver",
+    });
     await ctx.db.insert("driver", {
       userId,
       organizationId: args.organizationId,
@@ -175,11 +180,17 @@ export const updateDriver = mutation({
 
     if (organization === null) throw new ConvexError("Organization not found");
 
-    const licenseDetailsChanged = args.licenseNumber !== driver.licenseNumber || args.licenseImageFrontKey !== driver.licenseImageFrontKey || args.licenseImageBackKey !== driver.licenseImageBackKey
-    if(!organization.canDriverEditLicesnse && licenseDetailsChanged)
-        throw new ConvexError("update license details cannot be updated")
+    const licenseDetailsChanged =
+      args.licenseNumber !== driver.licenseNumber ||
+      args.licenseImageFrontKey !== driver.licenseImageFrontKey ||
+      args.licenseImageBackKey !== driver.licenseImageBackKey;
+    if (!organization.canDriverEditLicesnse && licenseDetailsChanged)
+      throw new ConvexError("update license details cannot be updated");
 
-    const isLicenseVerified = organization.isLicenseVerficationRequired && licenseDetailsChanged ? "Pending" : "Verified"
+    const isLicenseVerified =
+      organization.isLicenseVerficationRequired && licenseDetailsChanged
+        ? "Pending"
+        : "Verified";
 
     await ctx.db.patch(user._id, {
       firstName: args.firstName,
@@ -192,8 +203,12 @@ export const updateDriver = mutation({
     await ctx.db.patch(driver._id, {
       licenseNumber: args.licenseNumber,
       isLicenseVerified: isLicenseVerified,
-      licenseImageFrontKey: organization.isLicenseVerficationRequired ? args.licenseImageFrontKey : undefined,
-      licenseImageBackKey: organization.isLicenseVerficationRequired ? args.licenseImageBackKey : undefined,
+      licenseImageFrontKey: organization.isLicenseVerficationRequired
+        ? args.licenseImageFrontKey
+        : undefined,
+      licenseImageBackKey: organization.isLicenseVerficationRequired
+        ? args.licenseImageBackKey
+        : undefined,
       organizationId: args.organizationId,
     });
   },
@@ -210,7 +225,7 @@ export const uploadProfilePicture = mutation({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    if (user === null ) throw new ConvexError("User not found");
+    if (user === null) throw new ConvexError("User not found");
 
     await ctx.db.patch(user._id, {
       profilePictureKey: args.profilePictureKey,
@@ -240,8 +255,8 @@ export const updateLicense = mutation({
   args: {
     driverId: v.id("driver"),
     number: v.string(),
-    frontImageKey: v.string(),
-    backImageKey: v.string(),
+    frontImageKey: v.optional(v.string()),
+    backImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db
