@@ -38,6 +38,7 @@ import {
   BottomSheetIndicatorColor,
   iconBackgroundColor,
   iconColor,
+  VERIFICATION_CONFIG,
 } from '@/constants/colors';
 
 const { width } = Dimensions.get('window');
@@ -162,6 +163,9 @@ export default function Profile() {
   if (!userId) return <ErrorScreen message="Account not found" />;
   if (driver === undefined) return <LoadingScreen message="Loading profile..." />;
   if (driver === null) return <ErrorScreen message="Account not found" />;
+
+  const licenseVerification = VERIFICATION_CONFIG[driver.isLicenseVerified];
+  const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
@@ -342,12 +346,6 @@ export default function Profile() {
               <TouchableOpacity
                 className="flex-row items-center gap-4"
                 onPress={() => {
-                  if (
-                    !driver.licenseImageFrontKey ||
-                    !driver.licenseImageBackKey ||
-                    !driver.organization?.isLicenseVerficationRequired
-                  )
-                    return;
                   licenseBottomSheetRef.current?.snapToIndex(0);
                 }}>
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
@@ -361,11 +359,7 @@ export default function Profile() {
                     {driver.licenseNumber}
                   </Text>
                 </View>
-                {!(
-                  !driver.licenseImageFrontKey ||
-                  !driver.licenseImageBackKey ||
-                  !driver.organization?.isLicenseVerficationRequired
-                ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
+                <Feather name="chevron-right" size={16} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
@@ -402,7 +396,10 @@ export default function Profile() {
                   {/* Model + Reg Number Row */}
                   <TouchableOpacity
                     onPress={() => {
-                      if(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) 
+                      if (
+                        vehicle.rcImageKey === undefined ||
+                        driver.organization?.isVehicleRegistrationRequired === false
+                      )
                         return;
                       vehicleBottomSheetRef.current?.snapToIndex(0);
                     }}
@@ -424,8 +421,10 @@ export default function Profile() {
                         </Text>
                       </View>
                     </View>
-                    {!(vehicle.rcImageKey === undefined || driver.organization?.isVehicleRegistrationRequired === false) &&
-                    <Feather name="chevron-right" size={16} color="#94a3b8" />}
+                    {!(
+                      vehicle.rcImageKey === undefined ||
+                      driver.organization?.isVehicleRegistrationRequired === false
+                    ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
                   </TouchableOpacity>
 
                   <View className="mx-1 h-px bg-slate-100 dark:bg-zinc-800" />
@@ -513,7 +512,9 @@ export default function Profile() {
         ref={licenseBottomSheetRef}
         index={-1}
         animationConfigs={{ duration: 450 }}
-        snapPoints={snapPoints}
+        snapPoints={
+          driver.licenseImageFrontKey || driver.licenseImageBackKey ? ['50%', '80%'] : ['30%']
+        }
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
@@ -522,25 +523,52 @@ export default function Profile() {
         )}>
         <BottomSheetView className="pb-8">
           {/* Header */}
-          <View className="flex-row items-center gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
-              <Feather name="credit-card" size={16} color="#fff" />
+          <View className="flex-row items-center justify-between gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
+            <View className="flex-row items-center gap-3">
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+                <Feather name="credit-card" size={16} color="#fff" />
+              </View>
+              <View>
+                <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
+                  Driver's License
+                </Text>
+                {/* Verified badge */}
+                <View
+                  style={{ backgroundColor: licenseVerification.color + '30' }}
+                  className="flex-row items-center gap-1 self-start rounded-full px-2.5 py-1">
+                  <Feather
+                    name={licenseVerification.icon as any}
+                    size={11}
+                    color={licenseVerification.color}
+                  />
+                  <Text
+                    style={{ color: licenseVerification.color }}
+                    className="text-xs font-semibold">
+                    {licenseVerification.label}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View className="flex-1">
-              <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
-                Driver's License
-              </Text>
-              <Text className="mt-0.5 text-xs text-slate-400 dark:text-zinc-500">
-                Verified identity document
-              </Text>
-            </View>
-            {/* Verified badge */}
-            <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 dark:bg-emerald-900/30">
-              <Feather name="check-circle" size={11} color="#10b981" />
-              <Text className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                Verified
-              </Text>
-            </View>
+
+            {/* Edit button */}
+            {driver.organization?.canDriverEditLicesnse && (
+              <TouchableOpacity
+                onPress={() => {
+                  router.push({
+                    pathname: '/(protected)/editLicense',
+                    params: {
+                      licenseNumber: driver.licenseNumber,
+                      driverId: driver._id,
+                      requiresLicenseImg: driver.organization?.isLicenseVerficationRequired
+                        ? 'true'
+                        : 'false',
+                    },
+                  });
+                }}
+                className="h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                <Feather name="edit-2" size={14} color="#3b82f6" />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* License Number */}
@@ -559,11 +587,24 @@ export default function Profile() {
           </View>
 
           {/* Images */}
-          <View className="mt-3 gap-2 px-6">
-            <LicenseImageCard label="Front Side" uri={driver.licenseImageFrontKey} isDark={isDark} />
-
-            <LicenseImageCard label="Back Side" uri={driver.licenseImageBackKey} isDark={isDark} />
-          </View>
+          {driver.organization?.isLicenseVerficationRequired && (
+            <View className="mt-3 gap-2 px-6">
+              {driver.licenseImageFrontKey && (
+                <LicenseImageCard
+                  label="Front Side"
+                  uri={driver.licenseImageFrontKey}
+                  isDark={isDark}
+                />
+              )}
+              {driver.licenseImageBackKey && (
+                <LicenseImageCard
+                  label="Back Side"
+                  uri={driver.licenseImageBackKey}
+                  isDark={isDark}
+                />
+              )}
+            </View>
+          )}
         </BottomSheetView>
       </BottomSheet>
 
@@ -585,39 +626,61 @@ export default function Profile() {
           )}>
           <BottomSheetView className="pb-8">
             {/* Header */}
-            <View className="flex-row items-center gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
-                <Feather name="credit-card" size={16} color="#fff" />
+            {/* Header */}
+            <View className="flex-row items-center justify-between gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
+              <View className="flex-row items-center gap-3">
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+                  <Feather name="credit-card" size={16} color="#fff" />
+                </View>
+                <View>
+                  <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
+                    Vehicle Details
+                  </Text>
+                  {/* Verified badge */}
+                  <View
+                    style={{ backgroundColor: vehicleVerification.color + '30' }}
+                    className="flex-row items-center gap-1 self-start rounded-full px-2.5 py-1">
+                    <Feather
+                      name={vehicleVerification.icon as any}
+                      size={11}
+                      color={vehicleVerification.color}
+                    />
+                    <Text
+                      style={{ color: vehicleVerification.color }}
+                      className="text-xs font-semibold">
+                      {vehicleVerification.label}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-50">
-                  Vehicle Details
-                </Text>
-              </View>
-              <TouchableOpacity
-                className="h-9 w-9 items-center justify-center rounded-full"
-                style={{ backgroundColor: iconBackgroundColor }}
-                onPress={() => {
-                  router.push({
-                    pathname: '/(protected)/editVehicle',
-                    params: {
-                      vehicleId: vehicle._id,
-                      registrationNumber: vehicle.registrationNumber,
-                      type: vehicle.type,
-                      model: vehicle.model,
-                      fuelType: vehicle.fuelType,
-                      color: vehicle.color,
-                      seatingCapacity: String(vehicle.seatingCapacity),
-                      vehicleClass: vehicle.class,
-                      rcImageKey: vehicle.rcImageKey,
-                      isRcRequired: driver.organization?.isVehicleRegistrationRequired
-                        ? 'true'
-                        : 'false',
-                    },
-                  });
-                }}>
-                <MaterialIcons name="edit" size={18} color={iconColor} />
-              </TouchableOpacity>
+
+              {/* Edit button */}
+              {driver.organization?.canDriverEditVehicle && (
+                <TouchableOpacity
+                  className="h-9 w-9 items-center justify-center rounded-full"
+                  style={{ backgroundColor: iconBackgroundColor }}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/(protected)/editVehicle',
+                      params: {
+                        vehicleId: vehicle._id,
+                        registrationNumber: vehicle.registrationNumber,
+                        type: vehicle.type,
+                        model: vehicle.model,
+                        fuelType: vehicle.fuelType,
+                        color: vehicle.color,
+                        seatingCapacity: String(vehicle.seatingCapacity),
+                        vehicleClass: vehicle.class,
+                        rcImageKey: vehicle.rcImageKey,
+                        isRcRequired: driver.organization?.isVehicleRegistrationRequired
+                          ? 'true'
+                          : 'false',
+                      },
+                    });
+                  }}>
+                  <MaterialIcons name="edit" size={18} color={iconColor} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* License Number */}

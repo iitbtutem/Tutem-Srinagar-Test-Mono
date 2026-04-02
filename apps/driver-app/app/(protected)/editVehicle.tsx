@@ -29,6 +29,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useUser } from '@clerk/expo';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
@@ -71,7 +72,7 @@ export default function EditVehicle() {
     vehicleClass: (typeof VEHICLE_CLASS)[number];
     isRcRequired: string;
   }>();
-  
+
   if (!vehicleId) {
     showToast({ title: 'Error', description: 'Vehicle not found', type: 'error' });
     return router.back();
@@ -130,7 +131,6 @@ export default function EditVehicle() {
       showToast({ title: 'Success', description: 'Vehicle updated successfully', type: 'success' });
       router.back();
     } catch (error) {
-      console.error(error);
       showToast({ title: 'Error', description: 'Failed to update vehicle', type: 'error' });
     }
   });
@@ -196,14 +196,15 @@ export default function EditVehicle() {
 
   return (
     <View className="flex-1 bg-background">
+      <SafeAreaView />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
+        contentContainerStyle={{ flexGrow: 1 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           {/* Back button */}
           <TouchableOpacity
-            className="mb-2 mt-1 flex-row items-center gap-1.5 self-start"
+            className="m-2 mt-1 flex-row items-center gap-1.5 self-start"
             onPress={() => router.back()}>
             <MaterialIcons name="keyboard-backspace" size={20} color={isDark ? 'white' : 'black'} />
             <Text className="text-sm font-medium text-foreground opacity-90">Back</Text>

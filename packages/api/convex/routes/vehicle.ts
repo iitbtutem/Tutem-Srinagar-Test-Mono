@@ -75,14 +75,20 @@ export const addVehicle = mutation({
       throw new Error("Vehicle already exists");
     }
 
-    const userExistingVehicle = await ctx.db.query("vehicle")
-    .filter(q => q.eq(q.field("ownerId"), driver._id))
-    .first();
-    if(userExistingVehicle !== null) throw new ConvexError("Vehicle already registered for the driver")
+    const userExistingVehicle = await ctx.db
+      .query("vehicle")
+      .filter((q) => q.eq(q.field("ownerId"), driver._id))
+      .first();
+    if (userExistingVehicle !== null)
+      throw new ConvexError("Vehicle already registered for the driver");
 
     const newVehicle = await ctx.db.insert("vehicle", {
       ...args,
-      isVerified: organization.isVehicleRegistrationRequired && organization.isVehicleRCVerificationRequired ? "Pending" : "Verified",
+      isVerified:
+        organization.isVehicleRegistrationRequired &&
+        organization.isVehicleRCVerificationRequired
+          ? "Pending"
+          : "Verified",
     });
 
     return newVehicle;
@@ -102,29 +108,41 @@ export const updateVehicle = mutation({
     rcImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const vehicle = await ctx.db.query("vehicle")
-    .filter(q => q.eq(q.field("_id"), args.id))
-    .first();
-    if(vehicle === null) throw new ConvexError("Vehicle not found");
+    const { id, ...input } = args;
+    const vehicle = await ctx.db
+      .query("vehicle")
+      .filter((q) => q.eq(q.field("_id"), id))
+      .first();
+    if (vehicle === null) throw new ConvexError("Vehicle not found");
 
-    const driver = await ctx.db.query("driver")
-    .filter(q => q.eq(q.field("_id"), vehicle.ownerId))
-    .first();
-    if(driver === null) throw new ConvexError("Driver not found");
+    const driver = await ctx.db
+      .query("driver")
+      .filter((q) => q.eq(q.field("_id"), vehicle.ownerId))
+      .first();
+    if (driver === null) throw new ConvexError("Driver not found");
 
-    const organization = await ctx.db.query("organization")
-    .filter(q => q.eq(q.field("_id"), driver.organizationId))
-    .first();
-    if(organization === null) throw new ConvexError("Driver not assigned to any organization");
-    if(organization.canDriverEditVehicle === false) throw new ConvexError("Vehicle can't be updated");
+    const organization = await ctx.db
+      .query("organization")
+      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
+      .first();
+    if (organization === null)
+      throw new ConvexError("Driver not assigned to any organization");
+    if (organization.canDriverEditVehicle === false)
+      throw new ConvexError("Vehicle can't be updated");
 
-    if(organization.isVehicleRegistrationRequired && !args.rcImageKey)
+    if (organization.isVehicleRegistrationRequired && !input.rcImageKey)
       throw new ConvexError("Vehicle RC is required");
 
     await ctx.db.patch(vehicle._id, {
-      ...args,
-      isVerified: organization.isVehicleRegistrationRequired && organization.isVehicleRCVerificationRequired ? "Pending" : "Verified",
-      rcImageKey: organization.isVehicleRegistrationRequired ? args.rcImageKey : ""
-    })
+      ...input,
+      isVerified:
+        organization.isVehicleRegistrationRequired &&
+        organization.isVehicleRCVerificationRequired
+          ? "Pending"
+          : "Verified",
+      rcImageKey: organization.isVehicleRegistrationRequired
+        ? input.rcImageKey
+        : "",
+    });
   },
 });
