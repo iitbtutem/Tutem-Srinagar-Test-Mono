@@ -61,10 +61,7 @@ export default function Profile() {
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
-  const vehicle = useQuery(
-    api.routes.vehicle.getVehicleByDriverId,
-    driver?._id ? { driverId: driver._id } : 'skip'
-  );
+  const vehicle = useQuery( api.routes.vehicle.getVehicleByDriverId, driver && driver.driver?._id ? { driverId: driver.driver?._id } : 'skip');
 
   const handleLogout = async () => {
     await signOut();
@@ -162,9 +159,9 @@ export default function Profile() {
 
   if (!userId) return <ErrorScreen message="Account not found" />;
   if (driver === undefined) return <LoadingScreen message="Loading profile..." />;
-  if (driver === null) return <ErrorScreen message="Account not found" />;
+  if (driver === null ) return <ErrorScreen message="Account not found" />;
 
-  const licenseVerification = VERIFICATION_CONFIG[driver.isLicenseVerified];
+  const licenseVerification = VERIFICATION_CONFIG[driver.driver?.isLicenseVerified ?? "Pending"];
   const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
@@ -190,9 +187,9 @@ export default function Profile() {
                   lastName: driver?.lastName,
                   dob: driver.dob,
                   phoneNumber: driver.phoneNumber,
-                  licenseNumber: driver.licenseNumber,
+                  licenseNumber: driver.driver?.licenseNumber,
                   gender: driver.gender,
-                  organizationId: driver.organizationId,
+                  organizationId: driver.driver?.organizationId,
                   clerkId: driver.clerkId,
                 },
               })
@@ -356,7 +353,7 @@ export default function Profile() {
                     License Number
                   </Text>
                   <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                    {driver.licenseNumber}
+                    {driver.driver?.licenseNumber}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color="#94a3b8" />
@@ -557,7 +554,7 @@ export default function Profile() {
                   router.push({
                     pathname: '/(protected)/editLicense',
                     params: {
-                      licenseNumber: driver.licenseNumber,
+                      licenseNumber: driver.driver?.licenseNumber,
                       driverId: driver._id,
                       requiresLicenseImg: driver.organization?.isLicenseVerficationRequired
                         ? 'true'
@@ -578,7 +575,7 @@ export default function Profile() {
                 License No.
               </Text>
               <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
-                {driver.licenseNumber ?? '—'}
+                {driver.driver?.licenseNumber ?? '—'}
               </Text>
             </View>
             <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">

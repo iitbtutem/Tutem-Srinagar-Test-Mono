@@ -1,10 +1,6 @@
-import { useAuth } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
-import { api } from '@tutem/api';
-import { useQuery } from 'convex/react';
-import { Redirect, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
 
 export default function TabsLayout() {
 

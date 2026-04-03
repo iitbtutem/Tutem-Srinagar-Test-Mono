@@ -12,19 +12,20 @@ export default function ProtectedLayout() {
   const protectedGuard = !!userId && !!user;
 
   useEffect(() => {
-    if (user && user.rider === null && userId) {
-      if (router.canDismiss()) {
-        router.dismissAll();
-      }
-      router.replace('/register');
-    }
-    if (protectedGuard && user.rider === null) {
-      if (router.canDismiss()) {
-        router.dismissAll();
-      }
-      router.replace('/registerAsRider');
-    }
-  }, [user, userId, router]);
+     if (user === null && userId) {
+       if (router.canDismiss()) {
+         router.dismissAll();
+       }
+       router.replace('/register');
+     }
+     if (protectedGuard && user.rider === null) {
+       if (router.canDismiss()) {
+         router.dismissAll();
+       }
+       router.replace('/registerAsRider');
+     }
+   }, [user, userId, router]);
+
 
   if (user === undefined) return <ActivityIndicator />;
 

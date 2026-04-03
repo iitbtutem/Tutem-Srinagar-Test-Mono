@@ -1,26 +1,50 @@
 import { useAuth, useUser } from '@clerk/expo';
 import { api } from '@tutem/api';
-import { useConvexAuth, useQuery } from 'convex/react';
-import { Redirect, Stack } from 'expo-router';
-import LoadingScreen from '@/components/LoadingScreen';
-import ErrorScreen from '@/components/ErrorScreen';
+import { useQuery } from 'convex/react';
+import { Redirect, router, Stack, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator } from 'react-native';
 
 export default function ProtectedLayout() {
-  const { isAuthenticated } = useConvexAuth();
-  const { isSignedIn, userId, signOut } = useAuth();
-  const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
+  const { userId } = useAuth();
+  const segments = useSegments()
+  const user = useQuery(api.routes.driver.getDriver, userId && userId !== '' ? { clerkId: userId } : 'skip');
+  const protectedGuard = !!userId && !!user;
+  console.log("i am rayees baya", user);
 
-  const user = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  useEffect(() => {
+     if (user === null && userId) {
+       if (router.canDismiss()) {
+         router.dismissAll();
+       }
+       router.replace('/register');
+     }
+     if (protectedGuard && user.driver === null) {
+      console.log("mai nhi chalraha hu", protectedGuard, user.driver);
+        if (router.canDismiss()) {
+          router.dismissAll();
+        }
+      router.replace('/registerAsDriver');
+      console.log("mai hu segments", segments);
+     }
+   }, [user, userId, router, ]);
 
-  if (user === undefined || !isClerkUserLoaded) return <LoadingScreen message="Authenticating..." />;
+  // if (user === undefined) return <ActivityIndicator />;
 
-  if (!isAuthenticated || !isSignedIn) return <Redirect href={'/(auth)/signin'} />;
+  // if (user === null && userId) {
+  //   console.log("user is", user, userId);
+  //   console.log("i am redirecting to register");
+  //   return <Redirect href={'/register'} />;
+  // }
 
-  const protectedGuard = isAuthenticated && !!isSignedIn && !!userId && !!user;
+  // if (protectedGuard && user.driver === null) {
+  //   return <Redirect href={'/registerAsDriver'} />;
+  // }
+
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={protectedGuard}>
+      <Stack.Protected guard={protectedGuard && user.driver !== null}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="editProfile"
@@ -45,6 +69,9 @@ export default function ProtectedLayout() {
         />
       </Stack.Protected>
       <Stack.Screen name="register" />
+      <Stack.Protected guard={protectedGuard && user.driver === null}>
+        <Stack.Screen name="registerAsDriver" />
+      </Stack.Protected>
     </Stack>
   );
 }
