@@ -54,7 +54,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await signOut();
-    router.replace('/(auth)/signin');
+    router.replace('/signin');
   };
 
   const handleUploadImage = (imageUri: string): void => {

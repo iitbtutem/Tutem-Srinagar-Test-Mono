@@ -12,5 +12,5 @@ export default function RootScreen() {
     return <Redirect href={'/(protected)/(tabs)'} />;
   }
 
-  return <Redirect href={'/(auth)/signin'} />;
+  return <Redirect href={'/signin'} />;
 }

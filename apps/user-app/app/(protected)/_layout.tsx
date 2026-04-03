@@ -1,26 +1,36 @@
 import { useAuth, useUser } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useConvexAuth, useQuery } from 'convex/react';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, router, Stack } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
-import ErrorScreen from '@/components/ErrorScreen';
+import { useEffect } from 'react';
 
 export default function ProtectedLayout() {
-  const { isAuthenticated } = useConvexAuth();
-  const { isSignedIn, userId, signOut } = useAuth();
-  const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
+  const { userId } = useAuth();
 
   const user = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
+  const protectedGuard = !!userId && !!user;
 
-  if (user === undefined || !isClerkUserLoaded) return <ActivityIndicator />;
+  useEffect(() => {
+    if (user && user.rider === null && userId) {
+      if (router.canDismiss()) {
+        router.dismissAll();
+      }
+      router.replace('/register');
+    }
+    if (protectedGuard && user.rider === null) {
+      if (router.canDismiss()) {
+        router.dismissAll();
+      }
+      router.replace('/registerAsRider');
+    }
+  }, [user, userId, router]);
 
-  if (!isAuthenticated || !isSignedIn) return <Redirect href={'/(auth)/signin'} />;
-
-  const protectedGuard = isAuthenticated && !!isSignedIn && !!userId && !!user && !!user.rider;
+  if (user === undefined) return <ActivityIndicator />;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={protectedGuard}>
+      <Stack.Protected guard={protectedGuard && !!user.rider}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="editProfile"
@@ -31,6 +41,9 @@ export default function ProtectedLayout() {
         />
       </Stack.Protected>
       <Stack.Screen name="register" />
+      <Stack.Protected guard={protectedGuard && user.rider === null}>
+        <Stack.Screen name="registerAsRider" />
+      </Stack.Protected>
     </Stack>
   );
 }
