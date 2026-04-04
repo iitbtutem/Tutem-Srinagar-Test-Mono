@@ -74,6 +74,54 @@ export const addDriver = mutation({
   },
 });
 
+export const registerAsDriver = mutation({
+  args: {
+    clerkId: v.string(),
+    licenseNumber: v.string(),
+    licenseImageFrontKey: v.optional(v.string()),
+    licenseImageBackKey: v.optional(v.string()),
+    organizationId: v.id("organization"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
+    if (user === null) {
+      throw new ConvexError("User not found");
+    }
+
+    const existingDriver = await ctx.db
+      .query("driver")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .first();
+    if (existingDriver !== null)
+      throw new ConvexError("Driver profile already exists");
+
+    const organization = await ctx.db
+      .query("organization")
+      .filter((q) => q.eq(q.field("_id"), args.organizationId))
+      .first();
+
+    if (organization === null) throw new ConvexError("Organization not found");
+
+    await ctx.db.insert("driver", {
+      userId: user._id,
+      licenseNumber: args.licenseNumber,
+      licenseImageFrontKey: args.licenseImageFrontKey,
+      licenseImageBackKey: args.licenseImageBackKey,
+      isLicenseVerified: organization.isLicenseVerficationRequired
+        ? "Pending"
+        : "Verified",
+      organizationId: args.organizationId,
+    });
+    await ctx.db.insert("userPermission", {
+      userId: user._id,
+      permission: "Rider",
+    });
+  },
+});
+
 export const getDriver = query({
   args: {
     clerkId: v.string(),
@@ -91,56 +139,56 @@ export const getDriver = query({
       .filter((q) => q.eq(q.field("userId"), user._id))
       .first();
 
-    if (driver === null) return null;
-
     let licenseFrontImageUri;
     let licenseBackImageUri;
 
-    licenseFrontImageUri = driver.licenseImageFrontKey
+    licenseFrontImageUri = driver?.licenseImageFrontKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: driver.licenseImageFrontKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageFrontKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
-    licenseBackImageUri = driver.licenseImageBackKey
+    licenseBackImageUri = driver?.licenseImageBackKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: driver.licenseImageBackKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageBackKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     const profilePictureUri = user.profilePictureKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.profilePictureKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     const organization = await ctx.db
       .query("organization")
-      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
+      .filter((q) => q.eq(q.field("_id"), driver?.organizationId))
       .first();
 
     return {
       ...user,
-      ...driver,
-      organization: organization,
-      licenseImageFrontKey: licenseFrontImageUri,
-      licenseImageBackKey: licenseBackImageUri,
       profilePictureKey: profilePictureUri,
+      driverDetails: driver ? {
+        ...driver,
+        organization: organization,
+        licenseImageFrontKey: licenseFrontImageUri,
+        licenseImageBackKey: licenseBackImageUri,
+      } : null,
     };
   },
 });
@@ -180,12 +228,19 @@ export const updateDriver = mutation({
 
     if (organization === null) throw new ConvexError("Organization not found");
 
+    if (
+      organization.isLicenseVerficationRequired &&
+      (!args.licenseImageFrontKey || !args.licenseImageBackKey)
+    )
+      throw new ConvexError("License images are required");
+
     const licenseDetailsChanged =
       args.licenseNumber !== driver.licenseNumber ||
       args.licenseImageFrontKey !== driver.licenseImageFrontKey ||
       args.licenseImageBackKey !== driver.licenseImageBackKey;
+
     if (!organization.canDriverEditLicesnse && licenseDetailsChanged)
-      throw new ConvexError("update license details cannot be updated");
+      throw new ConvexError("license details cannot be updated");
 
     const isLicenseVerified =
       organization.isLicenseVerficationRequired && licenseDetailsChanged
@@ -274,10 +329,7 @@ export const updateLicense = mutation({
     if (organisation === null)
       throw new ConvexError("Driver doesn't belong to any organisation");
 
-    if (
-      !organisation.canDriverEditLicesnse &&
-      driver.isLicenseVerified !== "Pending"
-    )
+    if (!organisation.canDriverEditLicesnse && driver.isLicenseVerified === "Verified")
       throw new ConvexError("Can't update license details");
 
     if (!organisation.isLicenseVerficationRequired) {

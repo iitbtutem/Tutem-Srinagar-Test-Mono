@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { useMutation } from "convex/react";
 
 export const addRider = mutation({
   args: {
@@ -25,11 +26,34 @@ export const addRider = mutation({
 
     const userId = await ctx.db.insert("user", { ...args });
     await ctx.db.insert("rider", { isVerified: "Pending", userId });
-    await ctx.db.insert("userPermission", { userId: userId, permission: 'Rider'})
+    await ctx.db.insert("userPermission", { userId: userId, permission: 'Rider' })
 
     return userId;
   },
 });
+
+export const registerAsRider = mutation({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("user")
+      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .first();
+    if (user === null) {
+      throw new ConvexError("User not found");
+    };
+
+    const existingRider = await ctx.db.query("rider")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .first();
+    if (existingRider !== null) throw new ConvexError("Rider profile already exists");
+
+    await ctx.db.insert("rider", { isVerified: "Pending", userId: user._id });
+    await ctx.db.insert("userPermission", { userId: user._id, permission: 'Rider' });
+  }
+})
 
 export const getRider = query({
   args: {
@@ -50,18 +74,18 @@ export const getRider = query({
 
     const profilePictureUri = user.profilePictureKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
-          }),
-          { expiresIn: 300 }
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.profilePictureKey,
+        }),
+        { expiresIn: 300 }
+      )
       : undefined;
 
     return {
       ...user,
-      rider,
+      riderDetails: rider,
       profilePictureKey: profilePictureUri,
     };
   },

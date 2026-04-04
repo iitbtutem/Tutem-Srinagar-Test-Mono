@@ -8,7 +8,6 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';

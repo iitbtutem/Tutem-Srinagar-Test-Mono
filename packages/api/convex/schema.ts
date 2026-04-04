@@ -19,7 +19,7 @@ export default defineSchema({
     isVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
     userId: v.id("user"),
   }),
-  
+
   // Drivers
   driver: defineTable({
     licenseNumber: v.string(),
@@ -35,7 +35,6 @@ export default defineSchema({
     name: v.string(),
     address: v.string(),
     isLicenseVerficationRequired: v.boolean(),
-    isVehicleRegistrationRequired: v.boolean(),
     isVehicleRCVerificationRequired: v.boolean(),
     canDriverEditLicesnse: v.boolean(),
     canDriverEditVehicle: v.boolean(),

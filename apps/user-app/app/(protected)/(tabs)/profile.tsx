@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
 import {
- 
+
   iconBackgroundColor,
   iconColor,
 } from '@/constants/colors';
@@ -45,7 +45,6 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const isDark = colorScheme === 'dark';
 
@@ -54,7 +53,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await signOut();
-    router.replace('/(auth)/signin');
+    router.replace('/signin');
   };
 
   const handleUploadImage = (imageUri: string): void => {
