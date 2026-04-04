@@ -6,11 +6,13 @@ import { useQuery } from 'convex/react';
 import { Redirect, router } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, View, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
   return (
-    <View className="flex-1 bg-background p-6">
-      <View className='h-12 bg-muted/40 rounded-xl flex-row gap-2 items-center justify-between px-4 '>
+    <View className="bg-background flex-1">
+      <SafeAreaView />
+      <View className='h-12 bg-muted/40 rounded-xl flex-row gap-2 items-center justify-between px-4 mx-6'>
         <TouchableOpacity
           className='flex-row gap-2 items-center flex-1'
           onPress={() => router.push('/whereto')}
@@ -25,7 +27,7 @@ export default function Home() {
         </View>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="mt-4">
+        <View className="mt-4 mx-6">
           <Text className='text-lg font-bold mb-4'>Ride Services</Text>
           <FlatList
             data={[
@@ -57,14 +59,15 @@ export default function Home() {
         </View >
 
         <View className='mt-4'>
-          <Text className='text-lg font-bold mb-4'>Insights</Text>
+          <Text className='text-lg font-bold mb-4 mx-6'>Insights</Text>
           <FlatList
             data={[
               { id: 'Vid1', },
               { id: 'Vid2', },
               { id: 'Vid3', },
             ] as const}
-
+            ListHeaderComponent={<View className='h-6' />}
+            ListFooterComponent={<View className='h-6' />}
             horizontal
             keyExtractor={(item) => item.id}
             scrollEnabled={true}
