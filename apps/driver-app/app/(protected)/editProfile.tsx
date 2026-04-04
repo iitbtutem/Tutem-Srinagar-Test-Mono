@@ -189,6 +189,8 @@ export default function EditProfile() {
         dob: String(data.dob),
         clerkId: clerkId,
         organizationId: data.organizationId as Id<'organization'>,
+        licenseImageFrontKey: uploadedFrontKey,
+        licenseImageBackKey: uploadedBackKey,
       });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
@@ -236,21 +238,21 @@ export default function EditProfile() {
                     defaultValue={
                       field.value
                         ? {
-                            value: field.value,
-                            label:
-                              organizations?.find((org) => org._id === field.value)?.name ||
-                              field.value,
-                          }
+                          value: field.value,
+                          label:
+                            organizations?.find((org) => org._id === field.value)?.name ||
+                            field.value,
+                        }
                         : undefined
                     }
                     value={
                       field.value
                         ? {
-                            value: field.value,
-                            label:
-                              organizations?.find((org) => org._id === field.value)?.name ||
-                              field.value,
-                          }
+                          value: field.value,
+                          label:
+                            organizations?.find((org) => org._id === field.value)?.name ||
+                            field.value,
+                        }
                         : undefined
                     }
                     onValueChange={(option) => field.onChange(option?.value)}>
@@ -430,17 +432,17 @@ export default function EditProfile() {
                     defaultValue={
                       field.value
                         ? {
-                            value: field.value,
-                            label: field.value,
-                          }
+                          value: field.value,
+                          label: field.value,
+                        }
                         : undefined
                     }
                     value={
                       field.value
                         ? {
-                            value: field.value,
-                            label: field.value,
-                          }
+                          value: field.value,
+                          label: field.value,
+                        }
                         : undefined
                     }
                     onValueChange={(option) => field.onChange(option?.value)}>

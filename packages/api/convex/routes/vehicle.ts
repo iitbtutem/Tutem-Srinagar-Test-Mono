@@ -17,13 +17,13 @@ export const getVehicleByDriverId = query({
 
     const rcImageKey = vehicle.rcImageKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: vehicle.rcImageKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: vehicle.rcImageKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     return { ...vehicle, rcImageKey };
@@ -61,7 +61,7 @@ export const addVehicle = mutation({
     if (organization === null)
       throw new ConvexError("Driver not assigned to any organization.");
 
-    if (organization.isVehicleRegistrationRequired && !args.rcImageKey)
+    if (organization.isVehicleRCVerificationRequired && !args.rcImageKey)
       throw new ConvexError("Vehicle RC required");
 
     const existingVehicle = await ctx.db
@@ -85,7 +85,6 @@ export const addVehicle = mutation({
     const newVehicle = await ctx.db.insert("vehicle", {
       ...args,
       isVerified:
-        organization.isVehicleRegistrationRequired &&
         organization.isVehicleRCVerificationRequired
           ? "Pending"
           : "Verified",
@@ -125,22 +124,23 @@ export const updateVehicle = mutation({
       .query("organization")
       .filter((q) => q.eq(q.field("_id"), driver.organizationId))
       .first();
+
     if (organization === null)
       throw new ConvexError("Driver not assigned to any organization");
-    if (organization.canDriverEditVehicle === false)
+
+    if (organization.canDriverEditVehicle === false && vehicle.isVerified === "Verified")
       throw new ConvexError("Vehicle can't be updated");
 
-    if (organization.isVehicleRegistrationRequired && !input.rcImageKey)
+    if (organization.isVehicleRCVerificationRequired && !input.rcImageKey)
       throw new ConvexError("Vehicle RC is required");
 
     await ctx.db.patch(vehicle._id, {
       ...input,
       isVerified:
-        organization.isVehicleRegistrationRequired &&
         organization.isVehicleRCVerificationRequired
           ? "Pending"
           : "Verified",
-      rcImageKey: organization.isVehicleRegistrationRequired
+      rcImageKey: organization.isVehicleRCVerificationRequired
         ? input.rcImageKey
         : "",
     });

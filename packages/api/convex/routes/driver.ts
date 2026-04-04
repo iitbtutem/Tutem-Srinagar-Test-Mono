@@ -132,8 +132,6 @@ export const getDriver = query({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-    console.log("user is", user);
-
     if (user === null) return null;
 
     const driver = await ctx.db
@@ -331,10 +329,7 @@ export const updateLicense = mutation({
     if (organisation === null)
       throw new ConvexError("Driver doesn't belong to any organisation");
 
-    if (
-      !organisation.canDriverEditLicesnse &&
-      driver.isLicenseVerified !== "Pending"
-    )
+    if (!organisation.canDriverEditLicesnse && driver.isLicenseVerified === "Verified")
       throw new ConvexError("Can't update license details");
 
     if (!organisation.isLicenseVerficationRequired) {

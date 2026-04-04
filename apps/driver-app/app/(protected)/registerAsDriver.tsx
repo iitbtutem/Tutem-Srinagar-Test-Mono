@@ -47,6 +47,7 @@ const formSchema = z.object({
 });
 
 export default function RegisterAsRider() {
+  console.log("hello i am in registers as driver");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
@@ -165,8 +166,9 @@ export default function RegisterAsRider() {
       const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
-      
-      await registerAsDriver({ ...restData,
+
+      await registerAsDriver({
+        ...restData,
         organizationId: data.organizationId as Id<'organization'>,
         clerkId: userId,
         licenseImageFrontKey: uploadedFrontKey,
@@ -191,7 +193,7 @@ export default function RegisterAsRider() {
     }
   });
 
-  if (driver && driver.driver) <Redirect href="/" />;
+  if (driver && driver.driverDetails) return <Redirect href="/" />;
 
   if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
 

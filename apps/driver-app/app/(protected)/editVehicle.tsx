@@ -78,7 +78,7 @@ export default function EditVehicle() {
     return router.back();
   }
 
-  const isVehicleRegistrationRequired = isRcRequired === 'true' ? true : false;
+  const isVehicleRCVerificationRequired = isRcRequired === 'true' ? true : false;
 
   const updateVehicle = useMutation(api.routes.vehicle.updateVehicle);
 
@@ -116,7 +116,7 @@ export default function EditVehicle() {
         `vehicleRegisration/${currentUser.user?.id}}`
       );
 
-      if (isVehicleRegistrationRequired && rcImageKey === undefined) {
+      if (isVehicleRCVerificationRequired && rcImageKey === undefined) {
         return setError('rcImageKey', {
           type: 'required',
           message: 'RC image required',
@@ -128,9 +128,11 @@ export default function EditVehicle() {
         ...data,
         rcImageKey,
       });
+
       showToast({ title: 'Success', description: 'Vehicle updated successfully', type: 'success' });
       router.back();
     } catch (error) {
+
       showToast({ title: 'Error', description: 'Failed to update vehicle', type: 'error' });
     }
   });
@@ -449,7 +451,7 @@ export default function EditVehicle() {
             </View>
 
             {/* RC */}
-            {isVehicleRegistrationRequired && (
+            {isVehicleRCVerificationRequired && (
               <View className="mt-2 gap-4">
                 <Controller
                   control={control}

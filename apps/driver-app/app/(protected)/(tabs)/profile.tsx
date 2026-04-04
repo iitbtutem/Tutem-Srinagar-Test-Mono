@@ -395,7 +395,7 @@ export default function Profile() {
                     onPress={() => {
                       if (
                         vehicle.rcImageKey === undefined ||
-                        driver.driverDetails?.organization?.isVehicleRegistrationRequired === false
+                        driver.driverDetails?.organization?.isVehicleRCVerificationRequired === false
                       )
                         return;
                       vehicleBottomSheetRef.current?.snapToIndex(0);
@@ -420,7 +420,7 @@ export default function Profile() {
                     </View>
                     {!(
                       vehicle.rcImageKey === undefined ||
-                      driver.driverDetails?.organization?.isVehicleRegistrationRequired === false
+                      driver.driverDetails?.organization?.isVehicleRCVerificationRequired === false
                     ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
                   </TouchableOpacity>
 
@@ -548,14 +548,14 @@ export default function Profile() {
             </View>
 
             {/* Edit button */}
-            {driver.driverDetails?.organization?.canDriverEditLicesnse && (
+            {(driver.driverDetails?.organization?.canDriverEditLicesnse || driver.driverDetails?.isLicenseVerified !== "Verified") && (
               <TouchableOpacity
                 onPress={() => {
                   router.push({
                     pathname: '/(protected)/editLicense',
                     params: {
                       licenseNumber: driver.driverDetails?.licenseNumber,
-                      driverId: driver._id,
+                      driverId: driver.driverDetails?._id,
                       requiresLicenseImg: driver.driverDetails?.organization?.isLicenseVerficationRequired
                         ? 'true'
                         : 'false',
@@ -623,7 +623,6 @@ export default function Profile() {
           )}>
           <BottomSheetView className="pb-8">
             {/* Header */}
-            {/* Header */}
             <View className="flex-row items-center justify-between gap-3 border-b border-zinc-100 px-6 pb-3 pt-2 dark:border-zinc-800">
               <View className="flex-row items-center gap-3">
                 <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
@@ -652,7 +651,7 @@ export default function Profile() {
               </View>
 
               {/* Edit button */}
-              {driver.driverDetails?.organization?.canDriverEditVehicle && (
+              {(driver.driverDetails?.organization?.canDriverEditVehicle || vehicle.isVerified !== "Verified") && (
                 <TouchableOpacity
                   className="h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: iconBackgroundColor }}
@@ -669,7 +668,7 @@ export default function Profile() {
                         seatingCapacity: String(vehicle.seatingCapacity),
                         vehicleClass: vehicle.class,
                         rcImageKey: vehicle.rcImageKey,
-                        isRcRequired: driver.driverDetails?.organization?.isVehicleRegistrationRequired
+                        isRcRequired: driver.driverDetails?.organization?.isVehicleRCVerificationRequired
                           ? 'true'
                           : 'false',
                       },

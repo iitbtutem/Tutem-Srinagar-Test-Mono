@@ -100,7 +100,7 @@ export default function CreateVehicle() {
       );
       if (driverDetails === null) return;
 
-      if (driverDetails.organization?.isVehicleRegistrationRequired && rcImageKey === undefined) {
+      if (driverDetails.organization?.isVehicleRCVerificationRequired && rcImageKey === undefined) {
         setError('rcImageKey', {
           type: 'required',
           message: 'RC image required',
@@ -186,7 +186,7 @@ export default function CreateVehicle() {
     }
   }
 
-  const { isVehicleRegistrationRequired } = driver.driverDetails.organization;
+  const { isVehicleRCVerificationRequired } = driver.driverDetails.organization;
 
   return (
     <View className="flex-1 bg-background pt-6">
@@ -429,7 +429,7 @@ export default function CreateVehicle() {
             </View>
 
             {/* RC */}
-            {isVehicleRegistrationRequired && (
+            {isVehicleRCVerificationRequired && (
               <View className="mt-2 gap-4">
                 <Controller
                   control={control}
