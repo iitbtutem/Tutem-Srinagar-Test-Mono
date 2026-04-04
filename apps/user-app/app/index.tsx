@@ -9,7 +9,7 @@ export default function RootScreen() {
   if (isLoading || !isLoaded) return null
 
   if (isAuthenticated && isSignedIn) {
-    return <Redirect href={'/(protected)/(tabs)'} />;
+    return <Redirect href={'/(protected)'} />;
   }
 
   return <Redirect href={'/signin'} />;

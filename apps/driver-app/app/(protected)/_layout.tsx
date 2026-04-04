@@ -1,10 +1,9 @@
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { Stack, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 
 export default function ProtectedLayout() {
-  const segments = useSegments()
   const { userId } = useAuth();
   const user = useQuery(api.routes.driver.getDriver, userId && userId !== '' ? { clerkId: userId } : 'skip');
 

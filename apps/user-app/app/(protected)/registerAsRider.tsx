@@ -15,15 +15,11 @@ export default function RegisterAsRider() {
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
-  const handleRegisterAsRider = () => {
-    if(router.canDismiss()){
-        router.dismissAll();
-    };
-    registerAsRider({ clerkId: userId ?? '' });
-    router.replace("/");
+  const handleRegisterAsRider = async () => {
+    await registerAsRider({ clerkId: userId ?? '' });
   };
-  
-  if(rider && rider.rider) <Redirect href="/" />;
+
+  if (rider && rider.riderDetails) <Redirect href="/" />;
 
   return (
     <View className="flex-1 justify-center bg-background p-6">
