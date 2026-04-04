@@ -61,7 +61,7 @@ export default function Profile() {
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
-  const vehicle = useQuery( api.routes.vehicle.getVehicleByDriverId, driver && driver.driver?._id ? { driverId: driver.driver?._id } : 'skip');
+  const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip');
 
   const handleLogout = async () => {
     await signOut();
@@ -159,9 +159,9 @@ export default function Profile() {
 
   if (!userId) return <ErrorScreen message="Account not found" />;
   if (driver === undefined) return <LoadingScreen message="Loading profile..." />;
-  if (driver === null ) return <ErrorScreen message="Account not found" />;
+  if (driver === null) return <ErrorScreen message="Account not found" />;
 
-  const licenseVerification = VERIFICATION_CONFIG[driver.driver?.isLicenseVerified ?? "Pending"];
+  const licenseVerification = VERIFICATION_CONFIG[driver.driverDetails?.isLicenseVerified ?? "Pending"];
   const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
@@ -187,9 +187,9 @@ export default function Profile() {
                   lastName: driver?.lastName,
                   dob: driver.dob,
                   phoneNumber: driver.phoneNumber,
-                  licenseNumber: driver.driver?.licenseNumber,
+                  licenseNumber: driver.driverDetails?.licenseNumber,
                   gender: driver.gender,
-                  organizationId: driver.driver?.organizationId,
+                  organizationId: driver.driverDetails?.organizationId,
                   clerkId: driver.clerkId,
                 },
               })
@@ -353,7 +353,7 @@ export default function Profile() {
                     License Number
                   </Text>
                   <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                    {driver.driver?.licenseNumber}
+                    {driver.driverDetails?.licenseNumber}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color="#94a3b8" />
@@ -372,7 +372,7 @@ export default function Profile() {
                   Organization
                 </Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
-                  {driver.organization?.name}
+                  {driver.driverDetails?.organization?.name}
                 </Text>
               </View>
             </View>
@@ -395,7 +395,7 @@ export default function Profile() {
                     onPress={() => {
                       if (
                         vehicle.rcImageKey === undefined ||
-                        driver.organization?.isVehicleRegistrationRequired === false
+                        driver.driverDetails?.organization?.isVehicleRegistrationRequired === false
                       )
                         return;
                       vehicleBottomSheetRef.current?.snapToIndex(0);
@@ -420,7 +420,7 @@ export default function Profile() {
                     </View>
                     {!(
                       vehicle.rcImageKey === undefined ||
-                      driver.organization?.isVehicleRegistrationRequired === false
+                      driver.driverDetails?.organization?.isVehicleRegistrationRequired === false
                     ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
                   </TouchableOpacity>
 
@@ -510,7 +510,7 @@ export default function Profile() {
         index={-1}
         animationConfigs={{ duration: 450 }}
         snapPoints={
-          driver.licenseImageFrontKey || driver.licenseImageBackKey ? ['50%', '80%'] : ['30%']
+          driver.driverDetails?.licenseImageFrontKey || driver.driverDetails?.licenseImageBackKey ? ['50%', '80%'] : ['30%']
         }
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
@@ -548,15 +548,15 @@ export default function Profile() {
             </View>
 
             {/* Edit button */}
-            {driver.organization?.canDriverEditLicesnse && (
+            {driver.driverDetails?.organization?.canDriverEditLicesnse && (
               <TouchableOpacity
                 onPress={() => {
                   router.push({
                     pathname: '/(protected)/editLicense',
                     params: {
-                      licenseNumber: driver.driver?.licenseNumber,
+                      licenseNumber: driver.driverDetails?.licenseNumber,
                       driverId: driver._id,
-                      requiresLicenseImg: driver.organization?.isLicenseVerficationRequired
+                      requiresLicenseImg: driver.driverDetails?.organization?.isLicenseVerficationRequired
                         ? 'true'
                         : 'false',
                     },
@@ -575,7 +575,7 @@ export default function Profile() {
                 License No.
               </Text>
               <Text className="font-mono text-base font-bold tracking-wider text-slate-800 dark:text-zinc-100">
-                {driver.driver?.licenseNumber ?? '—'}
+                {driver.driverDetails?.licenseNumber ?? '—'}
               </Text>
             </View>
             <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
@@ -584,19 +584,19 @@ export default function Profile() {
           </View>
 
           {/* Images */}
-          {driver.organization?.isLicenseVerficationRequired && (
+          {driver.driverDetails?.organization?.isLicenseVerficationRequired && (
             <View className="mt-3 gap-2 px-6">
-              {driver.licenseImageFrontKey && (
+              {driver.driverDetails?.licenseImageFrontKey && (
                 <LicenseImageCard
                   label="Front Side"
-                  uri={driver.licenseImageFrontKey}
+                  uri={driver.driverDetails?.licenseImageFrontKey}
                   isDark={isDark}
                 />
               )}
-              {driver.licenseImageBackKey && (
+              {driver.driverDetails?.licenseImageBackKey && (
                 <LicenseImageCard
                   label="Back Side"
-                  uri={driver.licenseImageBackKey}
+                  uri={driver.driverDetails?.licenseImageBackKey}
                   isDark={isDark}
                 />
               )}
@@ -652,7 +652,7 @@ export default function Profile() {
               </View>
 
               {/* Edit button */}
-              {driver.organization?.canDriverEditVehicle && (
+              {driver.driverDetails?.organization?.canDriverEditVehicle && (
                 <TouchableOpacity
                   className="h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: iconBackgroundColor }}
@@ -669,7 +669,7 @@ export default function Profile() {
                         seatingCapacity: String(vehicle.seatingCapacity),
                         vehicleClass: vehicle.class,
                         rcImageKey: vehicle.rcImageKey,
-                        isRcRequired: driver.organization?.isVehicleRegistrationRequired
+                        isRcRequired: driver.driverDetails?.organization?.isVehicleRegistrationRequired
                           ? 'true'
                           : 'false',
                       },

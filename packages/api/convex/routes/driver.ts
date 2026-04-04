@@ -132,7 +132,7 @@ export const getDriver = query({
       .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
       .first();
 
-      console.log("user is", user);
+    console.log("user is", user);
 
     if (user === null) return null;
 
@@ -146,35 +146,35 @@ export const getDriver = query({
 
     licenseFrontImageUri = driver?.licenseImageFrontKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: driver.licenseImageFrontKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageFrontKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     licenseBackImageUri = driver?.licenseImageBackKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: driver.licenseImageBackKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageBackKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     const profilePictureUri = user.profilePictureKey
       ? await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
-          }),
-          { expiresIn: 300 },
-        )
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.profilePictureKey,
+        }),
+        { expiresIn: 300 },
+      )
       : undefined;
 
     const organization = await ctx.db
@@ -184,11 +184,13 @@ export const getDriver = query({
 
     return {
       ...user,
-      driver,
-      organization: organization,
-      licenseImageFrontKey: licenseFrontImageUri,
-      licenseImageBackKey: licenseBackImageUri,
       profilePictureKey: profilePictureUri,
+      driverDetails: driver ? {
+        ...driver,
+        organization: organization,
+        licenseImageFrontKey: licenseFrontImageUri,
+        licenseImageBackKey: licenseBackImageUri,
+      } : null,
     };
   },
 });

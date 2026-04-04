@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { api } from '@tutem/api';
 import { useUser } from '@clerk/expo';
 import { useAction, useMutation, useQuery } from 'convex/react';
@@ -29,6 +29,8 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import { cn } from '@/lib/utils';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
+import ErrorScreen from '@/components/ErrorScreen';
+import LoadingScreen from '@/components/LoadingScreen';
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
@@ -82,18 +84,23 @@ export default function CreateVehicle() {
     },
   });
 
-  if (!driver) return;
+  if (driver === null) return <ErrorScreen message='Driver not found' />;
+  if (driver === undefined) return <LoadingScreen message='Fetching details' />
 
-  if (!driver.organization) return;
+
+  if (driver.driverDetails === null) return <ErrorScreen message='Driver not found' />;
+  if (!driver.driverDetails.organization) return <ErrorScreen message='Organization not found' />;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
+    const driverDetails = driver.driverDetails;
     try {
       const rcImageKey = await processUpload(
         data.rcImageKey,
         `vehicleRegisration/${driver._id}}`
       );
+      if (driverDetails === null) return;
 
-      if (driver.organization?.isVehicleRegistrationRequired && rcImageKey === undefined) {
+      if (driverDetails.organization?.isVehicleRegistrationRequired && rcImageKey === undefined) {
         setError('rcImageKey', {
           type: 'required',
           message: 'RC image required',
@@ -106,9 +113,11 @@ export default function CreateVehicle() {
         });
       }
 
+      if (!driverDetails._id) return;
+
       await addVehicle({
         ...data,
-        ownerId: driver._id,
+        ownerId: driverDetails._id,
         rcImageKey,
       });
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
@@ -121,7 +130,6 @@ export default function CreateVehicle() {
 
   const handlePick = async (source: 'camera' | 'gallery') => {
     bottomSheetRef.current?.close();
-    // if (!currentFieldToUpdate) return;
 
     let result;
     if (source === 'camera') {
@@ -150,7 +158,7 @@ export default function CreateVehicle() {
   };
 
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  
+
   async function processUpload(fileUri: string | undefined, fileKey: string) {
     if (!fileUri || !fileUri.startsWith('file://')) return;
 
@@ -178,7 +186,7 @@ export default function CreateVehicle() {
     }
   }
 
-  const { isVehicleRegistrationRequired } = driver.organization;
+  const { isVehicleRegistrationRequired } = driver.driverDetails.organization;
 
   return (
     <View className="flex-1 bg-background pt-6">
