@@ -2,7 +2,6 @@ import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/Date
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import {
- 
   TextInput,
   View,
   TouchableOpacity,
@@ -84,9 +83,9 @@ export default function Register() {
   const licenseRef = useRef<TextInput>(null);
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const addDriver = useMutation(api.routes.user.addDriver);
+  const addDriver = useMutation(api.routes.driver.addDriver);
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
 
   const {
     handleSubmit,
@@ -218,9 +217,6 @@ export default function Register() {
         licenseImageBackKey: uploadedBackKey,
       });
       
-      await clerkUser?.update({
-        unsafeMetadata: { role: 'driver' }
-      });
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
       // Navigate to the main app after profile completion
@@ -236,9 +232,9 @@ export default function Register() {
     }
   });
 
-  if (user === undefined) return <LoadingScreen message="Loading registration..." />;
+  if (driver === undefined) return <LoadingScreen message="Loading registration..." />;
 
-  if (user && userId) return <Redirect href="/" />;
+  if (driver && userId) return <Redirect href="/" />;
 
   if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
 

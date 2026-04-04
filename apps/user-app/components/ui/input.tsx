@@ -13,9 +13,13 @@ const Input = forwardRef<TextInput, TextInputProps>(({ className, ...props }, re
           'opacity-50',
           Platform.select({ web: 'disabled:pointer-events-none disabled:cursor-not-allowed' })
         ),
+        cn(
+          'opacity-50',
+          Platform.select({ web: 'disabled:pointer-events-none disabled:cursor-not-allowed' })
+        ),
         Platform.select({
           web: cn(
-            ' selection:bg-primary selection:text-primary-foreground outline-none transition-[color,box-shadow] md:text-sm',
+            'selection:bg-primary selection:text-primary-foreground outline-none transition-[color,box-shadow] md:text-sm',
             'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
             'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive'
           ),

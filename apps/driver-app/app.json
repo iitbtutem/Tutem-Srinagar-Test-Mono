@@ -36,7 +36,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-dev-client",
       "@react-native-community/datetimepicker",
       "@clerk/expo",
       "expo-secure-store",

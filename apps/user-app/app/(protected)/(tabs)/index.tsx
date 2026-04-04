@@ -4,16 +4,10 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Redirect, router } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, View, TouchableOpacity } from 'react-native';
 
 export default function Home() {
-  const { userId } = useAuth();
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
-
-  if (user === undefined) return <ActivityIndicator />;
-
-  if (user === null && userId) return <Redirect href="/register" />;
-
   return (
     <View className="flex-1 bg-background p-6">
       <View className='h-12 bg-muted/40 rounded-xl flex-row gap-2 items-center justify-between px-4 '>

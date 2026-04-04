@@ -29,6 +29,7 @@
     "convex": "*",
     "expo": "~54.0.29",
     "expo-constants": "~18.0.12",
+    "expo-font": "~14.0.11",
     "expo-image-picker": "~17.0.10",
     "expo-linking": "~8.0.10",
     "expo-location": "~19.0.8",

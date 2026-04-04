@@ -45,8 +45,8 @@ export default function Register() {
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
 
-  const addUser = useMutation(api.routes.user.addRider);
-  const user = useQuery(api.routes.user.getUser, { clerkId: userId ?? '' });
+  const addUser = useMutation(api.routes.rider.addRider);
+  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
 
   const {
     handleSubmit,
@@ -71,10 +71,6 @@ export default function Register() {
       }
 
       await addUser({ ...data, dob: String(data.dob), clerkId: userId });
-      
-      await clerkUser?.update({
-        unsafeMetadata: { role: 'rider' }
-      });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
@@ -84,9 +80,9 @@ export default function Register() {
     }
   });
 
-  if (user === undefined) return <ActivityIndicator />;
+  if (rider === undefined) return <ActivityIndicator />;
 
-  if (user && userId) return <Redirect href="/" />;
+  if (rider && userId) return <Redirect href="/" />;
 
   return (
     <Animated.ScrollView

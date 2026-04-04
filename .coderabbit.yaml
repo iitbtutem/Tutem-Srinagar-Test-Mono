@@ -8,37 +8,36 @@ reviews:
 
   review_status: true   # shows status message in PR
 
-# Ignore low-signal or generated files
-ignore:
-  # Docs & markdown
-  - "*.md"
-  - "docs/**"
+  path_filters:
+    # Docs & markdown
+    - "!*.md"
+    - "!docs/**"
 
-  # Build outputs
-  - "dist/**"
-  - "build/**"
-  - ".next/**"
-  - "out/**"
+    # Build outputs
+    - "!dist/**"
+    - "!build/**"
+    - "!.next/**"
+    - "!out/**"
 
-  # Dependency / lock files
-  - "package-lock.json"
-  - "yarn.lock"
-  - "pnpm-lock.yaml"
+    # Dependency / lock files
+    - "!package-lock.json"
+    - "!yarn.lock"
+    - "!pnpm-lock.yaml"
 
-  # Logs
-  - "*.log"
+    # Logs
+    - "!*.log"
 
-  # Environment files
-  - ".env"
-  - ".env.*"
+    # Environment files
+    - "!.env"
+    - "!.env.*"
 
-  # Coverage reports
-  - "coverage/**"
+    # Coverage reports
+    - "!coverage/**"
 
-  # Generated code
-  - "**/generated/**"
-  - "**/*.gen.*"
+    # Generated code
+    - "!**/generated/**"
+    - "!**/*.gen.*"
 
-  # Minified files
-  - "*.min.js"
-  - "*.min.css"
+    # Minified files
+    - "!*.min.js"
+    - "!*.min.css"
