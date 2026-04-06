@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import BottomSheet from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Location from 'expo-location';
 import { colorScheme, useColorScheme } from 'nativewind';
@@ -14,6 +14,9 @@ import { mapStyleDark } from '@/constants/mapStyles';
 import Animated, { useAnimatedStyle, interpolate, useSharedValue, Extrapolation, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import { useToast } from '@/components/CustomToast';
 import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
+import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
+import { useRouter } from 'expo-router';
+import { Button } from '@/components/ui/button';
 
 
 export default function WhereTo() {
@@ -28,6 +31,8 @@ export default function WhereTo() {
     const pickupRef = useRef<any>(null);
     const destinationRef = useRef<any>(null);
 
+    const router = useRouter();
+
     // for bottom sheet
     const snapPoints = useMemo(() => ['40%', '90%'], []);
     const [sheetIndex, setSheetIndex] = useState(1);
@@ -41,6 +46,8 @@ export default function WhereTo() {
 
 
     const [locationLoading, setLocationLoading] = useState(true);
+    const [mapSelectionMode, setMapSelectionMode] = useState<'pickup' | 'destination'>('destination');
+    const [isSetLocationExpanded, setIsSetLocationExpanded] = useState(false);
     const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
 
 
@@ -66,7 +73,7 @@ export default function WhereTo() {
             };
 
             const title = await getAddressFromCoords(location.coords.latitude, location.coords.longitude);
-            
+
             pickupRef.current?.setAddressText(title);
             setPickupLocation({
                 title,
@@ -160,6 +167,12 @@ export default function WhereTo() {
         zIndex: animatedIndex.value <= 0.5 ? 10 : 0
     }));
 
+    const rotationStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }]
+        };
+    });
+
     const handleSheetChanges = useCallback((index: number) => {
         setSheetIndex(index);
         if (index === 0) Keyboard.dismiss();
@@ -168,19 +181,26 @@ export default function WhereTo() {
     const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
 
     const onRegionChangeComplete = async (region: any) => {
-        // Only update if we are in COLLAPSED state (manually selecting destination)
+        // Only update if we are in COLLAPSED state (manually selecting from map)
         if (sheetIndex === 0 && !locationLoading) {
             setIsUpdatingFromMap(true);
             try {
                 const title = await getAddressFromCoords(region.latitude, region.longitude);
-                setDestination({
-                    title,
-                    coords: { latitude: region.latitude, longitude: region.longitude }
-                });
-                // Update the search input text as well
-                destinationRef.current?.setAddressText(title);
+                if (mapSelectionMode === 'pickup') {
+                    setPickupLocation({
+                        title,
+                        coords: { latitude: region.latitude, longitude: region.longitude }
+                    });
+                    pickupRef.current?.setAddressText(title);
+                } else {
+                    setDestination({
+                        title,
+                        coords: { latitude: region.latitude, longitude: region.longitude }
+                    });
+                    destinationRef.current?.setAddressText(title);
+                }
             } catch (error) {
-                console.error("Failed to update destination from map", error);
+                console.error("Failed to update location from map", error);
             } finally {
                 setIsUpdatingFromMap(false);
             }
@@ -252,10 +272,10 @@ export default function WhereTo() {
                 enableDynamicSizing={false}
                 enablePanDownToClose={false}
                 backgroundStyle={{
-                    backgroundColor: isDark ? '#1C1C1E' : 'white',
-                    borderRadius: 32, // Consistent border radius for smoother snapping
+                    backgroundColor: BottomSheetBackgroundColor,
+                    borderRadius: 32,
                 }}
-                handleIndicatorStyle={{ backgroundColor: isDark ? '#3A3A3C' : '#D1D1D6', width: 48, height: 4 }}
+                handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
                 animationConfigs={{
                     damping: 80,
                     overshootClamping: true,
@@ -264,25 +284,21 @@ export default function WhereTo() {
                 keyboardBehavior='extend'
             >
                 <View style={{ flex: 1, paddingBottom: insets.bottom }}>
-
                     {/* CONTAINER FOR BOTH VIEWS TO ALLOW CROSS-FADE */}
                     <View style={{ flex: 1 }}>
                         {/* EXPANDED FULL-SCREEN STATE (Plan your ride) */}
-                        <Animated.View style={[{ flex: 1 }, fullStyle]} pointerEvents={sheetState === "FULL" ? "auto" : "none"}>
-                            <View style={{ flex: 1 }}>
+                        <Animated.View style={fullStyle} className='flex-1' pointerEvents={sheetState === "FULL" ? "auto" : "none"}>
+                            <View className='flex-1' >
                                 {/* Header */}
                                 <View className="flex-row items-center px-4 py-2">
-                                    <TouchableOpacity onPress={() => {
-                                        setSheetIndex(0);
-                                        Keyboard.dismiss();
-                                    }} className="p-2">
+                                    <TouchableOpacity onPress={() => router.back()} className="p-2">
                                         <Ionicons name="arrow-back" size={24} color={isDark ? "white" : "black"} />
                                     </TouchableOpacity>
                                     <Text className="flex-1 text-center text-lg font-bold mr-8 text-foreground">Plan your ride</Text>
                                 </View>
 
                                 {/* Dropdowns */}
-                                <View className="flex-row px-4 mt-2 gap-2">
+                                {/* <View className="flex-row px-4 mt-2 gap-2">
                                     <TouchableOpacity className="flex-row items-center bg-muted/40 px-3 py-2 rounded-full gap-2">
                                         <Feather name="clock" size={16} color={isDark ? "white" : "black"} />
                                         <Text className="font-semibold text-sm text-foreground">Pickup now</Text>
@@ -293,15 +309,19 @@ export default function WhereTo() {
                                         <Text className="font-semibold text-sm text-foreground">For me</Text>
                                         <Feather name="chevron-down" size={16} color={isDark ? "white" : "black"} />
                                     </TouchableOpacity>
-                                </View>
+                                </View> */}
 
                                 {/* Active Search Inputs Block using Google Places */}
                                 <View className="flex-row px-4 mt-6 z-50">
-                                    <View className="items-center mr-3 w-4 pt-4">
+
+                                    {/* <View className="items-center mr-3 w-4 pt-4">
                                         <View className="w-2 h-2 rounded-full bg-foreground" />
                                         <View className="w-0.5 h-10 bg-foreground" />
                                         <View className="w-2 h-2 bg-foreground" />
-                                    </View>                                    <View className="flex-1 border-2 border-foreground/20 rounded-xl bg-background overflow-hidden">
+                                    </View> */}
+
+                                    <View className="flex-1 border-2 border-foreground/20 rounded-xl bg-background">
+
                                         {/* Pickup Location Autocomplete */}
                                         <View className="flex-row items-center border-b-2 border-muted/50 z-[1000]">
                                             <GooglePlacesAutocomplete
@@ -310,12 +330,12 @@ export default function WhereTo() {
                                                 fetchDetails={true}
                                                 onPress={handlePickupSelect}
                                                 query={{
-                                                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+                                                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                                                     language: 'en',
                                                 }}
                                                 enablePoweredByContainer={false}
                                                 styles={{
-                                                    container: { flex: 0, width: '100%' },
+                                                    container: { flex: 0, width: '100%', zIndex: 1000 },
                                                     textInput: {
                                                         backgroundColor: 'transparent',
                                                         height: 50,
@@ -325,10 +345,11 @@ export default function WhereTo() {
                                                         paddingHorizontal: 12,
                                                     },
                                                     listView: {
-                                                        maxHeight: 200,
+                                                        position: 'absolute',
+                                                        top: 50,
                                                         backgroundColor: isDark ? '#1C1C1E' : 'white',
-                                                        borderBottomWidth: 1,
-                                                        borderColor: isDark ? '#3A3A3C' : '#E5E5E7',
+                                                        zIndex: 2000,
+                                                        maxHeight: 250,
                                                     },
                                                     row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
                                                     description: { color: isDark ? '#E5E5E7' : 'black' },
@@ -349,7 +370,7 @@ export default function WhereTo() {
                                                 }}
                                                 enablePoweredByContainer={false}
                                                 styles={{
-                                                    container: { flex: 0, width: '100%' },
+                                                    container: { flex: 0, width: '100%', zIndex: 900 },
                                                     textInput: {
                                                         backgroundColor: 'transparent',
                                                         height: 50,
@@ -359,8 +380,11 @@ export default function WhereTo() {
                                                         paddingHorizontal: 12,
                                                     },
                                                     listView: {
-                                                        maxHeight: 200,
+                                                        position: 'absolute',
+                                                        top: 50,
                                                         backgroundColor: isDark ? '#1C1C1E' : 'white',
+                                                        zIndex: 1500,
+                                                        maxHeight: 250,
                                                     },
                                                     row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
                                                     description: { color: isDark ? '#E5E5E7' : 'black' },
@@ -369,63 +393,156 @@ export default function WhereTo() {
                                         </View>
                                     </View>
 
-                                    <View className="w-10 pt-2 ml-3">
+                                    {/* Add stops  */}
+
+                                    {/* <View className="w-10 pt-2 ml-3">
                                         <TouchableOpacity className="w-10 h-10 bg-muted/30 rounded-full items-center justify-center">
                                             <Feather name="plus" size={20} color={isDark ? "white" : "black"} />
                                         </TouchableOpacity>
-                                    </View>
+                                    </View> */}
                                 </View>
 
                                 {/* Static Bottom Fallbacks (shown when not searching) */}
                                 <View className="flex-1 -z-10 mt-12 px-4">
-                                    <TouchableOpacity className="flex-row items-center py-4 border-b border-muted/20">
+
+                                    {/* <TouchableOpacity className="flex-row items-center py-4 border-b border-muted/20">
                                         <View className="w-10 items-center justify-center mr-3">
                                             <Feather name="globe" size={20} color={isDark ? "white" : "black"} />
                                         </View>
                                         <Text className="font-bold text-base text-foreground">Search in a different city</Text>
-                                    </TouchableOpacity>
+                                    </TouchableOpacity> */}
 
-                                    <TouchableOpacity className="flex-row items-center py-4">
-                                        <View className="w-10 items-center justify-center mr-3">
-                                            <MaterialIcons name="location-pin" size={20} color={isDark ? "white" : "black"} />
-                                        </View>
-                                        <Text className="font-bold text-base text-foreground">Set location on map</Text>
-                                    </TouchableOpacity>
+                                    {/* Set location on map Accordion */}
+                                    <View>
+                                        <TouchableOpacity
+                                            onPress={() => setIsSetLocationExpanded(!isSetLocationExpanded)}
+                                            className="flex-row items-center py-2"
+                                        >
+                                            <View className="w-10 items-center justify-center mr-3">
+                                                <MaterialIcons name="location-pin" size={20} color={isDark ? "white" : "black"} />
+                                            </View>
+                                            <Text className="flex-1 font-bold text-base text-foreground">Set location on map</Text>
+                                            <Animated.View style={rotationStyle}>
+                                                <Feather name="chevron-down" size={20} color={isDark ? "white" : "black"} />
+                                            </Animated.View>
+                                        </TouchableOpacity>
+
+                                        {isSetLocationExpanded && (
+                                            <View className="ml-10 pb-4 gap-2">
+                                                <Button
+                                                    variant={'ghost'}
+                                                    className="flex-row justify-start py-2 bg-muted/20 px-4 rounded-xl h-auto"
+                                                    onPress={() => {
+                                                        setMapSelectionMode('pickup');
+                                                        setSheetIndex(0);
+                                                        if (pickupLocation?.coords) {
+                                                            mapRef.current?.animateToRegion({
+                                                                ...pickupLocation.coords,
+                                                                latitudeDelta: 0.015,
+                                                                longitudeDelta: 0.015,
+                                                            }, 1000);
+                                                        }
+                                                    }}
+                                                >
+                                                    <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                                                    <Text className="text-foreground font-semibold">Pick up</Text>
+                                                </Button>
+
+                                                <Button
+                                                    variant={'ghost'}
+                                                    className="flex-row justify-start py-2 bg-muted/20 px-4 rounded-xl h-auto"
+                                                    onPress={() => {
+                                                        setMapSelectionMode('destination');
+                                                        setSheetIndex(0);
+                                                        if (destination?.coords) {
+                                                            mapRef.current?.animateToRegion({
+                                                                ...destination.coords,
+                                                                latitudeDelta: 0.015,
+                                                                longitudeDelta: 0.015,
+                                                            }, 1000);
+                                                        }
+                                                    }}
+                                                >
+                                                    <View className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                                                    <Text className="text-foreground font-semibold">Destination</Text>
+                                                </Button>
+                                            </View>
+                                        )}
+                                    </View>
                                 </View>
                             </View>
                         </Animated.View>
 
-                        {/* COMPACT STATE (Set your destination defaults) */}
+                        {/* COMPACT STATE (Map Selection View) */}
                         <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, compactStyle]} pointerEvents={sheetState === "COLLAPSED" ? "auto" : "none"}>
                             <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
-                                <View className="items-center mb-6 mt-2">
-                                    <Text className="text-xl font-extrabold text-foreground">Set your destination</Text>
+                                <View className="items-center mb-4 mt-2">
+                                    <Text className="text-xl font-extrabold text-foreground">
+                                        {mapSelectionMode === 'pickup' ? 'Set pick up location' : 'Set destination'}
+                                    </Text>
                                     <Text className="text-sm text-muted-foreground mt-1">Drag map to move pin</Text>
                                 </View>
 
-                                <TouchableOpacity
-                                    activeOpacity={0.8}
+                                {/* Mode Switcher in Compact View */}
+                                <View className="flex-row bg-muted/20 p-1 rounded-xl mb-4">
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setMapSelectionMode('pickup');
+                                            if (pickupLocation?.coords) {
+                                                mapRef.current?.animateToRegion({
+                                                    ...pickupLocation.coords,
+                                                    latitudeDelta: 0.015,
+                                                    longitudeDelta: 0.015,
+                                                }, 1000);
+                                            }
+                                        }}
+                                        className={`flex-1 py-2 rounded-lg items-center ${mapSelectionMode === 'pickup' ? 'bg-background shadow-sm' : ''}`}
+                                    >
+                                        <Text className={`text-sm font-bold ${mapSelectionMode === 'pickup' ? 'text-foreground' : 'text-muted-foreground'}`}>Pick up</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setMapSelectionMode('destination');
+                                            if (destination?.coords) {
+                                                mapRef.current?.animateToRegion({
+                                                    ...destination.coords,
+                                                    latitudeDelta: 0.015,
+                                                    longitudeDelta: 0.015,
+                                                }, 1000);
+                                            }
+                                        }}
+                                        className={`flex-1 py-2 rounded-lg items-center ${mapSelectionMode === 'destination' ? 'bg-background shadow-sm' : ''}`}
+                                    >
+                                        <Text className={`text-sm font-bold ${mapSelectionMode === 'destination' ? 'text-foreground' : 'text-muted-foreground'}`}>Destination</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Button
+                                    variant={'outline'}
                                     onPress={() => {
                                         setSheetIndex(1);
                                     }}
-                                    className="flex-row items-center bg-muted/40 h-14 rounded-2xl px-4 mb-4"
+                                    className="flex-row justify-start bg-muted/40 h-14 rounded-2xl px-4 mb-4"
                                 >
-                                    <View className="w-2 h-2 bg-foreground mr-3" />
-                                    <Text numberOfLines={1} className={`flex-1 text-base font-semibold mr-2 ${!destination ? 'text-muted-foreground' : 'text-foreground'}`}>
-                                        {isUpdatingFromMap ? 'Updating location...' : (destination?.title || 'Where to?')}
+                                    <View className={`w-2 h-2 rounded-full mr-1 ${mapSelectionMode === 'pickup' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    <Text numberOfLines={1} className={`flex-1 text-base font-semibold mr-2 ${((mapSelectionMode === 'pickup' ? !pickupLocation : !destination)) ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                        {isUpdatingFromMap ? 'Updating location...' : (mapSelectionMode === 'pickup' ? (pickupLocation?.title || 'Set pickup') : (destination?.title || 'Where to?'))}
                                     </Text>
                                     <Feather name="search" size={20} color={isDark ? "white" : "black"} />
-                                </TouchableOpacity>
+                                </Button>
 
-                                <TouchableOpacity className="bg-foreground h-14 rounded-xl items-center justify-center">
-                                    <Text className="text-background font-bold text-lg">Search destination</Text>
-                                </TouchableOpacity>
+                                <Button
+                                    onPress={() => setSheetIndex(1)}
+                                    className="h-14 rounded-xl"
+                                >
+                                    <Text className="text-secondary font-bold text-lg">Confirm {mapSelectionMode === 'pickup' ? 'pickup' : 'destination'}</Text>
+                                </Button>
                             </View>
                         </Animated.View>
                     </View>
 
                 </View>
-            </BottomSheet>
-        </GestureHandlerRootView>
+            </BottomSheet >
+        </GestureHandlerRootView >
     );
 }
