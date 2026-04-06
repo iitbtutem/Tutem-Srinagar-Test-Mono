@@ -5,7 +5,6 @@ import { useQuery } from "convex/react"
 import { Redirect } from "expo-router"
 
 export default function Protected() {
-    console.log("i protected index");
     const { userId } = useAuth()
     const user = useQuery(api.routes.driver.getDriver, userId ? { clerkId: userId } : 'skip')
 

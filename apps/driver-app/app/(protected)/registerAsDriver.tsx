@@ -47,7 +47,6 @@ const formSchema = z.object({
 });
 
 export default function RegisterAsRider() {
-  console.log("hello i am in registers as driver");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
