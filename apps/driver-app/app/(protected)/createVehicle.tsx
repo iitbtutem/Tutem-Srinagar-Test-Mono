@@ -107,7 +107,7 @@ export default function CreateVehicle() {
         });
 
         return showToast({
-          type: 'info',
+          type: 'error',
           title: 'Required',
           description: 'RC image required',
         });

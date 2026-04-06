@@ -170,6 +170,10 @@ export default function EditProfile() {
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
+        if (!data.licenseImageFrontKey)
+          setError('licenseImageFrontKey', { message: 'Front image required' });
+        if (!data.licenseImageBackKey)
+          setError('licenseImageBackKey', { message: 'Back image required' });
         showToast({
           title: 'Error',
           description: 'Please upload both front and back of your license',
@@ -238,21 +242,21 @@ export default function EditProfile() {
                     defaultValue={
                       field.value
                         ? {
-                          value: field.value,
-                          label:
-                            organizations?.find((org) => org._id === field.value)?.name ||
-                            field.value,
-                        }
+                            value: field.value,
+                            label:
+                              organizations?.find((org) => org._id === field.value)?.name ||
+                              field.value,
+                          }
                         : undefined
                     }
                     value={
                       field.value
                         ? {
-                          value: field.value,
-                          label:
-                            organizations?.find((org) => org._id === field.value)?.name ||
-                            field.value,
-                        }
+                            value: field.value,
+                            label:
+                              organizations?.find((org) => org._id === field.value)?.name ||
+                              field.value,
+                          }
                         : undefined
                     }
                     onValueChange={(option) => field.onChange(option?.value)}>
@@ -432,17 +436,17 @@ export default function EditProfile() {
                     defaultValue={
                       field.value
                         ? {
-                          value: field.value,
-                          label: field.value,
-                        }
+                            value: field.value,
+                            label: field.value,
+                          }
                         : undefined
                     }
                     value={
                       field.value
                         ? {
-                          value: field.value,
-                          label: field.value,
-                        }
+                            value: field.value,
+                            label: field.value,
+                          }
                         : undefined
                     }
                     onValueChange={(option) => field.onChange(option?.value)}>
@@ -470,10 +474,9 @@ export default function EditProfile() {
             {/* License Upload Buttons */}
             {requiresLicenseImage && (
               <View className="mb-2 mt-2 gap-4">
-                {(['licenseImageFrontKey', 'licenseImageBackKey'] as const).map((fieldKey) => {
-                  return (
+                {(['licenseImageFrontKey', 'licenseImageBackKey'] as const).map((fieldKey) => (
+                  <View key={fieldKey}>
                     <Controller
-                      key={fieldKey}
                       control={control}
                       name={fieldKey}
                       render={({ field: { value, onChange } }) => (
@@ -519,8 +522,11 @@ export default function EditProfile() {
                         </View>
                       )}
                     />
-                  );
-                })}
+                    {errors[fieldKey] && (
+                      <Text className="text-md text-destructive">{errors[fieldKey].message}</Text>
+                    )}
+                  </View>
+                ))}
               </View>
             )}
 
