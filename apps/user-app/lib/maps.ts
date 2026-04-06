@@ -2,8 +2,6 @@ export async function getAddressFromCoords(latitude: number, longitude: number):
 
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-    console.log(apiKey, "api key")
-
     if (!apiKey) {
         console.error("No Google Maps API Key found");
         return "Unnamed Road";
@@ -15,12 +13,10 @@ export async function getAddressFromCoords(latitude: number, longitude: number):
                 `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
             );
             const data = await response.json();
-            console.log("data is", data)
             if (data.status === 'OK' && data.results.length > 0) {
                 const title = data.results[0].formatted_address;
                 // Format Google's usually long address to something shorter for UI
-                console.log("title is", title);
-                return title.split(',').slice(0, 2).join(',');
+                return title.split(',').slice(0, 3).join(',');
             }
         } catch (googleError) {
             console.error("Google Geocoding fallback failed:", googleError);
