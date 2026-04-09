@@ -60,11 +60,13 @@ export default function WhereTo() {
     coords: { latitude: number; longitude: number };
   } | null>(null);
 
-  const [mapSelectionMode, setMapSelectionMode] = useState<'pickup' | 'destination'>('destination');
+  const [mapSelectionMode, setMapSelectionMode] = useState<'pickup' | 'destination' | null>(
+    'destination'
+  );
   const [isSetLocationExpanded, setIsSetLocationExpanded] = useState(false);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
-  
+
   const apiKey =
     Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   const pickupSessionToken = useRef<string>(uuid.v4() as string).current;
@@ -72,38 +74,44 @@ export default function WhereTo() {
 
   const [isPickupSearching, setIsPickupSearching] = useState(false);
   const [isDestinationSearching, setIsDestinationSearching] = useState(false);
+  const [tempLocation, setTempLocation] = useState<{
+    title: string;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // this is the effect for getting the current location of the user
   async function getCurrentLocation() {
-      setIsPickupSearching(true);
-      let { status } = await Location.requestForegroundPermissionsAsync();
+    setIsPickupSearching(true);
+    let { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (status !== 'granted') {
-        showToast({ title: 'Location permissions denied', type: 'error' });
-        setIsPickupSearching(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-
-      const newRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.015,
-        longitudeDelta: 0.015,
-      };
-
-      const title = await getAddressFromCoords(location.coords.latitude, location.coords.longitude);
-
-      pickupRef.current?.setAddressText(title);
-      setPickupLocation({
-        title,
-        coords: { latitude: location.coords.latitude, longitude: location.coords.longitude },
-      });
-
-      mapRef.current?.animateToRegion(newRegion, 1000);
+    if (status !== 'granted') {
+      showToast({ title: 'Location permissions denied', type: 'error' });
       setIsPickupSearching(false);
+      return;
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+
+    const newRegion = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.015,
+      longitudeDelta: 0.015,
+    };
+
+    const title = await getAddressFromCoords(location.coords.latitude, location.coords.longitude);
+
+    pickupRef.current?.setAddressText(title);
+    setPickupLocation({
+      title,
+      coords: { latitude: location.coords.latitude, longitude: location.coords.longitude },
+    });
+
+    mapRef.current?.animateToRegion(newRegion, 1000);
+    setIsPickupSearching(false);
   }
+
   useEffect(() => {
     getCurrentLocation();
   }, []);
@@ -132,7 +140,6 @@ export default function WhereTo() {
   };
 
   const handleDestinationSelect = async (data: any, details: any = null) => {
-    console.log('pressed key : ', data);
     if (details?.geometry?.location) {
       const dropoffCoords = {
         latitude: details.geometry.location.lat,
@@ -202,31 +209,63 @@ export default function WhereTo() {
     if (index === 0) Keyboard.dismiss();
   }, []);
 
+  const confirmLocationFromMap = () => {
+    if (!tempLocation && pickupLocation && destination) {
+      setSheetIndex(1);
+      return;
+    }
+    if (!tempLocation) return;
+
+    const { title, latitude, longitude } = tempLocation;
+    if (mapSelectionMode === 'pickup') {
+      setPickupLocation({
+        title: title,
+        coords: { latitude, longitude },
+      });
+      pickupRef.current?.setAddressText(title);
+    } else if (mapSelectionMode === 'destination') {
+      setDestination({
+        title: title,
+        coords: { latitude, longitude },
+      });
+      destinationRef.current?.setAddressText(title);
+    }
+    setTempLocation(null);
+    setSheetIndex(1);
+    setMapSelectionMode(null);
+    setTimeout(() => {
+      if (mapSelectionMode === 'pickup') {
+        pickupRef.current?.blur();
+      } else if (mapSelectionMode === 'destination') {
+        destinationRef.current?.blur();
+      }
+    }, 300);
+  };
+
   const onRegionChangeComplete = async (region: any) => {
-    // Only update if we are in COLLAPSED state (manually selecting from map)
-    // if (sheetIndex === 0 && !locationLoading) {
-    //   setIsUpdatingFromMap(true);
-    //   try {
-    //     const title = await getAddressFromCoords(region.latitude, region.longitude);
-    //     if (mapSelectionMode === 'pickup') {
-    //       setPickupLocation({
-    //         title,
-    //                     coords: { latitude: region.latitude, longitude: region.longitude }
-    //       });
-    //       pickupRef.current?.setAddressText(title);
-    //     } else {
-    //       setDestination({
-    //         title,
-    //                     coords: { latitude: region.latitude, longitude: region.longitude }
-    //       });
-    //       destinationRef.current?.setAddressText(title);
-    //     }
-    //   } catch (error) {
-    //             console.error("Failed to update location from map", error);
-    //   } finally {
-    //     setIsUpdatingFromMap(false);
-    //   }
-    // }
+    if (
+      sheetState === 'COLLAPSED' &&
+      !isPickupSearching &&
+      !isDestinationSearching &&
+      !isUpdatingFromMap &&
+      mapSelectionMode !== null
+    ) {
+      setIsUpdatingFromMap(true);
+      try {
+        const title = await getAddressFromCoords(region.latitude, region.longitude);
+        setTempLocation({ title, latitude: region.latitude, longitude: region.longitude });
+
+        const coords = mapSelectionMode === 'pickup' 
+        ? await fetchRoute({ latitude: region.latitude, longitude: region.longitude }, destination ? destination.coords : { latitude: region.latitude, longitude: region.longitude })
+        : await fetchRoute(pickupLocation ? pickupLocation.coords : { latitude: region.latitude, longitude: region.longitude }, { latitude: region.latitude, longitude: region.longitude })
+        setRouteCoords(coords);
+        
+      } catch (error) {
+        console.error('Failed to update location from map', error);
+      } finally {
+        setIsUpdatingFromMap(false);
+      }
+    }
   };
 
   const handleLocatePress = () => {
@@ -241,6 +280,17 @@ export default function WhereTo() {
         1000
       );
     }
+  };
+
+  const getCurrentMapCenter = async () => {
+    if (mapRef.current) {
+      const camera = await mapRef.current.getCamera();
+      return {
+        latitude: camera.center.latitude,
+        longitude: camera.center.longitude,
+      };
+    }
+    return null;
   };
 
   return (
@@ -296,6 +346,7 @@ export default function WhereTo() {
             />
           )}
         </MapView>
+
         <TouchableOpacity
           className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
           style={{ elevation: 5 }}
@@ -308,20 +359,25 @@ export default function WhereTo() {
           />
         </TouchableOpacity>
 
-        {/* Center Pin Overlay tracking the map center */}
-        {/* <View className="pointer-events-none absolute inset-0 items-center justify-center">
-          {locationLoading ? (
-            <ActivityIndicator size="large" color={isDark ? 'white' : 'black'} className="-mt-8" />
-          ) : (
-            <View className="-mt-8 items-center justify-center">
-              <View className="h-8 w-8 items-center justify-center rounded-full border-4 border-background bg-foreground shadow-sm">
-                <View className="h-2 w-2 rounded-full bg-background" />
+        {/* Center Pin Overlay - Only show when in selection mode */}
+        {(sheetState === 'COLLAPSED' && mapSelectionMode !== null) && (
+          <View className="pointer-events-none absolute inset-0 items-center justify-center">
+            {isPickupSearching || isDestinationSearching ? (
+              <ActivityIndicator
+                size="large"
+                color={isDark ? 'white' : 'black'}
+                className="-mt-8"
+              />
+            ) : (
+              <View className="-mt-8 items-center justify-center">
+                <View className="h-6 w-6 items-center justify-center rounded-full bg-foreground shadow-sm">
+                  <View className="h-2 w-2 rounded-full bg-background" />
+                </View>
+                <View className="h-5 w-1 bg-foreground" />
               </View>
-              <View className="h-4 w-1 bg-foreground" />
-              <View className="-mt-2 h-4 w-4 rounded-full border-2 border-background bg-blue-500 opacity-80" />
-            </View>
-          )}
-        </View> */}
+            )}
+          </View>
+        )}
       </View>
 
       {/* Draggable Bottom Sheet Layer */}
@@ -363,28 +419,8 @@ export default function WhereTo() {
                   </Text>
                 </View>
 
-                {/* Dropdowns */}
-                {/* <View className="flex-row px-4 mt-2 gap-2">
-                    <TouchableOpacity className="flex-row items-center bg-muted/40 px-3 py-2 rounded-full gap-2">
-                        <Feather name="clock" size={16} color={isDark ? "white" : "black"} />
-                        <Text className="font-semibold text-sm text-foreground">Pickup now</Text>
-                        <Feather name="chevron-down" size={16} color={isDark ? "white" : "black"} />
-                    </TouchableOpacity>
-                    <TouchableOpacity className="flex-row items-center bg-muted/40 px-3 py-2 rounded-full gap-2">
-                        <MaterialIcons name="person" size={16} color={isDark ? "white" : "black"} />
-                        <Text className="font-semibold text-sm text-foreground">For me</Text>
-                        <Feather name="chevron-down" size={16} color={isDark ? "white" : "black"} />
-                    </TouchableOpacity>
-                </View> */}
-
                 {/* Active Search Inputs Block using Google Places */}
                 <View className="z-[9999] mt-6 flex-row px-4">
-                  {/* <View className="items-center mr-3 w-4 pt-4">
-                      <View className="w-2 h-2 rounded-full bg-foreground" />
-                      <View className="w-0.5 h-10 bg-foreground" />
-                      <View className="w-2 h-2 bg-foreground" />
-                  </View> */}
-
                   <View className="flex-1 rounded-xl border-2 border-foreground/20 bg-background">
                     {/* Pickup Location Autocomplete */}
                     <View className="z-[2] flex-row items-center border-b-2 border-muted/50">
@@ -402,6 +438,9 @@ export default function WhereTo() {
                           }
                           fetchDetails={true}
                           onPress={handlePickupSelect}
+                          textInputProps={{
+                            onFocus: () => setMapSelectionMode('pickup'),
+                          }}
                           query={{
                             key: apiKey,
                             language: 'en',
@@ -418,7 +457,6 @@ export default function WhereTo() {
                               type: 'error',
                             });
                           }}
-                          // isLoading={isPickupSearching}
                           styles={{
                             container: { flex: 0, width: '100%', zIndex: 1 },
                             textInput: {
@@ -459,6 +497,9 @@ export default function WhereTo() {
                           placeholder="Where to?"
                           fetchDetails={true}
                           onPress={handleDestinationSelect}
+                          textInputProps={{
+                            onFocus: () => setMapSelectionMode('destination'),
+                          }}
                           query={{
                             key: apiKey,
                             language: 'en',
@@ -475,7 +516,6 @@ export default function WhereTo() {
                               type: 'error',
                             });
                           }}
-                          // isLoading={isDestinationSearching}
                           styles={{
                             container: { flex: 0, width: '100%', zIndex: 2 },
                             textInput: {
@@ -496,119 +536,116 @@ export default function WhereTo() {
                             row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
                             description: { color: isDark ? '#E5E5E7' : 'black' },
                           }}
-                          // onLoading={() => setIsDestinationSearching(true)}
-                          // onClear={() => setIsDestinationSearching(false)}
                         />
                       )}
                     </View>
                   </View>
-
-                  {/* Add stops  */}
-
-                  {/* <View className="w-10 pt-2 ml-3">
-                    <TouchableOpacity className="w-10 h-10 bg-muted/30 rounded-full items-center justify-center">
-                      <Feather name="plus" size={20} color={isDark ? "white" : "black"} />
-                    </TouchableOpacity>
-                  </View> */}
                 </View>
 
                 {/* Static Bottom Fallbacks (shown when not searching) */}
                 <View className="-z-10 mt-12 flex-1 px-4">
-                  {/* <TouchableOpacity className="flex-row items-center py-4 border-b border-muted/20">
-                    <View className="w-10 items-center justify-center mr-3">
-                        <Feather name="globe" size={20} color={isDark ? "white" : "black"} />
-                    </View>
-                    <Text className="font-bold text-base text-foreground">Search in a different city</Text>
-                  </TouchableOpacity> */}
-
                   {/* Set location on map Accordion */}
-                  <>
-                    <TouchableOpacity
-                      onPress={() => setIsSetLocationExpanded(!isSetLocationExpanded)}
-                      className="flex-row items-center py-2">
-                      <View className="mr-3 w-10 items-center justify-center">
-                        <MaterialIcons
-                          name="location-pin"
-                          size={20}
-                          color={isDark ? 'white' : 'black'}
-                        />
-                      </View>
-                      <Text className="flex-1 text-base font-bold text-foreground">
-                        Set location on map
-                      </Text>
-                      <Animated.View style={rotationStyle}>
-                        <Feather name="chevron-down" size={20} color={isDark ? 'white' : 'black'} />
-                      </Animated.View>
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setIsSetLocationExpanded(!isSetLocationExpanded)}
+                    className="flex-row items-center py-2">
+                    <View className="mr-3 w-10 items-center justify-center">
+                      <MaterialIcons
+                        name="location-pin"
+                        size={20}
+                        color={isDark ? 'white' : 'black'}
+                      />
+                    </View>
+                    <Text className="flex-1 text-base font-bold text-foreground">
+                      Set location on map
+                    </Text>
+                    <Animated.View style={rotationStyle}>
+                      <Feather name="chevron-down" size={20} color={isDark ? 'white' : 'black'} />
+                    </Animated.View>
+                  </TouchableOpacity>
 
-                    {isSetLocationExpanded && (
-                      <View className="ml-10 gap-2 pb-4">
-                        <Button
-                          variant={'ghost'}
-                          className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
-                          onPress={() => {
-                            setMapSelectionMode('pickup');
-                            return;
-                            setSheetIndex(0);
-                            if (pickupLocation?.coords) {
+                  {/* FIXED: Set location on map buttons */}
+                  {isSetLocationExpanded && (
+                    <View className="ml-10 gap-2 pb-4">
+                      <Button
+                        variant={'ghost'}
+                        className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
+                        onPress={async () => {
+                          setMapSelectionMode('pickup');
+                          setSheetIndex(0); // Collapse bottom sheet to enter selection mode
+                          // Animate to current pickup location if exists, otherwise use center of map
+                          if (pickupLocation?.coords) {
+                            mapRef.current?.animateToRegion(
+                              {
+                                ...pickupLocation.coords,
+                                latitudeDelta: 0.015,
+                                longitudeDelta: 0.015,
+                              },
+                              500
+                            );
+                          } else {
+                            // Get current map center
+                            const center = await getCurrentMapCenter();
+                            if (center) {
                               mapRef.current?.animateToRegion(
                                 {
-                                  ...pickupLocation.coords,
+                                  latitude: center.latitude,
+                                  longitude: center.longitude,
                                   latitudeDelta: 0.015,
                                   longitudeDelta: 0.015,
                                 },
-                                1000
+                                500
                               );
                             }
-                          }}>
-                          <View className="mr-2 h-2 w-2 rounded-full bg-green-500" />
-                          <Text className="font-semibold text-foreground">Pick up</Text>
-                        </Button>
+                          }
+                          // Small delay to ensure sheet is collapsed
+                          setTimeout(() => {
+                            Keyboard.dismiss();
+                          }, 100);
+                        }}>
+                        <View className="mr-2 h-2 w-2 rounded-full bg-green-500" />
+                        <Text className="font-semibold text-foreground">Pick up</Text>
+                      </Button>
 
-                        <Button
-                          variant={'ghost'}
-                          className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
-                          onPress={() => {
-                            setMapSelectionMode('destination');
-                            return;
-                            setSheetIndex(0);
-                            if (destination?.coords) {
+                      <Button
+                        variant={'ghost'}
+                        className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
+                        onPress={async () => {
+                          setMapSelectionMode('destination');
+                          setSheetIndex(0); // Collapse bottom sheet to enter selection mode
+                          // Animate to current destination if exists
+                          if (destination?.coords) {
+                            mapRef.current?.animateToRegion(
+                              {
+                                ...destination.coords,
+                                latitudeDelta: 0.015,
+                                longitudeDelta: 0.015,
+                              },
+                              500
+                            );
+                          } else {
+                            // Get current map center
+                            const center = await getCurrentMapCenter();
+                            if (center) {
                               mapRef.current?.animateToRegion(
                                 {
-                                  ...destination.coords,
+                                  latitude: center.latitude,
+                                  longitude: center.longitude,
                                   latitudeDelta: 0.015,
                                   longitudeDelta: 0.015,
                                 },
-                                1000
+                                500
                               );
                             }
-                          }}>
-                          <View className="mr-2 h-2 w-2 rounded-full bg-red-500" />
-                          <Text className="font-semibold text-foreground">Destination</Text>
-                        </Button>
-                      </View>
-                    )}
-                  </>
-
-                  <Button
-                    onPress={() => {
-                      console.log('Pickup: ', pickupLocation);
-                      console.log('Destination: ', destination);
-                      // if(pickupLocation?.coords.latitude && destination?.coords.latitude) {
-                      //   router.push({
-                      //     // pathname: "/(protected)/(rides)/confirm",
-                      //     pathname: "/(protected)/(rides)/whereto",
-                      //     params: {
-                      //       pickup: JSON.stringify(pickupLocation),
-                      //       destination: JSON.stringify(destination)
-                      //     }
-                      //   })
-                      // }
-                      // return;
-                    }}
-                    className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">Confirm locations</Text>
-                  </Button>
+                          }
+                          setTimeout(() => {
+                            Keyboard.dismiss();
+                          }, 100);
+                        }}>
+                        <View className="mr-2 h-2 w-2 rounded-full bg-red-500" />
+                        <Text className="font-semibold text-foreground">Destination</Text>
+                      </Button>
+                    </View>
+                  )}
                 </View>
               </View>
             </Animated.View>
@@ -627,21 +664,19 @@ export default function WhereTo() {
               ]}
               pointerEvents={sheetState === 'COLLAPSED' ? 'auto' : 'none'}>
               <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
-                <View className="mb-4 mt-2 items-center">
+                <View className="mb-4 items-center">
                   <Text className="text-xl font-extrabold text-foreground">
-                    {mapSelectionMode === 'pickup'
-                      ? 'Set pickup location'
-                      : 'Set destination'}
+                    {mapSelectionMode === 'pickup' ? 'Set pickup location' : 'Set destination'}
                   </Text>
-                  {/* <Text className="mt-1 text-sm text-muted-foreground">Drag map to move pin</Text> */}
+                  <Text className="mt-1 text-sm text-muted-foreground">Drag map to move pin</Text>
                 </View>
 
-                {/* Mode Switcher in Compact View */}
+                {/* FIXED: Mode Switcher in Compact View */}
                 <View className="mb-4 flex-row rounded-xl bg-muted/20 p-1">
                   <TouchableOpacity
                     onPress={() => {
                       setMapSelectionMode('pickup');
-                      return;
+                      // Animate to current pickup location if exists
                       if (pickupLocation?.coords) {
                         mapRef.current?.animateToRegion(
                           {
@@ -649,20 +684,24 @@ export default function WhereTo() {
                             latitudeDelta: 0.015,
                             longitudeDelta: 0.015,
                           },
-                          1000
+                          500
                         );
                       }
                     }}
-                    className={cn("flex-1 items-center rounded-lg py-2", { 'bg-background': mapSelectionMode === 'pickup' })}>
+                    className={cn('flex-1 items-center rounded-lg py-2', {
+                      'bg-background': mapSelectionMode === 'pickup',
+                    })}>
                     <Text
-                      className={cn("text-sm font-bold text-muted-foreground", { 'text-foreground': mapSelectionMode === 'pickup' })}>
+                      className={cn('text-sm font-bold text-muted-foreground', {
+                        'text-foreground': mapSelectionMode === 'pickup',
+                      })}>
                       Pickup
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
                       setMapSelectionMode('destination');
-                      return;
+                      // Animate to current destination if exists
                       if (destination?.coords) {
                         mapRef.current?.animateToRegion(
                           {
@@ -670,13 +709,17 @@ export default function WhereTo() {
                             latitudeDelta: 0.015,
                             longitudeDelta: 0.015,
                           },
-                          1000
+                          500
                         );
                       }
                     }}
-                    className={cn("flex-1 items-center rounded-lg py-2", { 'bg-background': mapSelectionMode === 'destination' })}>
+                    className={cn('flex-1 items-center rounded-lg py-2', {
+                      'bg-background': mapSelectionMode === 'destination',
+                    })}>
                     <Text
-                      className={cn("text-sm font-bold text-muted-foreground", { 'text-foreground': mapSelectionMode === 'destination' })}>
+                      className={cn('text-sm font-bold text-muted-foreground', {
+                        'text-foreground': mapSelectionMode === 'destination',
+                      })}>
                       Destination
                     </Text>
                   </TouchableOpacity>
@@ -686,27 +729,42 @@ export default function WhereTo() {
                   variant={'outline'}
                   onPress={() => {
                     setSheetIndex(1);
-                    mapSelectionMode === 'pickup'
-                      ? pickupRef.current.focus()
-                      : destinationRef.current.focus();
+                    setTimeout(() => {
+                      if (mapSelectionMode === 'pickup') {
+                        pickupRef.current?.focus();
+                        setMapSelectionMode('pickup');
+                      } else {
+                        destinationRef.current?.focus();
+                        setMapSelectionMode('destination');
+                      }
+                    }, 300);
                   }}
                   className="mb-4 h-14 flex-row justify-start rounded-2xl bg-muted/40 px-4">
                   <View
-                    className={cn("mr-1 h-2 w-2 rounded-full bg-red-500", { 'bg-green-500': mapSelectionMode === 'pickup' })}
+                    className={cn('mr-1 h-2 w-2 rounded-full', {
+                      'bg-green-500': mapSelectionMode === 'pickup',
+                      'bg-red-500': mapSelectionMode === 'destination',
+                    })}
                   />
                   <Text
                     numberOfLines={1}
-                    className={cn("mr-2 flex-1 text-base font-semibold text-foreground", { 'text-muted-foreground' : mapSelectionMode === 'pickup' ? !pickupLocation : !destination })}>
+                    className={cn('mr-2 flex-1 text-base font-semibold text-foreground', {
+                      'text-muted-foreground':
+                        mapSelectionMode === 'pickup' ? !pickupLocation : !destination,
+                    })}>
                     {isUpdatingFromMap
                       ? 'Updating location...'
-                      : mapSelectionMode === 'pickup'
-                        ? pickupLocation?.title || 'Set pickup'
-                        : destination?.title || 'Where to?'}
+                      : tempLocation
+                        ? tempLocation.title
+                        : mapSelectionMode === 'pickup'
+                          ? pickupLocation?.title || 'Set pickup'
+                          : destination?.title || 'Where to?'}
                   </Text>
                   <Feather name="search" size={20} color={isDark ? 'white' : 'black'} />
                 </Button>
 
-                <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
+                {/* FIXED: Confirm button */}
+                <Button onPress={confirmLocationFromMap} className="h-14 rounded-xl">
                   <Text className="text-lg font-bold text-secondary">
                     Confirm {mapSelectionMode === 'pickup' ? 'pickup' : 'destination'}
                   </Text>
