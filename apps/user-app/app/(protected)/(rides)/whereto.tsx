@@ -6,13 +6,13 @@ import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import BottomSheet, { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Location from 'expo-location';
 import { colorScheme, useColorScheme } from 'nativewind';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { mapStyleDark } from '@/constants/mapStyles';
+import { mapStyle } from '@/constants/mapStyles';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -27,6 +27,7 @@ import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
 import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function WhereTo() {
   const { colorScheme: currentTheme } = useColorScheme();
@@ -63,7 +64,7 @@ export default function WhereTo() {
   const [isSetLocationExpanded, setIsSetLocationExpanded] = useState(false);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
-
+  
   const apiKey =
     Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   const pickupSessionToken = useRef<string>(uuid.v4() as string).current;
@@ -73,8 +74,7 @@ export default function WhereTo() {
   const [isDestinationSearching, setIsDestinationSearching] = useState(false);
 
   // this is the effect for getting the current location of the user
-  useEffect(() => {
-    (async () => {
+  async function getCurrentLocation() {
       setIsPickupSearching(true);
       let { status } = await Location.requestForegroundPermissionsAsync();
 
@@ -103,7 +103,9 @@ export default function WhereTo() {
 
       mapRef.current?.animateToRegion(newRegion, 1000);
       setIsPickupSearching(false);
-    })();
+  }
+  useEffect(() => {
+    getCurrentLocation();
   }, []);
 
   const handlePickupSelect = async (data: any, details: any = null) => {
@@ -227,18 +229,44 @@ export default function WhereTo() {
     // }
   };
 
+  const handleLocatePress = () => {
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: pickupLocation?.coords?.latitude || 28.5367,
+          longitude: pickupLocation?.coords?.longitude || 77.1178,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000
+      );
+    }
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* Map Background */}
-      <View className="relative flex-1 bg-background">
+      <View className="relative h-2/3 bg-background">
         <MapView
           ref={mapRef}
-          style={{ height: "70%", width: "auto" }}
-          customMapStyle={isDark ? mapStyleDark : []}
+          provider={PROVIDER_GOOGLE}
+          showsUserLocation
+          followsUserLocation
+          showsMyLocationButton={false}
+          mapPadding={{
+            top: 10,
+            right: 10,
+            bottom: 10,
+            left: 10,
+          }}
+          mapType="standard"
+          userLocationUpdateInterval={5000}
+          style={{ height: '100%', width: 'auto' }}
+          customMapStyle={isDark ? mapStyle.dark : []}
           onRegionChangeComplete={onRegionChangeComplete}
           initialRegion={{
-            latitude: 28.5367,
-            longitude: 77.1178,
+            latitude: 34.5367,
+            longitude: 74.1178,
             latitudeDelta: 0.3,
             longitudeDelta: 0.3,
           }}>
@@ -262,11 +290,23 @@ export default function WhereTo() {
               coordinates={routeCoords}
               strokeWidth={4}
               strokeColor={isDark ? '#60a5fa' : '#1a1a2e'}
+              fillColor={isDark ? '#cb97f7' : '#7800e0'}
               lineCap="round"
               lineJoin="round"
             />
           )}
         </MapView>
+        <TouchableOpacity
+          className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
+          style={{ elevation: 5 }}
+          onPress={handleLocatePress}
+          activeOpacity={0.8}>
+          <MaterialCommunityIcons
+            name="crosshairs-gps"
+            size={24}
+            color={isDark ? '#60a5fa' : '#1a73e8'}
+          />
+        </TouchableOpacity>
 
         {/* Center Pin Overlay tracking the map center */}
         {/* <View className="pointer-events-none absolute inset-0 items-center justify-center">
@@ -507,8 +547,8 @@ export default function WhereTo() {
                           variant={'ghost'}
                           className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
                           onPress={() => {
-                            return;
                             setMapSelectionMode('pickup');
+                            return;
                             setSheetIndex(0);
                             if (pickupLocation?.coords) {
                               mapRef.current?.animateToRegion(
@@ -529,8 +569,8 @@ export default function WhereTo() {
                           variant={'ghost'}
                           className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
                           onPress={() => {
-                            return;
                             setMapSelectionMode('destination');
+                            return;
                             setSheetIndex(0);
                             if (destination?.coords) {
                               mapRef.current?.animateToRegion(
@@ -550,25 +590,24 @@ export default function WhereTo() {
                     )}
                   </>
 
-                  <Button onPress={() => {
-                    console.log("Pickup: ", pickupLocation);
-                    console.log("Destination: ", destination);
-                    // if(pickupLocation?.coords.latitude && destination?.coords.latitude) {
-                    //   router.push({
-                    //     // pathname: "/(protected)/(rides)/confirm",
-                    //     pathname: "/(protected)/(rides)/whereto",
-                    //     params: {
-                    //       pickup: JSON.stringify(pickupLocation),
-                    //       destination: JSON.stringify(destination)
-                    //     }
-                    //   })
-                    // }
-                    // return;
-                    }} 
+                  <Button
+                    onPress={() => {
+                      console.log('Pickup: ', pickupLocation);
+                      console.log('Destination: ', destination);
+                      // if(pickupLocation?.coords.latitude && destination?.coords.latitude) {
+                      //   router.push({
+                      //     // pathname: "/(protected)/(rides)/confirm",
+                      //     pathname: "/(protected)/(rides)/whereto",
+                      //     params: {
+                      //       pickup: JSON.stringify(pickupLocation),
+                      //       destination: JSON.stringify(destination)
+                      //     }
+                      //   })
+                      // }
+                      // return;
+                    }}
                     className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">
-                      Confirm locations
-                    </Text>
+                    <Text className="text-lg font-bold text-secondary">Confirm locations</Text>
                   </Button>
                 </View>
               </View>
@@ -590,7 +629,9 @@ export default function WhereTo() {
               <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
                 <View className="mb-4 mt-2 items-center">
                   <Text className="text-xl font-extrabold text-foreground">
-                    {mapSelectionMode === 'pickup' ? 'Set pick up location' : 'Set destination'}
+                    {mapSelectionMode === 'pickup'
+                      ? 'Set pickup location'
+                      : 'Set destination'}
                   </Text>
                   {/* <Text className="mt-1 text-sm text-muted-foreground">Drag map to move pin</Text> */}
                 </View>
@@ -599,8 +640,8 @@ export default function WhereTo() {
                 <View className="mb-4 flex-row rounded-xl bg-muted/20 p-1">
                   <TouchableOpacity
                     onPress={() => {
-                      return;
                       setMapSelectionMode('pickup');
+                      return;
                       if (pickupLocation?.coords) {
                         mapRef.current?.animateToRegion(
                           {
@@ -612,16 +653,16 @@ export default function WhereTo() {
                         );
                       }
                     }}
-                    className={`flex-1 items-center rounded-lg py-2 ${mapSelectionMode === 'pickup' ? 'bg-background shadow-sm' : ''}`}>
+                    className={cn("flex-1 items-center rounded-lg py-2", { 'bg-background': mapSelectionMode === 'pickup' })}>
                     <Text
-                      className={`text-sm font-bold ${mapSelectionMode === 'pickup' ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      Pick up
+                      className={cn("text-sm font-bold text-muted-foreground", { 'text-foreground': mapSelectionMode === 'pickup' })}>
+                      Pickup
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
-                      return;
                       setMapSelectionMode('destination');
+                      return;
                       if (destination?.coords) {
                         mapRef.current?.animateToRegion(
                           {
@@ -633,9 +674,9 @@ export default function WhereTo() {
                         );
                       }
                     }}
-                    className={`flex-1 items-center rounded-lg py-2 ${mapSelectionMode === 'destination' ? 'bg-background shadow-sm' : ''}`}>
+                    className={cn("flex-1 items-center rounded-lg py-2", { 'bg-background': mapSelectionMode === 'destination' })}>
                     <Text
-                      className={`text-sm font-bold ${mapSelectionMode === 'destination' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      className={cn("text-sm font-bold text-muted-foreground", { 'text-foreground': mapSelectionMode === 'destination' })}>
                       Destination
                     </Text>
                   </TouchableOpacity>
@@ -651,11 +692,11 @@ export default function WhereTo() {
                   }}
                   className="mb-4 h-14 flex-row justify-start rounded-2xl bg-muted/40 px-4">
                   <View
-                    className={`mr-1 h-2 w-2 rounded-full ${mapSelectionMode === 'pickup' ? 'bg-green-500' : 'bg-red-500'}`}
+                    className={cn("mr-1 h-2 w-2 rounded-full bg-red-500", { 'bg-green-500': mapSelectionMode === 'pickup' })}
                   />
                   <Text
                     numberOfLines={1}
-                    className={`mr-2 flex-1 text-base font-semibold ${(mapSelectionMode === 'pickup' ? !pickupLocation : !destination) ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    className={cn("mr-2 flex-1 text-base font-semibold text-foreground", { 'text-muted-foreground' : mapSelectionMode === 'pickup' ? !pickupLocation : !destination })}>
                     {isUpdatingFromMap
                       ? 'Updating location...'
                       : mapSelectionMode === 'pickup'
