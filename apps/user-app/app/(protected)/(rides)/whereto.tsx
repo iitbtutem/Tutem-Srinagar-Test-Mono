@@ -135,7 +135,8 @@ export default function WhereTo() {
           longitudeDelta: 0.015,
         },
         1000
-      );
+      );   
+      setMapSelectionMode(null);
     }
   };
 
@@ -162,6 +163,7 @@ export default function WhereTo() {
       // Collapse bottom sheet
       setSheetIndex(0);
       Keyboard.dismiss();
+      setMapSelectionMode(null);
     }
   };
 
@@ -420,8 +422,13 @@ export default function WhereTo() {
                 </View>
 
                 {/* Active Search Inputs Block using Google Places */}
-                <View className="z-[9999] mt-6 flex-row px-4">
-                  <View className="flex-1 rounded-xl border-2 border-foreground/20 bg-background">
+                <View className="z-[9999] mt-6 flex-row items-center px-4">
+                  <View className="items-center mr-3 w-4">
+                    <View className="w-2 h-2 rounded-full bg-green-500" />
+                    <View className="w-0.5 h-14 bg-foreground" />
+                    <View className="w-2 h-2 bg-red-500" />
+                  </View>
+                  <View className="flex-1 rounded-xl border-2 border-foreground bg-background">
                     {/* Pickup Location Autocomplete */}
                     <View className="z-[2] flex-row items-center border-b-2 border-muted/50">
                       {!apiKey ? (
