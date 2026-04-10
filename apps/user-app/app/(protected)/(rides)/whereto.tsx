@@ -671,7 +671,7 @@ export default function WhereTo() {
               ]}
               pointerEvents={sheetState === 'COLLAPSED' ? 'auto' : 'none'}>
               <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
-                <View className="mb-4 items-center">
+                <View className="mb-1 items-center">
                   <Text className="text-xl font-extrabold text-foreground">
                     {mapSelectionMode === 'pickup' ? 'Set pickup location' : 'Set destination'}
                   </Text>
@@ -679,7 +679,7 @@ export default function WhereTo() {
                 </View>
 
                 {/* FIXED: Mode Switcher in Compact View */}
-                <View className="mb-4 flex-row rounded-xl bg-muted/20 p-1">
+                <View className="mb-1 flex-row rounded-xl bg-muted/20 p-1">
                   <TouchableOpacity
                     onPress={() => {
                       setMapSelectionMode('pickup');
@@ -721,11 +721,11 @@ export default function WhereTo() {
                       }
                     }}
                     className={cn('flex-1 items-center rounded-lg py-2', {
-                      'bg-background': mapSelectionMode === 'destination',
+                      'bg-background': mapSelectionMode !== 'pickup',
                     })}>
                     <Text
                       className={cn('text-sm font-bold text-muted-foreground', {
-                        'text-foreground': mapSelectionMode === 'destination',
+                        'text-foreground': mapSelectionMode !== 'pickup',
                       })}>
                       Destination
                     </Text>
