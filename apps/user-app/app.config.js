@@ -24,7 +24,7 @@ export default {
         NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to pick you up and track your ride."
       },
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
       }
     },
     android: {
@@ -42,7 +42,7 @@ export default {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
         }
       }
     },
@@ -70,10 +70,9 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "3a5da138-6150-4c7d-8794-4529e9f69950"
+        projectId: "b41c7a4d-64c0-49e6-b87a-470f6ddfdae5"
       },
-      GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     },
-    owner: "rayeeshello"
+    owner: "rayeesone1"
   }
 };
