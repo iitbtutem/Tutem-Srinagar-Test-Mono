@@ -1,7 +1,15 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import uuid from 'react-native-uuid';
 import Constants from 'expo-constants';
-import { View, TouchableOpacity, Keyboard, ActivityIndicator, ScrollView, BackHandler } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  Keyboard,
+  ActivityIndicator,
+  ScrollView,
+  BackHandler,
+  Image,
+} from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,12 +30,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useToast } from '@/components/CustomToast';
 import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
-import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
+import {
+  BottomSheetBackgroundColor,
+  BottomSheetIndicatorColor,
+  iconColor,
+} from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useQuery } from 'convex/react';
 import { api } from '@tutem/api';
+import { SelectContent } from '@/components/ui/select';
 
 // ─── SheetLayer ───────────────────────────────────────────────────────────────
 type SheetLayerProps = {
@@ -67,7 +80,7 @@ function SheetLayer({ children, animatedIndex, visibleFrom = 0, visibleUntil }: 
 type Driver = {
   id: string;
   name: string;
-  lattitude: number;
+  latitude: number;
   longitude: number;
 };
 
@@ -86,31 +99,29 @@ function NearbyDriversPanel({
   sheetState,
   isDark,
 }: NearbyDriversPanelProps) {
-  if (!drivers || drivers.length === 0) return (
-    <View className="flex-1 items-center justify-center py-8">
-      <Text className="text-sm text-muted-foreground">No drivers available nearby</Text>
-    </View>
-  );
+  if (!drivers || drivers.length === 0)
+    return (
+      <View className="flex-1 items-center justify-center py-8">
+        <Text className="text-sm text-muted-foreground">No drivers available nearby</Text>
+      </View>
+    );
 
   return (
-    <View className="flex-1 px-4 pb-3 pt-2">
+    <View className="mb-6 px-4 pt-2">
       <View className="mb-3 flex-row items-center justify-between">
         <Text className="text-lg font-bold text-foreground">Nearby drivers</Text>
         <Text className="text-xs text-muted-foreground">{drivers.length} available</Text>
       </View>
 
       <ScrollView
-        horizontal={sheetState === 'COLLAPSED'}
+        // horizontal={sheetState === 'COLLAPSED'}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          sheetState === 'FULL'
-            ? { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }
-            : { flexDirection: 'row', gap: 8 }
-        }>
+        contentContainerStyle={{
+          gap: 3,
+        }}>
         {drivers.map((driver) => {
           const isSelected = selectedDriver === driver.id;
-          const initials = driver.name?.slice(0, 2).toUpperCase() ?? 'DR';
 
           return (
             <TouchableOpacity
@@ -125,15 +136,13 @@ function NearbyDriversPanel({
               <View
                 className={cn(
                   'h-9 w-9 items-center justify-center rounded-full',
-                  isSelected ? 'bg-foreground' : 'bg-muted'
+                  isSelected ? 'bg-background' : 'bg-foreground'
                 )}>
-                <Text
-                  className={cn(
-                    'text-xs font-bold',
-                    isSelected ? 'text-background' : 'text-foreground'
-                  )}>
-                  {initials}
-                </Text>
+                <MaterialIcons
+                  name={'directions-car'}
+                  size={24}
+                  color={isSelected ? 'white' : 'black'}
+                />
               </View>
 
               <View className="flex-1">
@@ -141,7 +150,7 @@ function NearbyDriversPanel({
                   {driver.name}
                 </Text>
                 <Text className="text-xs text-muted-foreground">
-                  {driver.lattitude.toFixed(4)}, {driver.longitude.toFixed(4)}
+                  {driver.latitude.toFixed(4)}, {driver.longitude.toFixed(4)}
                 </Text>
               </View>
 
@@ -183,7 +192,7 @@ export default function WhereTo() {
   } | null>(null);
 
   const [isPickupSetAutomatically, setIsPickupSetAutomatically] = useState(false);
-  
+
   const bothSelected = !!(pickupLocation && destination);
 
   const [mapSelectionMode, setMapSelectionMode] = useState<'pickup' | 'destination' | null>(
@@ -193,13 +202,12 @@ export default function WhereTo() {
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  
+
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);
 
   const apiKey =
-    Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY ||
-    process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   const pickupSessionToken = useRef<string>(uuid.v4() as string).current;
   const destinationSessionToken = useRef<string>(uuid.v4() as string).current;
 
@@ -214,29 +222,15 @@ export default function WhereTo() {
   const animatedIndex = useSharedValue(1);
 
   // Only fires when both locations are selected
-  const getNearbyDrivers = useQuery(
+  const nearbyDrivers = useQuery(
     api.routes.rides.getNearebyDrivers,
     bothSelected && showDrivers
       ? {
-          lattitude: pickupLocation!.coords.latitude,
+          latitude: pickupLocation!.coords.latitude,
           longitude: pickupLocation!.coords.longitude,
         }
       : 'skip'
   );
-
-  // Handle back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (showDrivers) {
-        // Go back to planning mode instead of exiting
-        handleBackToPlanning();
-        return true; // Prevent default back behavior
-      }
-      return false; // Allow default back behavior
-    });
-
-    return () => backHandler.remove();
-  }, [showDrivers]);
 
   async function getCurrentLocation() {
     setIsPickupSearching(true);
@@ -296,21 +290,20 @@ export default function WhereTo() {
         longitude: details.geometry.location.lng,
       };
       setDestination({
-        title:
-          data.description || data.structured_formatting?.main_text || 'Selected Destination',
+        title: data.description || data.structured_formatting?.main_text || 'Selected Destination',
         coords: dropoffCoords,
       });
       mapRef.current?.animateToRegion(
         { ...dropoffCoords, latitudeDelta: 0.01, longitudeDelta: 0.01 },
         1000
       );
-      
+
       // If pickup location is null, set it to current location
       if (!pickupLocation && !isPickupSetAutomatically) {
         setIsPickupSetAutomatically(true);
         await getCurrentLocation();
       }
-      
+
       // Auto-show drivers panel when destination is selected
       setShowDrivers(true);
       setSheetIndex(1);
@@ -319,32 +312,13 @@ export default function WhereTo() {
     }
   };
 
-  // Update route when locations change
-  useEffect(() => {
-    if (pickupLocation?.coords && destination?.coords) {
-      (async () => {
-        const coords = await fetchRoute(pickupLocation.coords, destination.coords);
-        setRouteCoords(coords);
-        if (coords.length > 0) {
-          mapRef.current?.fitToCoordinates([pickupLocation.coords, destination.coords], {
-            edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
-            animated: true,
-          });
-        }
-      })();
-    } else {
-      setRouteCoords([]);
-    }
-  }, [pickupLocation?.coords, destination?.coords]);
-
-  const rotationStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }],
-  }));
-
-  const handleSheetChanges = useCallback((index: number) => {
-    setSheetIndex(index);
-    if (index === 0) Keyboard.dismiss();
-  }, []);
+  const handleBackToPlanning = () => {
+    pickupRef.current?.setAddressText(pickupLocation?.title || '');
+    setDestination(null);
+    setShowDrivers(false);
+    setSelectedDriverId(null);
+    setSheetIndex(1);
+  };
 
   const confirmLocationFromMap = () => {
     if (!tempLocation && pickupLocation && destination) {
@@ -360,6 +334,7 @@ export default function WhereTo() {
     } else if (mapSelectionMode === 'destination') {
       setDestination({ title, coords: { latitude, longitude } });
       destinationRef.current?.setAddressText(title);
+      setShowDrivers(true);
     }
     setTempLocation(null);
     setSheetIndex(1);
@@ -426,13 +401,53 @@ export default function WhereTo() {
     return null;
   };
 
-  const handleBackToPlanning = () => {
-    pickupRef.current?.setAddressText(pickupLocation?.title || '');
-    setDestination(null);
-    setShowDrivers(false);
-    setSelectedDriverId(null);
-    setSheetIndex(1);
-  };
+  useEffect(() => {
+    if (!!pickupLocation) pickupRef.current?.setAddressText(pickupLocation.title);
+    destinationRef.current?.focus();
+  }, [bothSelected, showDrivers]);
+
+  // Update route when locations change
+  useEffect(() => {
+    if (pickupLocation?.coords && destination?.coords) {
+      (async () => {
+        const coords = await fetchRoute(pickupLocation.coords, destination.coords);
+        setRouteCoords(coords);
+        if (coords.length > 0) {
+          mapRef.current?.fitToCoordinates([pickupLocation.coords, destination.coords], {
+            edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
+            animated: true,
+          });
+        }
+      })();
+    } else {
+      setRouteCoords([]);
+    }
+  }, [pickupLocation?.coords, destination?.coords]);
+
+  // Handle back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showDrivers) {
+        // Go back to planning mode instead of exiting
+        handleBackToPlanning();
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [showDrivers, handleBackToPlanning]);
+
+  const rotationStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }],
+  }));
+
+  const handleSheetChanges = useCallback((index: number) => {
+    setSheetIndex(index);
+    if (index === 0) Keyboard.dismiss();
+  }, []);
+
+  const selectedDriver = nearbyDrivers?.find((driver) => driver.id === selectedDriverId);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -456,6 +471,22 @@ export default function WhereTo() {
             latitudeDelta: 0.3,
             longitudeDelta: 0.3,
           }}>
+          {nearbyDrivers?.map((driver) => (
+            <Marker
+              key={driver.id}
+              coordinate={{
+                latitude: driver.latitude,
+                longitude: driver.longitude,
+              }}
+              anchor={{ x: 0, y: 0 }}>
+              {/* <MaterialCommunityIcons name="car-hatchback" size={30} color={iconColor} /> */}
+              <Image
+                source={require('@/assets/images/top_cab.png')}
+                style={{ width: 40, height: 40 }}
+                resizeMode="contain"
+              />
+            </Marker>
+          ))}
           {pickupLocation?.coords && (
             <Marker coordinate={pickupLocation.coords} anchor={{ x: 0.5, y: 0.5 }}>
               <MaterialCommunityIcons name="map-marker" size={30} color="green" />
@@ -477,6 +508,14 @@ export default function WhereTo() {
             />
           )}
         </MapView>
+
+        {sheetState === 'COLLAPSED' && (
+          <TouchableOpacity
+            className="absolute left-5 top-16 z-0 h-12 w-12 items-center justify-center rounded-full bg-muted shadow-lg"
+            onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
@@ -522,9 +561,11 @@ export default function WhereTo() {
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
         animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
-        keyboardBehavior="extend">
+        keyboardBehavior="extend"
+        // enableHandlePanningGesture={!nearbyDrivers?.length || !!selectedDriver}
+        // enableContentPanningGesture={!nearbyDrivers?.length || !!selectedDriver}
+      >
         <View style={{ flex: 1, paddingBottom: insets.bottom }}>
-
           {/* ── OVERLAY LAYERS ────────────────────────────────────────────────
               Three layers total. Only one is ever visible at a time:
 
@@ -533,16 +574,13 @@ export default function WhereTo() {
               3. MAP-PIN LAYER   — sheet COLLAPSED (map drag selection)
           ──────────────────────────────────────────────────────────────────── */}
           <View style={{ flex: 1 }} pointerEvents="box-none">
-
             {/* LAYER 1: Both locations set — show nearby drivers */}
             {bothSelected && showDrivers && (
               <SheetLayer animatedIndex={animatedIndex} visibleFrom={0.5}>
-                <View style={{ paddingTop: 8 }}>
+                <View style={{ paddingVertical: 0 }}>
                   {/* Header with back option to re-plan */}
                   <View className="flex-row items-center px-4 py-2">
-                    <TouchableOpacity
-                      onPress={handleBackToPlanning}
-                      className="p-2">
+                    <TouchableOpacity onPress={handleBackToPlanning} className="p-2">
                       <Ionicons name="arrow-back" size={24} color={isDark ? 'white' : 'black'} />
                     </TouchableOpacity>
                     <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
@@ -573,21 +611,15 @@ export default function WhereTo() {
                   </View>
 
                   <NearbyDriversPanel
-                    drivers={getNearbyDrivers ?? []}
+                    drivers={nearbyDrivers ?? []}
                     selectedDriver={selectedDriverId}
-                    onSelect={setSelectedDriverId}
+                    onSelect={(id) => {
+                      setSheetIndex(0);
+                      setSelectedDriverId(id);
+                    }}
                     sheetState={sheetState}
                     isDark={isDark}
                   />
-
-                  {/* Confirm ride button — only shown when a driver is selected */}
-                  {selectedDriverId && (
-                    <View className="px-4 pt-2">
-                      <Button className="h-14 rounded-xl">
-                        <Text className="text-lg font-bold text-secondary">Confirm ride</Text>
-                      </Button>
-                    </View>
-                  )}
                 </View>
               </SheetLayer>
             )}
@@ -631,13 +663,21 @@ export default function WhereTo() {
                             fetchDetails={true}
                             onPress={handlePickupSelect}
                             textInputProps={{ onFocus: () => setMapSelectionMode('pickup') }}
-                            query={{ key: apiKey, language: 'en', sessionToken: pickupSessionToken }}
+                            query={{
+                              key: apiKey,
+                              language: 'en',
+                              sessionToken: pickupSessionToken,
+                            }}
                             debounce={400}
                             enablePoweredByContainer={false}
                             onFail={(error) => {
                               console.error('Pickup search failed:', error);
                               setIsPickupSearching(false);
-                              showToast({ title: 'Search failed', description: error, type: 'error' });
+                              showToast({
+                                title: 'Search failed',
+                                description: error,
+                                type: 'error',
+                              });
                             }}
                             styles={{
                               container: { flex: 0, width: '100%', zIndex: 1 },
@@ -687,7 +727,11 @@ export default function WhereTo() {
                             onFail={(error) => {
                               console.error('Destination search failed:', error);
                               setIsDestinationSearching(false);
-                              showToast({ title: 'Search failed', description: error, type: 'error' });
+                              showToast({
+                                title: 'Search failed',
+                                description: error,
+                                type: 'error',
+                              });
                             }}
                             styles={{
                               container: { flex: 0, width: '100%', zIndex: 2 },
@@ -745,7 +789,11 @@ export default function WhereTo() {
                             setSheetIndex(0);
                             if (pickupLocation?.coords) {
                               mapRef.current?.animateToRegion(
-                                { ...pickupLocation.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
+                                {
+                                  ...pickupLocation.coords,
+                                  latitudeDelta: 0.015,
+                                  longitudeDelta: 0.015,
+                                },
                                 500
                               );
                             } else {
@@ -771,7 +819,11 @@ export default function WhereTo() {
                             setSheetIndex(0);
                             if (destination?.coords) {
                               mapRef.current?.animateToRegion(
-                                { ...destination.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
+                                {
+                                  ...destination.coords,
+                                  latitudeDelta: 0.015,
+                                  longitudeDelta: 0.015,
+                                },
                                 500
                               );
                             } else {
@@ -796,107 +848,222 @@ export default function WhereTo() {
             )}
 
             {/* LAYER 3: Collapsed — map pin selection (always present) */}
-            <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
-              <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
-                <View className="mb-1 items-center">
-                  <Text className="text-xl font-extrabold text-foreground">
-                    {mapSelectionMode === 'pickup' ? 'Set pickup location' : 'Set destination'}
-                  </Text>
-                  <Text className="mt-1 text-sm text-muted-foreground">Drag map to move pin</Text>
-                </View>
 
-                {/* Mode switcher */}
-                <View className="mb-1 flex-row rounded-xl bg-muted/20 p-1">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setMapSelectionMode('pickup');
-                      if (pickupLocation?.coords) {
-                        mapRef.current?.animateToRegion(
-                          { ...pickupLocation.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-                          500
-                        );
-                      }
-                    }}
-                    className={cn('flex-1 items-center rounded-lg py-2', {
-                      'bg-background': mapSelectionMode === 'pickup',
-                    })}>
-                    <Text
-                      className={cn('text-sm font-bold text-muted-foreground', {
-                        'text-foreground': mapSelectionMode === 'pickup',
-                      })}>
-                      Pickup
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setMapSelectionMode('destination');
-                      if (destination?.coords) {
-                        mapRef.current?.animateToRegion(
-                          { ...destination.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-                          500
-                        );
-                      }
-                    }}
-                    className={cn('flex-1 items-center rounded-lg py-2', {
-                      'bg-background': mapSelectionMode !== 'pickup',
-                    })}>
-                    <Text
-                      className={cn('text-sm font-bold text-muted-foreground', {
-                        'text-foreground': mapSelectionMode !== 'pickup',
-                      })}>
-                      Destination
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+            {(bothSelected || showDrivers) && selectedDriver && (
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
+                  <View className="mb-2 items-center">
+                    <Text className="text-xl font-extrabold text-foreground">Your ride</Text>
+                  </View>
 
-                {/* Search button */}
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSheetIndex(1);
-                    setTimeout(() => {
-                      if (mapSelectionMode === 'pickup') {
-                        pickupRef.current?.focus();
+                  <View className="mb-3 gap-4 rounded-2xl bg-background p-4 shadow-sm">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1 flex-row items-center gap-3">
+                        <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
+                          <Text className="text-sm font-bold text-foreground">
+                            {selectedDriver.name?.[0]}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text className="text-base font-semibold text-foreground">
+                            {selectedDriver.name}
+                          </Text>
+                          <View className="mt-0.5 flex-row items-center gap-1">
+                            <Text className="text-yellow-500">★</Text>
+                            <Text className="text-sm text-muted-foreground">5.0</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="items-end">
+                        <Text className="text-sm font-medium text-foreground">Heavy Tipper</Text>
+                        <Text className="text-xs tracking-wide text-muted-foreground">
+                          JK-WILRUIN-ROADS
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className="h-[1px] bg-border" />
+
+                    <View className="flex-row items-center justify-between rounded-xl bg-muted/30 p-3">
+                      <View>
+                        <Text className="text-muted-foreground">Arriving in</Text>
+                        <Text className="text-lg font-bold text-foreground">7 min</Text>
+                      </View>
+                      <View className="items-end">
+                        <Text className="text-lg font-bold text-foreground">$420.69</Text>
+                        <Text className="text-sm text-muted-foreground">25 km</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Confirm button */}
+                  <Button onPress={() => console.log('Confirm Ride')} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">Confirm Ride</Text>
+                  </Button>
+                </View>
+              </SheetLayer>
+            )}
+
+            {(bothSelected || showDrivers) && !selectedDriver && (
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
+                  <View className="mb-2 items-center">
+                    <Text className="text-xl font-extrabold text-foreground">Your route</Text>
+                  </View>
+
+                  <View className="mb-4 gap-3">
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      style={{ minWidth: 130 }}
+                      className={cn(
+                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
+                      )}>
+                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
+                        <MaterialCommunityIcons name="map-marker" size={24} color="green" />
+                      </View>
+
+                      <View className="flex-1">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                          {pickupLocation?.title}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">Pickup</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      style={{ minWidth: 130 }}
+                      className={cn(
+                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
+                      )}>
+                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
+                        <MaterialCommunityIcons name="map-marker" size={24} color="red" />
+                      </View>
+
+                      <View className="flex-1">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                          {destination?.title}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">Destination</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Confirm button */}
+                  <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">Choose driver</Text>
+                  </Button>
+                </View>
+              </SheetLayer>
+            )}
+
+            {(!bothSelected || !showDrivers) && !selectedDriver && (
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+                <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
+                  <View className="mb-1 items-center">
+                    <Text className="text-xl font-extrabold text-foreground">
+                      {mapSelectionMode === 'pickup' ? 'Set pickup location' : 'Set destination'}
+                    </Text>
+                    <Text className="mt-1 text-sm text-muted-foreground">Drag map to move pin</Text>
+                  </View>
+
+                  {/* Mode switcher */}
+                  <View className="mb-1 flex-row rounded-xl bg-muted/20 p-1">
+                    <TouchableOpacity
+                      onPress={() => {
                         setMapSelectionMode('pickup');
-                      } else {
-                        destinationRef.current?.focus();
+                        if (pickupLocation?.coords) {
+                          mapRef.current?.animateToRegion(
+                            {
+                              ...pickupLocation.coords,
+                              latitudeDelta: 0.015,
+                              longitudeDelta: 0.015,
+                            },
+                            500
+                          );
+                        }
+                      }}
+                      className={cn('flex-1 items-center rounded-lg py-2', {
+                        'bg-background': mapSelectionMode === 'pickup',
+                      })}>
+                      <Text
+                        className={cn('text-sm font-bold text-muted-foreground', {
+                          'text-foreground': mapSelectionMode === 'pickup',
+                        })}>
+                        Pickup
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
                         setMapSelectionMode('destination');
-                      }
-                    }, 300);
-                  }}
-                  className="mb-4 h-14 flex-row justify-start rounded-2xl bg-muted/40 px-4">
-                  <View
-                    className={cn('mr-1 h-2 w-2 rounded-full', {
-                      'bg-green-500': mapSelectionMode === 'pickup',
-                      'bg-red-500': mapSelectionMode === 'destination',
-                    })}
-                  />
-                  <Text
-                    numberOfLines={1}
-                    className={cn('mr-2 flex-1 text-base font-semibold text-foreground', {
-                      'text-muted-foreground':
-                        mapSelectionMode === 'pickup' ? !pickupLocation : !destination,
-                    })}>
-                    {isUpdatingFromMap
-                      ? 'Updating location...'
-                      : tempLocation
-                        ? tempLocation.title
-                        : mapSelectionMode === 'pickup'
-                          ? pickupLocation?.title || 'Set pickup'
-                          : destination?.title || 'Where to?'}
-                  </Text>
-                  <Feather name="search" size={20} color={isDark ? 'white' : 'black'} />
-                </Button>
+                        if (destination?.coords) {
+                          mapRef.current?.animateToRegion(
+                            { ...destination.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
+                            500
+                          );
+                        }
+                      }}
+                      className={cn('flex-1 items-center rounded-lg py-2', {
+                        'bg-background': mapSelectionMode !== 'pickup',
+                      })}>
+                      <Text
+                        className={cn('text-sm font-bold text-muted-foreground', {
+                          'text-foreground': mapSelectionMode !== 'pickup',
+                        })}>
+                        Destination
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {/* Confirm button */}
-                <Button onPress={confirmLocationFromMap} className="h-14 rounded-xl">
-                  <Text className="text-lg font-bold text-secondary">
-                    Confirm {mapSelectionMode === 'pickup' ? 'pickup' : 'destination'}
-                  </Text>
-                </Button>
-              </View>
-            </SheetLayer>
+                  {/* Search button */}
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setSheetIndex(1);
+                      setTimeout(() => {
+                        if (mapSelectionMode === 'pickup') {
+                          pickupRef.current?.focus();
+                          setMapSelectionMode('pickup');
+                        } else {
+                          destinationRef.current?.focus();
+                          setMapSelectionMode('destination');
+                        }
+                      }, 300);
+                    }}
+                    className="mb-4 h-14 flex-row justify-start rounded-2xl bg-muted/40 px-4">
+                    <View
+                      className={cn('mr-1 h-2 w-2 rounded-full', {
+                        'bg-green-500': mapSelectionMode === 'pickup',
+                        'bg-red-500': mapSelectionMode === 'destination',
+                      })}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      className={cn('mr-2 flex-1 text-base font-semibold text-foreground', {
+                        'text-muted-foreground':
+                          mapSelectionMode === 'pickup' ? !pickupLocation : !destination,
+                      })}>
+                      {isUpdatingFromMap
+                        ? 'Updating location...'
+                        : tempLocation
+                          ? tempLocation.title
+                          : mapSelectionMode === 'pickup'
+                            ? pickupLocation?.title || 'Set pickup'
+                            : destination?.title || 'Where to?'}
+                    </Text>
+                    <Feather name="search" size={20} color={isDark ? 'white' : 'black'} />
+                  </Button>
 
+                  {/* Confirm button */}
+                  <Button onPress={confirmLocationFromMap} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">
+                      Confirm {mapSelectionMode === 'pickup' ? 'pickup' : 'destination'}
+                    </Text>
+                  </Button>
+                </View>
+              </SheetLayer>
+            )}
           </View>
         </View>
       </BottomSheet>
