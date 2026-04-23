@@ -1,12 +1,18 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, Octicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { useColorScheme } from 'nativewind';
+import CustomHeader from '@/components/CustomHeader';
+import { useAuth } from '@clerk/expo';
+import { useQuery } from 'convex/react';
+import { api } from '@tutem/api';
 
 export default function TabsLayout() {
+  const { userId } = useAuth();
+
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-
+  
   return (
     <Tabs
       screenOptions={{
@@ -36,12 +42,12 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="profile"
+        name="history"
         options={{
-          title: 'Profile',
+          title: 'History',
           animation: 'fade',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="user" size={size} color={color} />
+            <Octicons name="history" size={24} color={color} />
           ),
         }}
       />

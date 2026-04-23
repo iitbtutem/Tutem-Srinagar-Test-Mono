@@ -38,15 +38,14 @@ export default function EditProfile() {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const { firstName, lastName, dob, phoneNumber, gender, clerkId } =
-    useLocalSearchParams<{
-      firstName: string;
-      lastName?: string;
-      dob: string;
-      phoneNumber: string;
-      gender: 'Male' | 'Female' | 'Other';
-      clerkId: string;
-    }>();
+  const { firstName, lastName, dob, phoneNumber, gender, clerkId } = useLocalSearchParams<{
+    firstName: string;
+    lastName?: string;
+    dob: string;
+    phoneNumber: string;
+    gender: 'Male' | 'Female' | 'Other';
+    clerkId: string;
+  }>();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -71,7 +70,8 @@ export default function EditProfile() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      await updateUser({ ...data, dob: String(data.dob), clerkId: clerkId });
+      const {dob, gender, ...rest} = data;
+      await updateUser({ ...rest, clerkId: clerkId });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
@@ -183,6 +183,7 @@ export default function EditProfile() {
             render={({ field, fieldState }) => (
               <>
                 <CustomDatePicker
+                  disabled={true}
                   ref={dobRef}
                   title="Choose DOB"
                   date={field.value}
@@ -226,7 +227,7 @@ export default function EditProfile() {
                     : undefined
                 }
                 onValueChange={(option: any) => field.onChange(option?.value)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" disabled={true}>
                   <SelectValue placeholder="Select Gender" />
                 </SelectTrigger>
                 <SelectContent className="w-10/12">

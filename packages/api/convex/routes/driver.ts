@@ -4,6 +4,43 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+export const registerExpoPushToken = mutation({
+  args: {
+    driverId: v.id("driver"),
+    expoPushToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db
+      .query("driver")
+
+      .filter((q) => q.eq(q.field("_id"), args.driverId))
+      .first();
+    if(driver === null) return;
+
+    await ctx.db.patch(driver._id, {
+      expoPushToken: args.expoPushToken
+    });
+  }
+});
+
+export const removeExpoPushToken = mutation({
+  args: {
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db
+      .query("driver")
+
+      .filter((q) => q.eq(q.field("_id"), args.driverId))
+      .first();
+    if(driver === null) return;
+    
+    await ctx.db.patch(driver._id, {
+      expoPushToken: undefined
+    });
+  }
+});
+
 export const addDriver = mutation({
   args: {
     firstName: v.string(),
@@ -16,6 +53,7 @@ export const addDriver = mutation({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
+    expoPushToken: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     let existingUser = await ctx.db
@@ -65,9 +103,13 @@ export const addDriver = mutation({
       licenseImageBackKey: args.licenseImageBackKey,
       licenseImageFrontKey: args.licenseImageFrontKey,
       licenseNumber: args.licenseNumber,
+      isAvailableForRide: true,
+      isOnline: true,
       isLicenseVerified: organization.isLicenseVerficationRequired
         ? "Pending"
         : "Verified",
+      expoPushToken: args.expoPushToken,
+      genderMatching: false,
     });
 
     return;
@@ -81,6 +123,7 @@ export const registerAsDriver = mutation({
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
+    expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -108,12 +151,16 @@ export const registerAsDriver = mutation({
     await ctx.db.insert("driver", {
       userId: user._id,
       licenseNumber: args.licenseNumber,
+      isAvailableForRide: true,
+      isOnline: true,
       licenseImageFrontKey: args.licenseImageFrontKey,
       licenseImageBackKey: args.licenseImageBackKey,
       isLicenseVerified: organization.isLicenseVerficationRequired
         ? "Pending"
         : "Verified",
       organizationId: args.organizationId,
+      expoPushToken: args.expoPushToken,
+      genderMatching: false,
     });
     await ctx.db.insert("userPermission", {
       userId: user._id,
@@ -180,6 +227,18 @@ export const getDriver = query({
       .filter((q) => q.eq(q.field("_id"), driver?.organizationId))
       .first();
 
+    if(driver === null) return;
+    const ratings = await ctx.db
+      .query("ratings")
+      .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+      .filter((q) => q.eq(q.field("raterType"), "Rider"))
+      .collect();
+
+    const averageRating =
+      ratings.length === 0
+        ? null
+        : ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
+
     return {
       ...user,
       profilePictureKey: profilePictureUri,
@@ -188,6 +247,8 @@ export const getDriver = query({
         organization: organization,
         licenseImageFrontKey: licenseFrontImageUri,
         licenseImageBackKey: licenseBackImageUri,
+        averageRating,
+        totalRatings: ratings.length
       } : null,
     };
   },
@@ -197,12 +258,10 @@ export const updateDriver = mutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
-    dob: v.string(),
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
-    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
   },
@@ -250,8 +309,6 @@ export const updateDriver = mutation({
     await ctx.db.patch(user._id, {
       firstName: args.firstName,
       lastName: args.lastName,
-      dob: args.dob,
-      gender: args.gender,
       phoneNumber: args.phoneNumber,
     });
 
@@ -352,3 +409,48 @@ export const updateLicense = mutation({
     });
   },
 });
+
+export const toggleAvailability = mutation({
+  args: {
+    id: v.id("driver")
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.id);
+    if(driver === null) throw new ConvexError("Invalid user");
+
+    const rideRequests = await ctx.db
+    .query("ride")
+    .filter((q) => q.and(
+      q.eq(q.field("driverId"), driver._id),
+      q.eq(q.field("status"), "Open")
+    ))
+    .collect();
+
+    if(driver.isOnline === true){
+      for(const ride of rideRequests){
+        await ctx.db.patch(ride._id, {
+          requestStatus: "Rejected"
+        })
+      };
+    };
+
+    await ctx.db.patch(driver._id, {
+      isAvailableForRide: driver.isOnline ? false : true,
+      isOnline: !driver.isOnline,
+    });
+  }
+})
+
+export const toggleGenderMatching = mutation({
+  args: {
+    id: v.id("driver")
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.id);
+    if(driver === null) throw new ConvexError("Invalid user");
+
+    await ctx.db.patch(driver._id, {
+      genderMatching: !driver.genderMatching
+    })
+  }
+})

@@ -8,9 +8,10 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { colorScheme } from 'nativewind';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
+import { NotificationProvider } from '@/context/NotificationContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -39,6 +40,15 @@ const tokenCache = {
 
 export default function RootLayout() {
   const theme = colorScheme.get();
+  
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -46,18 +56,20 @@ export default function RootLayout() {
         publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
         tokenCache={tokenCache}>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <ToastProvider>
-            <StatusBar
-              style={theme === 'dark' ? 'light' : 'dark'}
-              backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
-            />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-              }}
-            />
-            <PortalHost />
-          </ToastProvider>
+          <NotificationProvider>
+            <ToastProvider>
+              <StatusBar
+                style={theme === 'dark' ? 'light' : 'dark'}
+                backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
+              />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+              <PortalHost />
+            </ToastProvider>
+          </NotificationProvider>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </GestureHandlerRootView>

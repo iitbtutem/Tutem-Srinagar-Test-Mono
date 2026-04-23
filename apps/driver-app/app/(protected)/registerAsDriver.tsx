@@ -20,7 +20,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { ActivityIndicator, Image, TextInput, TouchableOpacity, View } from 'react-native';
@@ -35,6 +35,7 @@ import {
   BottomSheetIndicatorColor,
   iconColor,
 } from '@/constants/colors';
+import { useNotification } from '@/context/NotificationContext';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -54,7 +55,8 @@ export default function RegisterAsRider() {
 
   const { userId } = useAuth();
   const router = useRouter();
-  const { showToast } = useToast();
+  const { showToast } = useToast();  
+  const { expoPushToken } = useNotification();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
@@ -172,6 +174,7 @@ export default function RegisterAsRider() {
         clerkId: userId,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
+        expoPushToken: expoPushToken ?? undefined,
       });
 
       showToast({ title: 'Success', description: 'Account created successfully', type: 'success' });
@@ -203,6 +206,7 @@ export default function RegisterAsRider() {
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
+      <Stack.Screen options={{ headerShown: true }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"

@@ -1,3 +1,4 @@
+import CustomHeader from '@/components/CustomHeader';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
@@ -10,7 +11,10 @@ export default function ProtectedLayout() {
   const protectedGuard = !!userId && !!user;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ 
+      headerShown: true,
+      header: (props) => user && <CustomHeader {...props} user={user} />, 
+      }}>
       <Stack.Protected guard={protectedGuard && user?.driverDetails !== null}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen

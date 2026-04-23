@@ -9,6 +9,7 @@ type CustomDatePickerProps = {
   title?: string;
   date: Date | null;
   setDate: (date: Date) => void;
+  disabled?: boolean;
 };
 
 export type CustomDatePickerHandle = {
@@ -16,7 +17,7 @@ export type CustomDatePickerHandle = {
 };
 
 const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProps>(
-  ({ title = 'Choose Date', date, setDate }, ref) => {
+  ({ title = 'Choose Date', date, setDate, disabled = false }, ref) => {
     const [show, setShow] = useState(false);
 
     useImperativeHandle(ref, () => ({
@@ -26,6 +27,7 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
     return (
       <>
         <Button
+          disabled={disabled}
           onPress={() => setShow(true)}
           className="justify-start bg-muted-foreground/10 dark:bg-input/80">
           <Feather name="calendar" size={18} color="gray" />

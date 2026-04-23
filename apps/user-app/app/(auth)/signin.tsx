@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { TriangleAlert } from 'lucide-react-native';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, ImageBackground } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import z from 'zod';
@@ -82,51 +82,56 @@ export default function Signin() {
   if (isSignedIn && isAuthenticated) return <Redirect href={'/'} />;
 
   return (
-    <View className="flex-1 gap-3 bg-background px-4 py-10">
-      <Text className="text-xl font-[320] tracking-wider">Enter your email address</Text>
+    <ImageBackground
+      source={require('@/assets/images/background.png')}
+      imageStyle={{ opacity: 0.15 }}
+      className="flex-1 bg-background">
+      <View className="flex-1 gap-3 px-4 py-10">
+        <Text className="text-xl font-[320] tracking-wider">Enter your email address</Text>
 
-      {/* Email input */}
-      <View>
-        <View className="relative">
-          <Controller
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                inputMode="email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="Email address"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                className="pl-4"
-                value={value}
-              />
-            )}
-            name="email"
-          />
-        </View>
-        {errors.email && (
-          <View className="flex-row items-center gap-x-1">
-            <TriangleAlert size={15} color={'red'} />
-            <Text className="text-md py-2 text-destructive">{errors.email.message}</Text>
+        {/* Email input */}
+        <View>
+          <View className="relative">
+            <Controller
+              control={control}
+              rules={{ required: true }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  inputMode="email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholder="Email address"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  className="pl-4"
+                  value={value}
+                />
+              )}
+              name="email"
+            />
           </View>
-        )}
+          {errors.email && (
+            <View className="flex-row items-center gap-x-1">
+              <TriangleAlert size={15} color={'red'} />
+              <Text className="text-md py-2 text-destructive">{errors.email.message}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Continue button */}
+        <Button size="lg" onPress={handleSubmit(handleContinue)} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-base font-semibold">Continue</Text>
+          )}
+        </Button>
+
+        <Text className="mt-3 text-xs text-gray-600">
+          By continuing, you agree to our Terms of Service and Privacy Policy. A one-time
+          verification code will be sent to your email.
+        </Text>
       </View>
-
-      {/* Continue button */}
-      <Button size="lg" onPress={handleSubmit(handleContinue)} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text className="text-base font-semibold">Continue</Text>
-        )}
-      </Button>
-
-      <Text className="mt-3 text-xs text-gray-600">
-        By continuing, you agree to our Terms of Service and Privacy Policy. A one-time verification
-        code will be sent to your email.
-      </Text>
-    </View>
+    </ImageBackground>
   );
 }

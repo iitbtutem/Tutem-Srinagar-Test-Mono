@@ -23,7 +23,7 @@ export default {
         NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to track your ride."
       },
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
       }
     },
     android: {
@@ -34,9 +34,10 @@ export default {
         backgroundColor: "#ffffff"
       },
       package: "com.yameenfarooq.driverapp",
+      googleServicesFile: "./driver-google-services.json",
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
         }
       }
     },
@@ -51,6 +52,7 @@ export default {
       "@clerk/expo",
       "expo-secure-store",
       "expo-font",
+      "expo-notifications",
       [
         "expo-location",
         {

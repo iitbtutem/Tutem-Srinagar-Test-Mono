@@ -13,6 +13,8 @@ import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import * as Notifications from 'expo-notifications';
+import { NotificationProvider } from '@/context/NotificationContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -44,30 +46,39 @@ const tokenCache = {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
 
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider
         publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
         tokenCache={tokenCache}>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <ToastProvider>
-            <KeyboardProvider>
-              <StatusBar
-                style={colorScheme === 'dark' ? 'light' : 'dark'}
-                backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
-              />
-              <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
-                {/* <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}> */}
+          <NotificationProvider>
+            <ToastProvider>
+              <KeyboardProvider>
+                <StatusBar
+                  style={colorScheme === 'dark' ? 'light' : 'dark'}
+                  backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
+                />
+                <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
                   <Stack
                     screenOptions={{
                       headerShown: false,
                     }}
                   />
-                {/* </SafeAreaView> */}
-                <PortalHost />
-              </View>
-            </KeyboardProvider>
-          </ToastProvider>
+                  <PortalHost />
+                </View>
+              </KeyboardProvider>
+            </ToastProvider>
+          </NotificationProvider>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </GestureHandlerRootView>

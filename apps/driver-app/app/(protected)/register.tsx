@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -24,7 +24,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth, useUser } from '@clerk/expo';
@@ -38,6 +38,7 @@ import {
   BottomSheetIndicatorColor,
   iconColor,
 } from '@/constants/colors';
+import { useNotification } from '@/context/NotificationContext';
 
 const formSchema = z.object({
   firstName: z
@@ -66,8 +67,8 @@ export default function Register() {
 
   const router = useRouter();
   const { userId } = useAuth();
-  const { user: clerkUser } = useUser();
   const { showToast } = useToast();
+  const { expoPushToken } = useNotification();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -77,6 +78,7 @@ export default function Register() {
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const addDriver = useMutation(api.routes.driver.addDriver);
+  const registerExpoPushToken = useMutation(api.routes.driver.registerExpoPushToken);
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
 
@@ -206,6 +208,7 @@ export default function Register() {
         clerkId: userId,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
+        expoPushToken: expoPushToken ?? undefined
       });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
@@ -222,6 +225,12 @@ export default function Register() {
       setIsSubmitting(false);
     }
   });
+  
+  useEffect(() => {
+    if(!userId || !driver || !expoPushToken) return;
+    if(!driver.driverDetails) return;
+    registerExpoPushToken({ driverId: driver.driverDetails._id, expoPushToken })
+  }, [])
 
   if (driver === undefined) return <LoadingScreen message="Loading registration..." />;
 
@@ -236,6 +245,7 @@ export default function Register() {
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
+      <Stack.Screen options={{ headerShown: true }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"

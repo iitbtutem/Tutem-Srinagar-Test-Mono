@@ -13,5 +13,5 @@
     },
     "include": [
         "convex"
-    ]
+, "pushNotifications.ts"    ]
 }

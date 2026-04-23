@@ -1,28 +1,36 @@
 import { useToast } from '@/components/CustomToast';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { useNotification } from '@/context/NotificationContext';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Redirect, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { useEffect } from 'react';
+import { ImageBackground, View } from 'react-native';
 
 export default function RegisterAsRider() {
   const { userId } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
+    const { expoPushToken } = useNotification();
 
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
   const handleRegisterAsRider = async () => {
-    await registerAsRider({ clerkId: userId ?? '' });
+    if(expoPushToken !== null)
+      await registerAsRider({ clerkId: userId ?? '', expoPushToken: expoPushToken });
   };
 
   if (rider && rider.riderDetails) <Redirect href="/" />;
 
   return (
-    <View className="flex-1 justify-center bg-background p-6">
+     <ImageBackground
+          source={require('@/assets/images/background.png')}
+          imageStyle={{ opacity: 0.15 }}
+          className="flex-1 bg-background">
+    <View className="flex-1 justify-center p-6">
       <View className="items-center justify-center">
         {/* Status Badge */}
         <View className="mb-8 rounded-full bg-green-100 px-4 py-2">
@@ -50,5 +58,6 @@ export default function RegisterAsRider() {
         <Text>Submit Rider Registration</Text>
       </Button>
     </View>
+    </ImageBackground>
   );
 }

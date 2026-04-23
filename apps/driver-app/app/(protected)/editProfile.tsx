@@ -188,9 +188,9 @@ export default function EditProfile() {
 
       const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
       const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
+      const {dob, gender, ...rest} = data
       await updateDriver({
-        ...data,
-        dob: String(data.dob),
+        ...rest,
         clerkId: clerkId,
         organizationId: data.organizationId as Id<'organization'>,
         licenseImageFrontKey: uploadedFrontKey,
@@ -379,6 +379,7 @@ export default function EditProfile() {
                 render={({ field, fieldState }) => (
                   <>
                     <CustomDatePicker
+                      disabled={true}
                       ref={dobRef}
                       title="Choose DOB"
                       date={field.value}
@@ -450,7 +451,7 @@ export default function EditProfile() {
                         : undefined
                     }
                     onValueChange={(option) => field.onChange(option?.value)}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full" disabled={true}>
                       <SelectValue placeholder="Select Gender" />
                     </SelectTrigger>
                     <SelectContent className="w-10/12">
