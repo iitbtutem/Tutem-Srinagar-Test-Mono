@@ -236,6 +236,12 @@ export const cancelRide = internalMutation({
       updatedAt: Date.now(),
     });
 
+    if(driver.isAvailableForRide === true && ride.requestStatus === "Accepted"){
+      await ctx.db.patch(driver._id, {
+        isAvailableForRide: true,
+      });
+    };
+
     return ride.requestStatus === "Accepted" ? driver.expoPushToken : undefined;
   },
 });
@@ -844,6 +850,7 @@ export const completeRide = internalMutation({
 
     await ctx.db.patch(ride._id, {
       status: "Completed",
+      completedAt: Date.now(),
       updatedAt: Date.now(),
     });
 
