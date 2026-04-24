@@ -11,6 +11,7 @@ import {
   Platform,
   Dimensions,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -956,6 +957,10 @@ export default function Home() {
         </View>
 
         {/* Ride requests list */}
+        <ImageBackground
+        source={require('@/assets/images/background.png')}
+        imageStyle={{ opacity: 0.15 }}
+        className="flex-1 bg-background">
         <View className="px-4 pt-4">
           {/* Section header */}
           <View className="mb-3 flex-row items-center justify-between">
@@ -980,7 +985,7 @@ export default function Home() {
               entering={ZoomIn.springify()}
               className="items-center justify-center gap-3 py-12">
               <Text className="text-3xl">🛣️</Text>
-              <Text className="text-sm font-bold text-slate-100">Waiting for ride requests</Text>
+              <Text className="text-sm font-bold">Waiting for ride requests</Text>
               <Text className="text-center text-xs leading-4 text-slate-400">
                 New requests will appear here as riders book nearby
               </Text>
@@ -997,6 +1002,7 @@ export default function Home() {
             />
           ))}
         </View>
+        </ImageBackground>
       </ScrollView>
 
       {/* Loading overlay */}

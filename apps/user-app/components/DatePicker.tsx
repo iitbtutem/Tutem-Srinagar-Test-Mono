@@ -24,6 +24,9 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
       open: () => setShow(true),
     }));
 
+    const today = new Date();
+    const minimumDob = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
     return (
       <>
         <Button
@@ -47,6 +50,7 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
               setDate(new Date(e.nativeEvent.timestamp));
             }}
             value={new Date()}
+            maximumDate={minimumDob}
           />
         )}
       </>
