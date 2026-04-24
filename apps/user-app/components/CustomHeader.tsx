@@ -1,4 +1,4 @@
-import { AntDesign, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome5, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from './ui/text';
@@ -149,7 +149,7 @@ function ProfileDropdown({ user }: { user: User }) {
               <Link href={'/profile'}>
                 <View className="flex-row items-center gap-3 px-2">
                   <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <AntDesign name="user" size={18} color={iconColor} />
+                    <FontAwesome5 name="user" size={18} color={iconColor} />
                   </View>
                   <Text className="text-base font-medium text-primary">Profile</Text>
                 </View>

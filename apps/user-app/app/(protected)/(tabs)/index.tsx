@@ -47,11 +47,11 @@ export default function HomeScreen() {
             columnWrapperStyle={{ gap: 14 }}
             contentContainerStyle={{ gap: 14 }}
             renderItem={({ item: service }) => (
-              <View className="flex-1 gap-3 px-0.5">
+              <View className="flex-1 gap-3">
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push(service.href)}
-                  className="aspect-square flex-1 items-center justify-center rounded-full bg-card p-3 shadow-sm">
+                  className="aspect-square w-full items-center justify-center rounded-full bg-card p-3 shadow-sm">
                   {/* Icon container */}
                   <View className="h-24 w-24 items-center justify-center rounded-full">
                     <Image
@@ -62,10 +62,12 @@ export default function HomeScreen() {
                   </View>
                 </TouchableOpacity>
 
-                {/* Label */}
-                <Text className="text-center text-xs font-medium text-foreground">
-                  {service.name}
-                </Text>
+                {/* Label with fixed min-height to prevent layout shift */}
+                <View className="min-h-[40px] justify-center">
+                  <Text className="text-center text-xs font-medium text-foreground">
+                    {service.name}
+                  </Text>
+                </View>
               </View>
             )}
           />
@@ -165,7 +167,7 @@ export function ActiveRideCard() {
                   {pickup?.address ?? 'Pickup'}
                 </Text>
               </View>
-              <View className="ml-[3.5px] ml-[3px] h-4 w-px self-start bg-border" />
+              <View className="ml-[3px] h-4 w-px self-start bg-border" />
               <View className="flex-row items-center gap-2">
                 <View className="h-2 w-2 rounded-full bg-red-500" />
                 <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>

@@ -1,16 +1,16 @@
 import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { api, Id } from '@tutem/api';
+import { api } from '@tutem/api';
+import type { Id } from '@tutem/api';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
-import React, { useMemo, useRef, useState } from 'react';
-import { Dimensions, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { ImageBackground, TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
@@ -21,7 +21,6 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 import { HorizontalRule } from '@/components/ui/seperator';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +29,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
-import {
-
-  iconBackgroundColor,
-  iconColor,
-} from '@/constants/colors';
+import { iconBackgroundColor, iconColor } from '@/constants/colors';
 
 const EXPANDED_HEADER_HEIGHT = 300;
 const COLLAPSED_HEADER_HEIGHT = 100;
@@ -48,12 +43,11 @@ export default function Profile() {
 
   const isDark = colorScheme === 'dark';
 
-
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
   const removeExpoPushToken = useMutation(api.routes.rider.removeExpoPushToken);
 
-  const handleLogout = async (riderId: Id<"rider"> | undefined) => {
-    if(riderId !== undefined) await removeExpoPushToken({ riderId })
+  const handleLogout = async (riderId: Id<'rider'> | undefined) => {
+    if (riderId !== undefined) await removeExpoPushToken({ riderId });
     await signOut();
     router.replace('/signin');
   };
@@ -152,7 +146,10 @@ export default function Profile() {
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
+    <ImageBackground
+      source={require('@/assets/images/background.png')}
+      imageStyle={{ opacity: 0.15 }}
+      className="flex-1 bg-background">
       <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
 
       {/* Hero Header */}
@@ -297,6 +294,29 @@ export default function Profile() {
             </View>
 
             <HorizontalRule className="mx-6" />
+            {/* Gender */}
+
+            <View className="flex-row items-center gap-4 px-6 py-4">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50 dark:bg-pink-900/30">
+                <MaterialIcons
+                  name={rider.riderDetails?.genderMatching ? 'people' : 'public'}
+                  size={20}
+                  color={rider.riderDetails?.genderMatching ? '#16a34a' : '#ec4899'}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
+                  Gender Preference
+                </Text>
+                <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                  {rider.riderDetails?.genderMatching
+                    ? 'Ride with Same Gender'
+                    : 'No Preference (Any)'}
+                </Text>
+              </View>
+            </View>
+
+            <HorizontalRule className="mx-6" />
 
             {/* Phone */}
             <View className="flex-row items-center gap-4 px-6 py-4">
@@ -315,7 +335,7 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-    </View>
+    </ImageBackground>
   );
 }
 
