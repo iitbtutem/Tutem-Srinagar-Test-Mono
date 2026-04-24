@@ -519,6 +519,13 @@ export default function Home() {
     ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
     : null;
 
+  useEffect(()=> {
+    if(!currentRide){
+      activeSheetRef.current?.close();
+      requestSheetRef.current?.close();
+    }
+  }, [currentRide])
+
   if (currentRide) {
     // ACTIVE RIDE LAYOUT — full-screen map + non-closable bottom sheet
 
