@@ -51,7 +51,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push(service.href)}
-                  className="aspect-square w-full items-center justify-center rounded-full bg-card p-3 shadow-sm">
+                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-[#fbfcf8] shadow-sm">
                   {/* Icon container */}
                   <View className="h-24 w-24 items-center justify-center rounded-full">
                     <Image
