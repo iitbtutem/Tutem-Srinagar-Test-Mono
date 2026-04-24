@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { api, Id } from '@tutem/api';
+import { api } from '@tutem/api';
+import type { Id } from '@tutem/api';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { Stack, useNavigation, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React, { useMemo, useRef, useState } from 'react';
@@ -23,7 +24,7 @@ import Animated, {
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { HorizontalRule } from '@/components/ui/seperator';
 import { Image } from 'react-native';
-import { cn, createBottomSheetTabBarHandlers } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import {
   Dialog,
@@ -51,8 +52,6 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const { onAnimate, onChange } = createBottomSheetTabBarHandlers(navigation);
 
   const isDark = colorScheme === 'dark';
   const snapPoints = useMemo(() => ['50%', '80%'], []);
@@ -516,8 +515,8 @@ export default function Profile() {
       </Animated.ScrollView>
 
       <BottomSheet
-        onChange={onChange}
-        onAnimate={onAnimate}
+        // onChange={onChange}
+        // onAnimate={onAnimate}
         ref={licenseBottomSheetRef}
         index={-1}
         animationConfigs={{ duration: 450 }}
@@ -621,8 +620,8 @@ export default function Profile() {
 
       {vehicle && (
         <BottomSheet
-          onChange={onChange}
-          onAnimate={onAnimate}
+          // onChange={onChange}
+          // onAnimate={onAnimate}
           ref={vehicleBottomSheetRef}
           index={-1}
           animationConfigs={{ duration: 450 }}

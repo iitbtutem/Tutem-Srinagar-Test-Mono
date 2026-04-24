@@ -75,7 +75,7 @@ export default function EditProfile() {
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
-      router.replace('/(protected)/(tabs)/profile');
+      router.replace('/profile');
     } catch (error) {
       showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
     }
