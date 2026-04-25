@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { TriangleAlert } from 'lucide-react-native';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, ImageBackground } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import z from 'zod';
@@ -81,7 +81,11 @@ export default function Signin() {
   if (isSignedIn && isAuthenticated) return <Redirect href={'/'} />
 
   return (
-    <View className="flex-1 gap-3 bg-background px-4 py-10">
+    <ImageBackground
+    source={require('@/assets/images/background.png')}
+    imageStyle={{ opacity: 0.15 }}
+    className="flex-1 bg-background">
+    <View className="flex-1 gap-3 px-4 py-10">
       <Text className="text-xl font-[320] tracking-wider">Enter your email address</Text>
 
       {/* Email input */}
@@ -127,5 +131,6 @@ export default function Signin() {
         code will be sent to your email.
       </Text>
     </View>
+    </ImageBackground>
   );
 }
