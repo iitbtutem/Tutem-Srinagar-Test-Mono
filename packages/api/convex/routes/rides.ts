@@ -203,6 +203,33 @@ export const bookRide = internalMutation({
   },
 });
 
+export const changeDriver = internalMutation({
+  args: {
+    rideId: v.id("ride"),
+    riderId: v.id("rider"),
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const ride = await ctx.db.get(args.rideId);
+    if(ride === null || ride.riderId !== args.riderId) throw new ConvexError("Ride not found");
+
+    const driver = await ctx.db.get(ride.driverId);
+
+    if(driver && driver.isAvailableForRide === false){
+      await ctx.db.patch(driver._id, {
+        isAvailableForRide: true,
+      })
+    }
+    await ctx.db.patch(ride._id, {
+      updatedAt: Date.now(),
+      driverId: args.driverId,
+      requestStatus: "Pending",
+      status: "Open",
+    });
+
+  }
+});
+
 export const cancelRide = internalMutation({
   args: {
     riderId: v.id("rider"),
@@ -326,7 +353,10 @@ export const getRiderCurrentRideById = query({
 
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
-
+    
+    const riderDetails = await ctx.db.get(rider.userId);
+    if (riderDetails === null) throw new ConvexError("Invalid user");
+    
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid driver");
 
@@ -367,7 +397,10 @@ export const getRiderCurrentRideById = query({
       ...ride,
       distance,
       otp,
-      rider,
+      rider: {
+        ...rider,
+        userDetails: riderDetails
+      },
       vehicle,
       driver: {
         ...driver,
@@ -402,6 +435,9 @@ export const getRiderCurrentRideByRiderId = query({
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
 
+    const riderDetails = await ctx.db.get(rider.userId);
+    if (riderDetails === null) throw new ConvexError("Invalid user");
+
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid driver");
 
@@ -442,7 +478,10 @@ export const getRiderCurrentRideByRiderId = query({
       ...ride,
       distance,
       otp,
-      rider,
+      rider: {
+        ...rider,
+        userDetails: riderDetails
+      },
       vehicle,
       driver: {
         ...driver,

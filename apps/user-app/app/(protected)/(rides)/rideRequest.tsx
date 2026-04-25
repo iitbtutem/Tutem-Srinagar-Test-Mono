@@ -1,11 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { View, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
@@ -18,6 +18,18 @@ import PulseDot from '@/components/PulseDot';
 import LiveTimer from '@/components/LiveTimer';
 import * as Location from 'expo-location';
 import { mapStyle } from '@/constants/mapStyles';
+import { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconColor, VERIFICATION_CONFIG } from '@/constants/colors';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { useSharedValue } from 'react-native-reanimated';
+import NearbyDrivers from '@/components/NearbyDrivers';
+import SheetLayer from '@/components/BottomSheetLayer';
+import { FunctionReturnType } from 'convex/server';
+import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/CustomToast';
+import { distanceFormat } from '../../../../driver-app/lib/utils';
+import { Separator } from '@/components/ui/seperator';
 
 // types
 
@@ -36,6 +48,11 @@ type RouteState = {
   remainingDistance?: string;
   remainingDuration?: string;
 };
+
+// NearbyDrivers
+type NearbyDriver = FunctionReturnType<typeof api.routes.actions.getNearbyDrivers>[number];
+
+type VehicleClass = (typeof VEHICLE_CLASS)[number];
 // helpers
 
 function getVehicleIcon(type: string): React.ComponentProps<typeof MaterialCommunityIcons>['name'] {
@@ -105,10 +122,13 @@ export default function RideRequest() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
   const router = useRouter();
   const  {colorScheme}= useColorScheme();
+  const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
   const cancelRide = useAction(api.routes.rideActions.cancelRide);
   const [cancelling, setCancelling] = useState(false);
+  const [changingDriver, setChangingDriver] = useState(false);
   const [routeState, setRouteState] = useState<RouteState | null>(null);
 
   const [riderLocation, setRiderLocation] = useState<Coords | null>(null);
@@ -118,7 +138,110 @@ export default function RideRequest() {
   const [driverLocation, setDriverLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [mainRoute, setMainRoute] = useState<{ latitude: number, longitude: number }[] | null>(null);
   const [approachRoute, setApproachRoute] = useState<{ latitude: number, longitude: number }[] | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<NearbyDriver | null>(null);
+  const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
+  
+  const [filters, setFilters] = useState<VehicleClass[]>([]);
+  const [genderMatch, setGenderMatch] = useState(false);
+
+  // Center on driver when location is first received
+  const [hasCenteredOnDriver, setHasCenteredOnDriver] = useState(false);
+
+  const [sheetIndex, setSheetIndex] = useState(-1);
+
   const mapRef = useRef<MapView>(null);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+
+  const animatedIndex = useSharedValue(1);
+
+  const isDark = colorScheme === 'dark';
+  
+  const getNearbyDriversAction = useAction(api.routes.actions.getNearbyDrivers);
+  const changeDriver = useAction(api.routes.rideActions.changeDriver);
+
+  const fetchDrivers = async () => {
+    if(!ride) return;
+    try {
+      const drivers = await getNearbyDriversAction({
+        pickup: {
+          latitude: ride.pickup.latitude,
+          longitude: ride.pickup.longitude,
+        },
+        destination: {
+          latitude: ride.destination.latitude,
+          longitude: ride.destination.longitude,
+        },
+        distance: Number(ride.distance),
+        riderId: ride.riderId,
+        genderMatch: genderMatch,
+        filters: filters,
+      });
+      setNearbyDrivers(drivers);
+    } catch (error) {
+      console.error("Discovery error:", error);
+      setNearbyDrivers([]);
+    }
+  };
+
+  const handleCancel = () => {
+    if (!ride) return;
+
+    Alert.alert('Cancel Ride?', 'Are you sure you want to cancel this ride request?', [
+      { text: 'No, Keep It', style: 'cancel' },
+      {
+        text: 'Yes, Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          if (!id) return;
+          try {
+            setCancelling(true);
+            router.dismissAll();
+            router.replace('/');
+            await cancelRide({ rideId: id, riderId: ride.riderId });
+          } catch (e) {
+            Alert.alert('Error', 'Failed to cancel ride. Please try again.');
+          } finally {
+            setCancelling(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleShowNearbyDrivers = async () => {
+    try {
+      await fetchDrivers();
+      bottomSheetRef.current?.expand();
+    } catch (error) {
+      console.log("Error : ", error)
+    }
+  }
+
+  const handleChangeDriver = async () => {
+    if(!ride || !selectedDriver) return;
+    setChangingDriver(true);
+    try {
+      await changeDriver({
+        rideId: ride._id,
+        riderId: ride.riderId,
+        driverId: selectedDriver.driver._id,
+      });
+      bottomSheetRef.current?.close();
+    } catch (error: any) {
+      console.log(`Error ${error}`)
+      showToast({
+        type: "error",
+        title: "Failed",
+        description: "Failed to change driver"
+      })
+    } finally {
+      setChangingDriver(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [filters, genderMatch])
 
   // 1. Fetch Main Route (Pickup -> Destination) once
   useEffect(() => {
@@ -130,7 +253,7 @@ export default function RideRequest() {
         if (route) setMainRoute(route.polyline);
       });
     }
-  }, [ride?._id]);
+  }, [ride]);
 
   // 2. Fetch Approach Route (Driver -> Pickup) dynamically
   // Only if ride is not yet started (Open)
@@ -193,9 +316,6 @@ export default function RideRequest() {
     };
   }, [ride?.driver?._id]);
 
-  // Center on driver when location is first received
-  const [hasCenteredOnDriver, setHasCenteredOnDriver] = useState(false);
-
   useEffect(() => {
     if (driverLocation && !hasCenteredOnDriver && mapRef.current) {
        mapRef.current.animateToRegion({
@@ -206,30 +326,6 @@ export default function RideRequest() {
       setHasCenteredOnDriver(true);
     }
   }, [driverLocation, hasCenteredOnDriver]);
-  const handleCancel = () => {
-    if (!ride) return;
-
-    Alert.alert('Cancel Ride?', 'Are you sure you want to cancel this ride request?', [
-      { text: 'No, Keep It', style: 'cancel' },
-      {
-        text: 'Yes, Cancel',
-        style: 'destructive',
-        onPress: async () => {
-          if (!id) return;
-          try {
-            setCancelling(true);
-            router.dismissAll();
-            router.replace('/');
-            await cancelRide({ rideId: id, riderId: ride.riderId });
-          } catch (e) {
-            Alert.alert('Error', 'Failed to cancel ride. Please try again.');
-          } finally {
-            setCancelling(false);
-          }
-        },
-      },
-    ]);
-  };
 
   // Live GPS
   useEffect(() => {
@@ -295,15 +391,21 @@ export default function RideRequest() {
 
   if (ride === undefined) return;
   if (ride === null) return <ErrorScreen message="Ride Not found" code="Failed to fetch ride" />;
-
+  
   const vehicle = ride.vehicle;
   const fuelStyle = vehicle ? getFuelColor(vehicle.fuelType) : null;
+
+  const verificationStatus = selectedDriver?.driver?.isLicenseVerified;
+  
+  const licenseVerification = verificationStatus
+    ? VERIFICATION_CONFIG[verificationStatus]
+    : VERIFICATION_CONFIG['Pending'];
 
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView />
 
-{/* ── Maximized Map Modal/Overlay ── */}
+{/* Maximized Map Modal/Overlay */}
       {isMapMaximized && (
         <View className="absolute inset-0 z-50 bg-black">
            <MapView
@@ -382,7 +484,7 @@ export default function RideRequest() {
       )}
 
       <ScrollView
-        className="flex-1"
+        className={cn("flex-1", { "pointer-events-none" : sheetIndex !== -1 })}
         contentContainerClassName="px-4 pb-12"
         showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -393,8 +495,8 @@ export default function RideRequest() {
           <Text className="text-lg font-bold text-gray-900">Ride Details</Text>
         </View>
 
- {/* ── Live Tracking Map ── */}
-        <View className="mb-4 overflow-hidden rounded-3xl border border-gray-100 bg-gray-50 shadow-sm" style={{ height: 220 }}>
+        {/* Live Tracking Map */}
+        <View className={cn("mb-4 overflow-hidden rounded-3xl border border-gray-100 bg-gray-50 shadow-sm", { "pointer-events-none": sheetIndex !== -1 })} style={{ height: 220 }}>
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
@@ -473,68 +575,115 @@ export default function RideRequest() {
         </View>
 
         {/* Driver card */}
-        <View className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <View className={cn("mb-4 rounded-2xl border bg-white p-4 shadow-sm", {
+          "pointer-events-none": sheetIndex !== -1,
+          "border-red-200": ride.requestStatus === "Rejected",
+          "border-gray-100": ride.requestStatus !== "Rejected",
+        })}>
+
+          {/* Rejection banner */}
+          {ride.requestStatus === "Rejected" && (
+            <View className="mb-3 flex-row items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 border border-red-100">
+              <MaterialIcons name="cancel" size={16} color="#dc2626" style={{ marginTop: 1 }} />
+              <View className="flex-1">
+                <Text className="text-[13px] font-semibold text-red-700">
+                  Driver declined your request
+                </Text>
+                <Text className="text-[12px] text-red-500 mt-0.5">
+                  Tap the edit icon to choose a new driver.
+                </Text>
+              </View>
+            </View>
+          )}
+
           <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
             Your Driver
           </Text>
 
-          <View className="flex-row items-center gap-3">
-            <Avatar alt="Profile pic" className="h-14 w-14">
-              <AvatarImage
-                source={
-                  ride.driver.userDetails.profilePictureKey?.trim()
-                    ? { uri: ride.driver.userDetails.profilePictureKey }
-                    : require('@/assets/images/avatar.jpg')
-                }
-              />
-              <AvatarFallback className="bg-indigo-100">
-                <Text className="text-base font-bold text-indigo-700">
-                  {ride.driver.userDetails.firstName?.[0]}
-                  {ride.driver.userDetails.lastName?.[0]}
-                </Text>
-              </AvatarFallback>
-            </Avatar>
-
-            <View className="flex-1">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-base font-bold text-gray-900">
-                  {`${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails.lastName ?? ''}`.trim() ||
-                    'Driver'}
-                </Text>
-                <View className="flex-row items-center gap-0.5 rounded-full bg-gray-100 px-2 py-[2px]">
-                  <MaterialIcons
-                    name={
-                      ride.driver.userDetails.gender === 'Male'
-                        ? 'male'
-                        : ride.driver.userDetails.gender === 'Female'
-                          ? 'female'
-                          : 'transgender'
+          <View className='flex-row justify-between gap-2'>
+            <View className="flex-1 flex-row items-center gap-3">
+              {/* Avatar with red ring on rejection */}
+              <View className={cn("rounded-full", {
+                "p-0.5 bg-red-200": ride.requestStatus === "Rejected",
+              })}>
+                <Avatar alt="Profile pic" className="h-14 w-14">
+                  <AvatarImage
+                    source={
+                      ride.driver.userDetails.profilePictureKey?.trim()
+                        ? { uri: ride.driver.userDetails.profilePictureKey }
+                        : require('@/assets/images/avatar.jpg')
                     }
-                    size={12}
-                    color="#374151"
                   />
-                  <Text className="text-[11px] font-medium text-gray-600">
-                    {ride.driver.userDetails.gender}
-                  </Text>
-                </View>
+                  <AvatarFallback className="bg-indigo-100">
+                    <Text className="text-base font-bold text-indigo-700">
+                      {ride.driver.userDetails.firstName?.[0]}
+                      {ride.driver.userDetails.lastName?.[0]}
+                    </Text>
+                  </AvatarFallback>
+                </Avatar>
               </View>
 
-              {ride.driver.totalRating > 0 && (
-                <View className="mt-1 flex-row items-center gap-1">
-                  <Ionicons name="star" size={13} color="#f59e0b" />
-                  <Text className="text-sm text-gray-500">
-                    {`${ride.driver?.averageRating ?? '--'}`}
-                    <Text className="text-gray-400">{` (${ride.driver?.totalRating} trips)`}</Text>
-                  </Text>
+              <View className="flex-1 items-start">
+                <Text className={cn("text-base font-bold", {
+                  "text-gray-400": ride.requestStatus === "Rejected",
+                  "text-gray-900": ride.requestStatus !== "Rejected",
+                })}>
+                  {`${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails.lastName ?? ''}`.trim() || 'Driver'}
+                </Text>
+                <View className='flex-row gap-2'>
+                  <View className="flex-row items-center gap-0.5 rounded-full bg-gray-100 px-2 py-[2px]">
+                    <MaterialIcons
+                      name={
+                        ride.driver.userDetails.gender === 'Male'
+                          ? 'male'
+                          : ride.driver.userDetails.gender === 'Female'
+                            ? 'female'
+                            : 'transgender'
+                      }
+                      size={12}
+                      color="#374151"
+                    />
+                    <Text className="text-[11px] font-medium text-gray-600">
+                      {ride.driver.userDetails.gender}
+                    </Text>
+                  </View>
+                  {ride.driver.totalRating > 0 && (
+                    <View className="mt-1 flex-row items-center gap-1">
+                      <Ionicons name="star" size={13} color="#f59e0b" />
+                      <Text className="text-sm text-gray-500">
+                        {`${ride.driver?.averageRating ?? '--'}`}
+                        <Text className="text-gray-400">{` (${ride.driver?.totalRating} trips)`}</Text>
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
             </View>
+
+            {/* Edit button — highlighted on rejection */}
+            <TouchableOpacity
+              onPress={handleShowNearbyDrivers}
+              className={cn(
+                'h-10 w-10 items-center justify-center rounded-full',
+                ride.requestStatus === "Rejected"
+                  ? 'bg-red-500'
+                  : 'bg-gray-200/50'
+              )}
+            >
+              <MaterialIcons
+                name='edit'
+                size={18}
+                color={ride.requestStatus === "Rejected" ? "#fff" : iconColor}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Vehicle details */}
           {vehicle && (
-            <View className="mt-4 flex-row items-center gap-3 rounded-xl bg-gray-50 p-3">
-              {/* Vehicle icon */}
+            <View className={cn("mt-4 flex-row items-center gap-3 rounded-xl p-3", {
+              "bg-gray-50": ride.requestStatus !== "Rejected",
+              "bg-red-50/60 opacity-60": ride.requestStatus === "Rejected",
+            })}>
               <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
                 <MaterialCommunityIcons
                   name={getVehicleIcon(vehicle.type)}
@@ -543,7 +692,6 @@ export default function RideRequest() {
                 />
               </View>
 
-              {/* Vehicle info */}
               <View className="flex-1">
                 <View className="flex-row items-center gap-2">
                   <Text className="text-sm font-bold text-gray-900">{vehicle.model}</Text>
@@ -563,7 +711,6 @@ export default function RideRequest() {
                 </View>
               </View>
 
-              {/* Seats */}
               <View className="items-center gap-0.5">
                 <Ionicons name="people-outline" size={14} color="#6b7280" />
                 <Text className="text-xs font-semibold text-gray-600">
@@ -652,31 +799,41 @@ export default function RideRequest() {
             <PulseDot color={ride.status === 'Open' ? 'bg-orange-400' : 'bg-green-400'} />
             <View className="flex-1">
               <Text
-                className={`text-sm font-extrabold ${ride.status === 'Open' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {ride.status === 'Open' ? 'Accepted' : 'Ride in Progress'}
+                className={`text-sm font-extrabold ${
+                  ride.status === 'Open' 
+                    ? ride.requestStatus === "Pending" 
+                      ? 'text-amber-400' 
+                      : ride.requestStatus === "Rejected" 
+                        ? 'text-red-500' 
+                        : 'text-emerald-400'
+                    : 'text-emerald-400'
+                }`}>
+                {ride.status === 'Open' 
+                  ? ride.requestStatus === "Pending" 
+                    ? "Pending" 
+                    : ride.requestStatus === "Rejected" 
+                      ? "Driver Un-available"
+                      : 'Driver Assigned'
+                  : 'Ride in Progress'
+                }
               </Text>
+              
               <Text className="mt-0.5 text-[11px] font-medium text-slate-500">
-                {ride.status === 'Open' ? 'Waiting to pick up rider' : 'Rider is in the vehicle'}
+                {ride.status === 'Open' 
+                  ? ride.requestStatus === "Pending" 
+                    ? "Waiting for driver to accept request" 
+                    : ride.requestStatus === "Rejected"
+                      ? "Please try requesting again"
+                      : 'Driver is on the way'
+                  : 'On your way to destination'
+                }
               </Text>
             </View>
-            <Text
-              className={`text-base font-extrabold tabular-nums ${ride.status === 'Open' ? 'text-amber-400' : 'text-emerald-400'}`}>
-              <LiveTimer
-                startTimestamp={
-                  ride.status === 'Open' ? ride.updatedAt : (ride.startedAt ?? ride.updatedAt)
-                }
-              />
-            </Text>
-          </View>
-        )}
-
-        {/* Status */}
-        {ride.status === 'Open' && (
-          <View className="flex-row items-center justify-center gap-2 rounded-xl bg-amber-50 p-4">
-            <Ionicons name="time-outline" size={16} color="#92400e" />
-            <Text className="text-sm font-semibold text-amber-800">
-              Waiting for driver to accept your ride…
-            </Text>
+            <LiveTimer
+              startTimestamp={
+                ride.status === 'Open' ? ride.updatedAt : (ride.startedAt ?? ride.updatedAt)
+              }
+            />
           </View>
         )}
 
@@ -685,7 +842,7 @@ export default function RideRequest() {
           <TouchableOpacity
             onPress={handleCancel}
             disabled={cancelling || ride.status !== 'Open'}
-            className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 active:opacity-70">
+            className={cn("my-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 active:opacity-70", { "pointer-events-none": sheetIndex !== -1 })}>
             {cancelling ? (
               <ActivityIndicator size="small" color="#dc2626" />
             ) : (
@@ -697,6 +854,217 @@ export default function RideRequest() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={sheetIndex}
+        animatedIndex={animatedIndex}
+        onChange={setSheetIndex}
+        snapPoints={["45%", "80%"]}
+        enableDynamicSizing={false}
+        enablePanDownToClose={false}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
+        animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
+      >
+        <View style={{ flex: 1, paddingBottom: insets.bottom }}>
+          <View style={{ flex: 1 }} pointerEvents="box-none">
+            <SheetLayer animatedIndex={animatedIndex} visibleFrom={0.5}>
+              <View style={{ paddingVertical: 0 }}>
+                {/* Header with back option to re-plan */}
+                <View className="flex-row items-center px-4 py-2">
+                  <TouchableOpacity onPress={() => bottomSheetRef.current?.close()} className="p-2">
+                    <Ionicons name="arrow-back" size={24} color={isDark ? 'white' : 'black'} />
+                  </TouchableOpacity>
+                  <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
+                    Choose a driver
+                  </Text>
+                </View>
+
+                <NearbyDrivers
+                  drivers={nearbyDrivers ?? []}
+                  selectedDriver={selectedDriver?.driver._id ?? null}
+                  onSelect={(driver) => {
+                    setSheetIndex(0);
+                    setSelectedDriver(driver);
+                  }}
+                  isDark={isDark}
+                  filters={filters}
+                  setFilters={setFilters}
+                  genderMatch={genderMatch}
+                  setGenderMatch={setGenderMatch}
+                  riderGender={ride.rider.userDetails.gender} // REMINDER GET IT CHECKED OUT, TO SEE IF IM GETTING THE USER THE RIGHT WAY
+                />
+              </View>
+            </SheetLayer>
+
+            {selectedDriver && (
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
+                  <View className="mb-1 items-center">
+                    <Text className="text-xl font-extrabold text-foreground">Driver details</Text>
+                  </View>
+
+                  <View className="mb-3 gap-2 rounded-2xl bg-background p-4">
+                    <View className="flex-row items-center gap-3">
+                      {/* Avatar */}
+                      <Avatar alt="Profile pic" className="h-9 w-9">
+                        <AvatarImage
+                          source={
+                            selectedDriver.driver.userDetails.profilePictureKey?.trim()
+                              ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
+                              : require('@/assets/images/avatar.jpg')
+                          }
+                        />
+                        <AvatarFallback className="bg-white/20">
+                          <Text className="text-xs font-bold text-primary">
+                            {selectedDriver.driver.userDetails.firstName?.[0]}
+                            {selectedDriver.driver.userDetails?.lastName?.[0]}
+                          </Text>
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <View>
+                        <Text className="text-base font-semibold text-foreground">
+                          {selectedDriver.driver.userDetails.firstName} {selectedDriver.driver.userDetails.lastName}
+                        </Text>
+                        <View className="mt-0.5 flex-row items-center gap-1">
+                          {selectedDriver.driver.averageRating && (
+                            <>
+                              <Ionicons name="star" size={14} color="orange" />
+                              <Text className="text-sm text-muted-foreground">
+                                {selectedDriver.driver.averageRating}
+                              </Text>
+                            </>
+                          )}
+                          {/* Gender badge */}
+                          <View className="flex-row items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1">
+                            <MaterialIcons
+                              name={
+                                selectedDriver.driver.userDetails.gender === 'Male'
+                                  ? 'male'
+                                  : selectedDriver.driver.userDetails.gender === 'Female'
+                                    ? 'female'
+                                    : 'transgender'
+                              }
+                              size={13}
+                              color="rgba(255,255,255,0.8)"
+                            />
+                            <Text className="text-xs font-medium text-white">
+                              {selectedDriver.driver.userDetails.gender}
+                            </Text>
+                          </View>
+                          {/* Verified badge */}
+                          <View
+                            style={{ backgroundColor: licenseVerification.color + '30' }}
+                            className="flex-row items-center gap-1 self-start rounded-full px-2.5 py-1">
+                            <Feather
+                              name={licenseVerification.icon as any}
+                              size={11}
+                              color={licenseVerification.color}
+                            />
+                            <Text
+                              style={{ color: licenseVerification.color }}
+                              className="text-xs font-semibold">
+                              {licenseVerification.label}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                    <Separator />
+                    <View className='flex-row items-center gap-3'>
+                      <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
+                        <MaterialCommunityIcons
+                          name={getVehicleIcon(selectedDriver.vehicle.type)}
+                          size={22}
+                          color="#4f46e5"
+                        />
+                      </View>
+                      <Text className="text-sm font-semibold text-foreground">
+                        {selectedDriver.vehicle.registrationNumber} -{' '}
+                        {selectedDriver.vehicle.class}
+                      </Text>
+                    </View>
+
+                    <View className="h-[1px] bg-border" />
+
+                    <View className="flex-row items-center justify-between rounded-xl bg-muted/30 px-3">
+                      <View>
+                        <Text className="text-sm text-muted-foreground">
+                          {distanceFormat(Number(ride.distance))}
+                        </Text>
+                      </View>
+                      <View className="items-end">
+                        <Text className="text-lg font-bold text-foreground">
+                          ₹{selectedDriver.fare}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Confirm button */}
+                  <Button onPress={handleChangeDriver} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">Confirm Driver</Text>
+                  </Button>
+                </View>
+              </SheetLayer>
+            )}
+
+            {!selectedDriver && (
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
+                  <View className="mb-2 items-center">
+                    <Text className="text-xl font-extrabold text-foreground">Your route</Text>
+                  </View>
+
+                  <View className="mb-4 gap-3">
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      style={{ minWidth: 130 }}
+                      className={cn(
+                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
+                      )}>
+                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
+                        <MaterialCommunityIcons name="map-marker" size={24} color="green" />
+                      </View>
+
+                      <View className="flex-1">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                          {ride.pickup.address}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">Pickup</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      style={{ minWidth: 130 }}
+                      className={cn(
+                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
+                      )}>
+                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
+                        <MaterialCommunityIcons name="map-marker" size={24} color="red" />
+                      </View>
+
+                      <View className="flex-1">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                          {ride.destination.address}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">Destination</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Confirm button */}
+                  <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">Choose driver</Text>
+                  </Button>
+                </View>
+              </SheetLayer>
+            )}
+          </View>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
