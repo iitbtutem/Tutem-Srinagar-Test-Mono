@@ -1,36 +1,77 @@
 import '@/global.css';
 
-import { NAV_THEME } from '@/lib/theme';
-import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from 'convex/react';
+import { ConvexProviderWithClerk } from 'convex/react-clerk';
+import { ClerkProvider, useAuth } from '@clerk/expo';
+import * as SecureStore from 'expo-secure-store';
+import { ToastProvider } from '@/components/CustomToast';
+import { colorScheme } from 'nativewind';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
+import { NotificationProvider } from '@/context/NotificationContext';
+
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
-
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
 });
 
+// Secure token cache for Clerk
+const tokenCache = {
+  async getToken(key: string) {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
+    }
+  },
+  async saveToken(key: string, value: string) {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch {}
+  },
+};
+
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme();
+  const theme = colorScheme.get();
+  
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 
   return (
-    <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
-
-
-      <ConvexProvider client={convex} >
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Stack />
-        <PortalHost />
-
-      </ConvexProvider>
-
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider
+        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+        tokenCache={tokenCache}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <NotificationProvider>
+            <ToastProvider>
+              <StatusBar
+                style={theme === 'dark' ? 'light' : 'dark'}
+                backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
+              />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+              <PortalHost />
+            </ToastProvider>
+          </NotificationProvider>
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

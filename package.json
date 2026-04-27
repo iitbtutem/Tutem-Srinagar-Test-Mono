@@ -2,7 +2,24 @@
   "name": "tutem",
   "version": "0.0.1",
   "private": true,
-  "workspaces": ["apps/*", "packages/*", "tooling/*"],
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "tooling/*"
+    ],
+    "nohoist": [
+      "**/@radix-ui/**",
+      "**/react/**",
+      "**/react-dom/**",
+      "**/react",
+      "**/react-dom",
+      "user-app",
+      "user-app/**",
+      "driver-app",
+      "driver-app/**"
+    ]
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
