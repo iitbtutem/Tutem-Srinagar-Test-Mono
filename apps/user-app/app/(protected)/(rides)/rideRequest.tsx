@@ -853,6 +853,17 @@ export default function RideRequest() {
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* feedback button */}
+        {ride.status !== "Completed" && (
+          <Button
+            onPress={() => router.push(`/feedback/${id}`)}
+          >
+            <Text className=''>
+              Give Feedback
+            </Text>
+          </Button>
+        )}
       </ScrollView>
 
       <BottomSheet
