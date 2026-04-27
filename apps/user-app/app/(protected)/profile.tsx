@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
 import { iconBackgroundColor, iconColor } from '@/constants/colors';
+import { cn } from '@/lib/utils';
 
 const EXPANDED_HEADER_HEIGHT = 300;
 const COLLAPSED_HEADER_HEIGHT = 100;
@@ -155,7 +156,7 @@ export default function Profile() {
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className="overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30">
+        className={cn("overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30", {"bg-primary/75": isDark})}>
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, right: 0, zIndex: 10 }]}

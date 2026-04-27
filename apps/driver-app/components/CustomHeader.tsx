@@ -30,6 +30,7 @@ import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
 import { useState } from 'react';
 import { mutation } from '../../../packages/api/convex/_generated/server';
+import { useColorScheme } from 'nativewind';
 
 type User = FunctionReturnType<typeof api.routes.driver.getDriver>;
 type Props = {
@@ -43,6 +44,9 @@ export default function CustomHeader({ navigation, options, back, user }: Props)
   if (!user) return;
   const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
+
+  const {colorScheme}= useColorScheme();
+  const isDark = colorScheme === "dark";
 
   return (
     <SafeAreaView className="bg-primary-background h-[110px] flex-row items-center justify-between gap-3 bg-cyan-500 px-4">
@@ -67,7 +71,7 @@ export default function CustomHeader({ navigation, options, back, user }: Props)
 
         <View>
           <Text className="text-[10px] text-gray-500">Status</Text>
-          <Text className="text-xs font-semibold text-primary">
+          <Text className={cn("text-xs font-semibold text-primary", {"text-black": isDark})}>
             {user.driverDetails?.isOnline ? 'Online' : 'Offline'}
           </Text>
         </View>
@@ -90,6 +94,7 @@ export default function CustomHeader({ navigation, options, back, user }: Props)
           user={user}
           genderMatching={genderMatching}
           setGenderMatching={setGenderMatching}
+          isDark={isDark}
         />
       </View>
     </SafeAreaView>
@@ -100,10 +105,12 @@ function ProfileDropdown({
   user,
   genderMatching,
   setGenderMatching,
+  isDark
 }: {
   user: User;
   genderMatching: boolean;
   setGenderMatching: React.Dispatch<React.SetStateAction<boolean>>;
+  isDark: boolean
 }) {
   const { signOut } = useAuth();
   const removeExpoPushToken = useMutation(api.routes.driver.removeExpoPushToken);
@@ -140,7 +147,8 @@ function ProfileDropdown({
           className={cn(
             'rounded-full border-2',
             { 'border-green-600': user.driverDetails?.isAvailableForRide },
-            { 'border-red-600': !user.driverDetails?.isAvailableForRide }
+            { 'border-red-600': !user.driverDetails?.isAvailableForRide },
+            {"bg-blue-600/60": isDark}
           )}>
           <Avatar alt="Profile pic" className="h-11 w-11">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
@@ -153,17 +161,13 @@ function ProfileDropdown({
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl">
+      <DropdownMenuContent className={cn("native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl", {"bg-black": isDark})}>
         <Animated.View entering={FadeIn.duration(200)}>
-          <View className="border-b border-gray-100 bg-primary/5 px-4 py-2">
+          <View className="bg-primary/5 px-4 py-2">
             <Text className="text-lg font-bold text-primary">Menu</Text>
           </View>
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Settings
-          </DropdownMenuLabel>
-
           <DropdownMenuGroup>
             <DropdownMenuItem asChild closeOnPress>
               <Link href={'/profile'}>
