@@ -762,19 +762,6 @@ export default function WhereTo() {
           </TouchableOpacity>
         )}
 
-        {sheetState === 'COLLAPSED' && (
-          <Button
-            variant={'default'}
-            className={cn(
-              'absolute right-5 top-16 z-10 h-8 flex-row items-center rounded-full py-0',
-              genderMatch ? 'bg-primary' : 'bg-muted/50'
-            )}
-            onPress={() => setGenderMatch(!genderMatch)}>
-            <Text className={cn('text-primary', { 'text-primary-foreground': genderMatch })}>
-              Match Gender
-            </Text>
-          </Button>
-        )}
 
         <TouchableOpacity
           className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
@@ -933,7 +920,7 @@ export default function WhereTo() {
                             }
                             fetchDetails={true}
                             onPress={handlePickupSelect}
-                            textInputProps={{ onFocus: () => setMapSelectionMode('pickup') }}
+                            textInputProps={{ onFocus: () => setMapSelectionMode('pickup'), placeholderTextColor: isDark ? "#9ca3af" : "#6b7280" }}
                             query={{
                               key: apiKey,
                               language: 'en',
@@ -987,7 +974,7 @@ export default function WhereTo() {
                             placeholder="Where to?"
                             fetchDetails={true}
                             onPress={handleDestinationSelect}
-                            textInputProps={{ onFocus: () => setMapSelectionMode('destination') }}
+                            textInputProps={{ onFocus: () => setMapSelectionMode('destination'), placeholderTextColor: isDark ? "#9ca3af" : "#6b7280" }}
                             query={{
                               key: apiKey,
                               language: 'en',

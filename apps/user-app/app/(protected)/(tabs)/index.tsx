@@ -51,7 +51,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push(service.href)}
-                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-[#fbfcf8] shadow-sm">
+                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-[#fbfcf8] dark:bg-zinc-800 shadow-sm">
                   {/* Icon container */}
                   <View className="h-24 w-24 items-center justify-center rounded-full">
                     <Image
@@ -150,7 +150,7 @@ export function ActiveRideCard() {
             {/* Header: Status + OTP */}
             <View className="flex-row items-center justify-between">
               <View
-                className={`rounded-full px-3 py-1 ${statusColor[status] ?? 'bg-muted text-muted-foreground'}`}>
+                className={`rounded-full px-3 py-1 ${statusColor[status] ?? 'bg-muted dark:bg-gray-300 text-muted-foreground'}`}>
                 <Text className="text-xs font-medium capitalize">{status}</Text>
               </View>
               <View className="items-end">

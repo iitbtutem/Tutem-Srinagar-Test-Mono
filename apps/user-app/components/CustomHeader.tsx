@@ -20,6 +20,7 @@ import {
 } from './ui/dropdown-menu';
 import { useMutation } from 'convex/react';
 import { useState } from 'react';
+import { useColorScheme } from 'nativewind';
 
 type User = FunctionReturnType<typeof api.routes.rider.getRider>;
 type Props = {
@@ -39,6 +40,10 @@ export default function CustomHeader({ user }: Props) {
     await toggleGenderMatching({ id: user.riderDetails?._id });
     setGenderMatching((prev) => !prev);
   };
+
+  const {colorScheme}= useColorScheme();
+  const isDark = colorScheme === "dark";
+
 
   return (
     <SafeAreaView className="bg-primary-background h-[110px] flex-row items-start justify-between gap-3 bg-cyan-500 px-4">
@@ -65,7 +70,7 @@ export default function CustomHeader({ user }: Props) {
 
         <View>
           <Text className="text-[10px] text-gray-500">Gender</Text>
-          <Text className="text-xs font-semibold text-primary">
+          <Text className={cn("text-xs font-semibold text-primary", {"text-black": isDark})}>
             {user.riderDetails?.genderMatching ? 'Match' : 'Any'}
           </Text>
         </View>
@@ -91,13 +96,13 @@ export default function CustomHeader({ user }: Props) {
             </Text>
           </View>
         </View>
-        <ProfileDropdown user={user} />
+        <ProfileDropdown user={user} isDark={isDark} />
       </View>
     </SafeAreaView>
   );
 }
 
-function ProfileDropdown({ user }: { user: User }) {
+function ProfileDropdown({ user, isDark }: { user: User , isDark: boolean}) {
   const { signOut } = useAuth();
   const removeExpoPushToken = useMutation(api.routes.rider.removeExpoPushToken);
 
@@ -121,7 +126,7 @@ function ProfileDropdown({ user }: { user: User }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <TouchableOpacity className="rounded-full border-2 border-green-600 bg-white/60">
+        <TouchableOpacity className={cn("rounded-full border-2 border-green-600 bg-white/60",{"bg-blue-600/60": isDark})}>
           <Avatar alt="Profile pic" className="h-11 w-11">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
             <AvatarFallback className="bg-white/20">
@@ -133,7 +138,7 @@ function ProfileDropdown({ user }: { user: User }) {
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl">
+      <DropdownMenuContent className={cn("native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl", {"bg-black": isDark})}>
         <Animated.View entering={FadeIn.duration(200)}>
           <View className="px-4 py-2">
             <Text className="text-lg font-bold text-primary">Menu</Text>

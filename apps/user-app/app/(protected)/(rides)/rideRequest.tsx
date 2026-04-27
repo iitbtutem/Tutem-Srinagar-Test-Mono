@@ -74,13 +74,13 @@ function getVehicleIcon(type: string): React.ComponentProps<typeof MaterialCommu
 function getFuelColor(fuel: string) {
   switch (fuel) {
     case 'EV':
-      return { bg: 'bg-emerald-100', text: 'text-emerald-700' };
+      return { bg: 'bg-emerald-100 bg-emerald-500', text: 'text-emerald-700' };
     case 'Petrol':
-      return { bg: 'bg-orange-100', text: 'text-orange-700' };
+      return { bg: 'bg-orange-100 dark:bg-orange-500', text: 'text-orange-700' };
     case 'Diesel':
       return { bg: 'bg-slate-100', text: 'text-slate-600' };
     default:
-      return { bg: 'bg-gray-100', text: 'text-gray-600' };
+      return { bg: 'bg-gray-100 bg-gray-500', text: 'text-gray-600' };
   }
 }
 
@@ -106,10 +106,10 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <View className="flex-1 items-center gap-0.5 rounded-2xl bg-gray-50 py-3">
+    <View className="flex-1 items-center gap-0.5 rounded-2xl bg-gray-50 dark:bg-zinc-900 py-3">
       <Ionicons name={icon} size={18} color={highlight ? '#2563eb' : '#6b7280'} />
-      <Text className="mt-1 text-[11px] text-gray-400">{label}</Text>
-      <Text className={`text-base font-bold ${highlight ? 'text-blue-600' : 'text-gray-900'}`}>
+      <Text className="mt-1 text-[11px] text-gray-400 dark:text-gray-100">{label}</Text>
+      <Text className={`text-base font-bold ${highlight ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
         {value}
       </Text>
     </View>
@@ -402,7 +402,7 @@ export default function RideRequest() {
     : VERIFICATION_CONFIG['Pending'];
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <SafeAreaView />
 
 {/* Maximized Map Modal/Overlay */}
@@ -489,14 +489,14 @@ export default function RideRequest() {
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="flex-row items-center py-4">
-          <Pressable onPress={() => router.back()} className="mr-3 rounded-full bg-gray-100 p-2">
-            <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Pressable onPress={() => router.back()} className="mr-3 rounded-full bg-gray-200 dark:bg-zinc-800 p-2">
+            <Ionicons name="arrow-back" size={20} color={isDark ? "#f9fafb": "#27272a"} />
           </Pressable>
-          <Text className="text-lg font-bold text-gray-900">Ride Details</Text>
+          <Text className="text-lg font-bold text-gray-900 dark:text-gray-50">Ride Details</Text>
         </View>
 
         {/* Live Tracking Map */}
-        <View className={cn("mb-4 overflow-hidden rounded-3xl border border-gray-100 bg-gray-50 shadow-sm", { "pointer-events-none": sheetIndex !== -1 })} style={{ height: 220 }}>
+        <View className={cn("mb-4 overflow-hidden rounded-3xl border border-gray-100 dark:border-gray-600 bg-gray-50 shadow-sm", { "pointer-events-none": sheetIndex !== -1 })} style={{ height: 220 }}>
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
@@ -575,7 +575,7 @@ export default function RideRequest() {
         </View>
 
         {/* Driver card */}
-        <View className={cn("mb-4 rounded-2xl border bg-white p-4 shadow-sm", {
+        <View className={cn("mb-4 rounded-2xl border bg-white dark:bg-zinc-800 p-4 shadow-sm dark:border-zinc-600", {
           "pointer-events-none": sheetIndex !== -1,
           "border-red-200": ride.requestStatus === "Rejected",
           "border-gray-100": ride.requestStatus !== "Rejected",
@@ -604,7 +604,7 @@ export default function RideRequest() {
             <View className="flex-1 flex-row items-center gap-3">
               {/* Avatar with red ring on rejection */}
               <View className={cn("rounded-full", {
-                "p-0.5 bg-red-200": ride.requestStatus === "Rejected",
+                "p-0.5 border-2 border-red-500": ride.requestStatus === "Rejected",
               })}>
                 <Avatar alt="Profile pic" className="h-14 w-14">
                   <AvatarImage
@@ -626,12 +626,12 @@ export default function RideRequest() {
               <View className="flex-1 items-start">
                 <Text className={cn("text-base font-bold", {
                   "text-gray-400": ride.requestStatus === "Rejected",
-                  "text-gray-900": ride.requestStatus !== "Rejected",
+                  "text-gray-900 dark:text-gray-100": ride.requestStatus !== "Rejected",
                 })}>
                   {`${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails.lastName ?? ''}`.trim() || 'Driver'}
                 </Text>
                 <View className='flex-row gap-2'>
-                  <View className="flex-row items-center gap-0.5 rounded-full bg-gray-100 px-2 py-[2px]">
+                  <View className="flex-row items-center gap-0.5 rounded-full bg-gray-100 dark:bg-black px-2 py-[2px]">
                     <MaterialIcons
                       name={
                         ride.driver.userDetails.gender === 'Male'
@@ -641,9 +641,9 @@ export default function RideRequest() {
                             : 'transgender'
                       }
                       size={12}
-                      color="#374151"
+                      color = {isDark ? "#4b5563" : "#374151"}
                     />
-                    <Text className="text-[11px] font-medium text-gray-600">
+                    <Text className="text-[11px] font-medium text-gray-600 dark:text-gray-50">
                       {ride.driver.userDetails.gender}
                     </Text>
                   </View>
@@ -681,7 +681,7 @@ export default function RideRequest() {
           {/* Vehicle details */}
           {vehicle && (
             <View className={cn("mt-4 flex-row items-center gap-3 rounded-xl p-3", {
-              "bg-gray-50": ride.requestStatus !== "Rejected",
+              "bg-gray-50 dark:bg-zinc-950": ride.requestStatus !== "Rejected",
               "bg-red-50/60 opacity-60": ride.requestStatus === "Rejected",
             })}>
               <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
@@ -694,7 +694,7 @@ export default function RideRequest() {
 
               <View className="flex-1">
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-sm font-bold text-gray-900">{vehicle.model}</Text>
+                  <Text className="text-sm font-bold text-gray-900 dark:text-gray-100">{vehicle.model}</Text>
                   {fuelStyle && (
                     <InfoPill
                       label={vehicle.fuelType}
@@ -703,17 +703,17 @@ export default function RideRequest() {
                   )}
                 </View>
                 <View className="mt-1 flex-row items-center gap-2">
-                  <Text className="text-xs text-gray-500">{vehicle.color}</Text>
-                  <Text className="text-gray-300">·</Text>
-                  <Text className="text-xs font-semibold tracking-widest text-gray-700">
+                  <Text className="text-xs text-gray-500 dark:text-gray-100">{vehicle.color}</Text>
+                  <Text className="text-gray-300 dark:text-gray-50">·</Text>
+                  <Text className="text-xs font-semibold tracking-widest text-gray-700 dark:text-gray-100">
                     {vehicle.registrationNumber}
                   </Text>
                 </View>
               </View>
 
               <View className="items-center gap-0.5">
-                <Ionicons name="people-outline" size={14} color="#6b7280" />
-                <Text className="text-xs font-semibold text-gray-600">
+                <Ionicons name="people-outline" size={14} color={isDark ? "#f9fafb": "#27272a"}/>
+                <Text className="text-xs font-semibold text-gray-600 dark:text-gray-100">
                   {vehicle.seatingCapacity}
                 </Text>
               </View>
@@ -722,7 +722,7 @@ export default function RideRequest() {
         </View>
 
         {/* Route */}
-        <View className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <View className="mb-4 rounded-2xl border border-gray-100 dark:border-gray-600 bg-white dark:bg-zinc-800 p-4 shadow-sm">
           <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
             Route
           </Text>
@@ -739,7 +739,7 @@ export default function RideRequest() {
                 <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-teal-500">
                   Pickup
                 </Text>
-                <Text className="text-sm font-semibold leading-5 text-gray-900">
+                <Text className="text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">
                   {ride.pickup?.address ?? 'Not set'}
                 </Text>
               </View>
@@ -747,7 +747,7 @@ export default function RideRequest() {
                 <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-violet-500">
                   Destination
                 </Text>
-                <Text className="text-sm font-semibold leading-5 text-gray-900">
+                <Text className="text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">
                   {ride.destination?.address ?? 'Not set'}
                 </Text>
               </View>
@@ -768,11 +768,11 @@ export default function RideRequest() {
 
         {/* OTP */}
         {ride.status === 'Open' && (
-          <View className="mb-4 items-center rounded-2xl bg-indigo-50 px-6 py-7">
+          <View className="mb-4 items-center rounded-2xl bg-indigo-50 dark:bg-zinc-800 px-6 py-7">
             <Text className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
               Share with your driver
             </Text>
-            <Text className="mt-4 text-5xl font-extrabold tracking-[12px] text-indigo-900">
+            <Text className="mt-4 h-14 text-5xl font-extrabold tracking-[12px] text-indigo-900 dark:text-indigo-300">
               {ride.otp}
             </Text>
             <View className="mt-4 flex-row items-center gap-1.5">
@@ -781,8 +781,8 @@ export default function RideRequest() {
             </View>
 
             {/* Confirm prompt */}
-            <View className="-mx-2 mt-2 rounded-xl bg-emerald-50 px-4 py-2">
-              <Text className="text-center text-sm font-semibold text-emerald-700">
+            <View className="-mx-2 mt-2 rounded-xl bg-emerald-50 dark:bg-indigo-100 px-4 py-2">
+              <Text className="text-center text-sm font-semibold text-emerald-700 dark:text-indigo-600">
                 Confirm once you are inside the vehicle
               </Text>
             </View>
@@ -862,7 +862,7 @@ export default function RideRequest() {
         onChange={setSheetIndex}
         snapPoints={["45%", "80%"]}
         enableDynamicSizing={false}
-        enablePanDownToClose={false}
+        enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
         animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
