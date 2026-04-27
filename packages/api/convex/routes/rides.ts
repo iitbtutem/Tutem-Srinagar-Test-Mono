@@ -861,8 +861,6 @@ export const completeRide = internalMutation({
 export const submitRating = mutation({
   args: {
     rideId: v.id("ride"),
-    riderId: v.id("rider"),
-    driverId: v.id("driver"),
     raterType: v.union(v.literal("Rider"), v.literal("Driver")),
     score: v.number(),
     comment: v.optional(v.string()),
@@ -880,7 +878,6 @@ export const submitRating = mutation({
     // Prevent duplicate: same ride + same raterType
     const existing = await ctx.db
       .query("ratings")
-      .withIndex("by_ride", (q) => q.eq("rideId", args.rideId))
       .filter((q) => q.eq(q.field("raterType"), args.raterType))
       .first();
 
@@ -889,8 +886,8 @@ export const submitRating = mutation({
 
     await ctx.db.insert("ratings", {
       rideId: args.rideId,
-      riderId: args.riderId,
-      driverId: args.driverId,
+      riderId: ride.riderId,
+      driverId: ride.driverId,
       raterType: args.raterType,
       score: args.score,
       comment: args.comment,
@@ -898,7 +895,7 @@ export const submitRating = mutation({
   },
 });
 
-// ─── READ ─────────────────────────────────────────────────────────────────────
+// READ 
 
 // Get both ratings for a single ride
 export const getRideRatings = query({
