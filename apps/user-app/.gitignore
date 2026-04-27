@@ -7,8 +7,6 @@ node_modules/
 .expo/
 dist/
 web-build/
-android/
-ios/
 
 # Native
 *.orig.*
@@ -41,7 +39,3 @@ yarn-error.*
 
 expo-env.d.ts
 # @end expo-cli
-
-# FCM
-tutem-user-firebase-adminsdk-fbsvc-f730cbcc84.json
-user-google-services.json
