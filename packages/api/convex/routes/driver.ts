@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalQuery, mutation, query } from "../_generated/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -252,6 +252,17 @@ export const getDriver = query({
       } : null,
     };
   },
+});
+
+export const getDriverExpoPushToken = internalQuery({
+  args: {
+    id: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.id);
+    if(driver === null) throw new ConvexError("Invalid Driver");
+    return driver.expoPushToken;
+  }
 });
 
 export const updateDriver = mutation({

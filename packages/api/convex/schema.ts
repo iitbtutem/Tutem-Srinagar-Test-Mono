@@ -97,7 +97,9 @@ export default defineSchema({
     updatedAt: v.number(),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
-  }),
+  })
+  .index("by_rider", ["riderId"])
+  .index("by_driver", ["driverId"]),
 
   ratings: defineTable({
     rideId: v.id("ride"),

@@ -73,6 +73,38 @@ export const bookRide = action({
   },
 });
 
+export const changeDriver = action({
+  args: {
+    rideId: v.id("ride"),
+    riderId: v.id("rider"),
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(
+      internal.routes.rides.changeDriver, 
+      {
+        rideId: args.rideId,
+        riderId: args.riderId,
+        driverId: args.driverId,
+      }
+    );
+
+    const driverExpoPushToken = await ctx.runQuery(
+      internal.routes.driver.getDriverExpoPushToken,
+      {
+        id: args.driverId,
+      }
+    );
+
+    // if (driverExpoPushToken)
+    //   await sendNotification({
+    //     pushTokens: [driverExpoPushToken],
+    //     title: "New Ride Request 🚖",
+    //     body: "You have received a new ride request. Open the app to view trip details and accept it.",
+    //   });
+  }
+});
+
 export const cancelRide = action({
   args: {
     riderId: v.id("rider"),

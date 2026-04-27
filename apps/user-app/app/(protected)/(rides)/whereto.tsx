@@ -55,6 +55,8 @@ const VEHICLE_ICONS = {
   Auto: 'rickshaw',
 } as const;
 
+type VehicleClass = (typeof VEHICLE_CLASS)[number];
+
 // SheetLayer
 type SheetLayerProps = {
   children: React.ReactNode;
@@ -308,7 +310,6 @@ export default function WhereTo() {
   const [sheetIndex, setSheetIndex] = useState(1);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
 
-  type VehicleClass = (typeof VEHICLE_CLASS)[number];
   const [filters, setFilters] = useState<VehicleClass[]>([]);
 
   const [genderMatch, setGenderMatch] = useState(false);
@@ -1203,10 +1204,10 @@ export default function WhereTo() {
                     <View className="h-[1px] bg-border" />
 
                     <View className="flex-row items-center justify-between rounded-xl bg-muted/30 px-3">
-                      <View>
+                      {/* <View>
                         <Text className="text-muted-foreground">Arriving in</Text>
                         <Text className="text-lg font-bold text-foreground">7 min</Text>
-                      </View>
+                      </View> */}
                       <View className="items-end">
                         <Text className="text-lg font-bold text-foreground">
                           ₹{selectedDriver.fare}

@@ -171,13 +171,11 @@ export const bookRide = internalMutation({
 
     const existingRide = await ctx.db
       .query("ride")
+      .withIndex("by_rider", q => q.eq("riderId", rider._id))
       .filter((q) =>
-        q.and(
-          q.eq(q.field("riderId"), rider._id),
-          q.or(
-            q.eq(q.field("status"), "Active"),
-            q.eq(q.field("status"), "Open"),
-          ),
+        q.or(
+          q.eq(q.field("status"), "Active"),
+          q.eq(q.field("status"), "Open"),
         ),
       )
       .first();
@@ -205,6 +203,33 @@ export const bookRide = internalMutation({
   },
 });
 
+export const changeDriver = internalMutation({
+  args: {
+    rideId: v.id("ride"),
+    riderId: v.id("rider"),
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const ride = await ctx.db.get(args.rideId);
+    if(ride === null || ride.riderId !== args.riderId) throw new ConvexError("Ride not found");
+
+    const driver = await ctx.db.get(ride.driverId);
+
+    if(driver && driver.isAvailableForRide === false){
+      await ctx.db.patch(driver._id, {
+        isAvailableForRide: true,
+      })
+    }
+    await ctx.db.patch(ride._id, {
+      updatedAt: Date.now(),
+      driverId: args.driverId,
+      requestStatus: "Pending",
+      status: "Open",
+    });
+
+  }
+});
+
 export const cancelRide = internalMutation({
   args: {
     riderId: v.id("rider"),
@@ -214,17 +239,10 @@ export const cancelRide = internalMutation({
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
     
-    const ride = await ctx.db
-    .query("ride")
-    .filter((q) =>
-      q.and(
-        q.eq(q.field("_id"), args.rideId),
-        q.eq(q.field("riderId"), args.riderId),
-        ),
-      )
-      .first();
+    const ride = await ctx.db.get(args.rideId);
       
-    if (ride === null) throw new ConvexError("Ride not found");
+    if (ride === null || ride.riderId !== rider._id) throw new ConvexError("Ride not found");
+
     if (ride.status !== "Open")
       throw new ConvexError("Ride cannot cancelled at this stage");
     
@@ -235,6 +253,12 @@ export const cancelRide = internalMutation({
       status: "Canceled",
       updatedAt: Date.now(),
     });
+
+    if(driver.isAvailableForRide === false && ride.requestStatus === "Accepted"){
+      await ctx.db.patch(driver._id, {
+        isAvailableForRide: true,
+      });
+    };
 
     return ride.requestStatus === "Accepted" ? driver.expoPushToken : undefined;
   },
@@ -319,33 +343,26 @@ export const acceptRide = internalMutation({
 export const getRiderCurrentRideById = query({
   args: {
     id: v.id("ride")
-    },
+  },
   handler: async (ctx, args) => {
 
-    const ride = await ctx.db
-      .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("_id"), args.id),  
-          q.or(
-            q.eq(q.field("status"), "Open"),
-            q.eq(q.field("status"), "Active"),
-          ),
-        ),
-      )
-      .first();
+    const ride = await ctx.db.get(args.id);
 
-    if (ride === null) throw new ConvexError("Ride not found");
+    if(ride === null || (ride.status !== "Active" && ride.status !== "Open"))
+      throw new ConvexError("Ride is not available");
 
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
-
+    
+    const riderDetails = await ctx.db.get(rider.userId);
+    if (riderDetails === null) throw new ConvexError("Invalid user");
+    
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid driver");
 
     const vehicle = await ctx.db
       .query("vehicle")
-      .filter((q) => q.eq(q.field("ownerId"), driver._id))
+      .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
       .first();
 
     const user = await ctx.db.get(driver.userId);
@@ -380,7 +397,10 @@ export const getRiderCurrentRideById = query({
       ...ride,
       distance,
       otp,
-      rider,
+      rider: {
+        ...rider,
+        userDetails: riderDetails
+      },
       vehicle,
       driver: {
         ...driver,
@@ -399,16 +419,14 @@ export const getRiderCurrentRideByRiderId = query({
   args: {
     riderId: v.id("rider"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => {   
     const ride = await ctx.db
       .query("ride")
+      .withIndex("by_rider", q => q.eq("riderId", args.riderId))
       .filter((q) =>
-        q.and(
-          q.eq(q.field("riderId"), args.riderId!),
-          q.or(
-            q.eq(q.field("status"), "Open"),
-            q.eq(q.field("status"), "Active"),
-          ),
+        q.or(
+          q.eq(q.field("status"), "Open"),
+          q.eq(q.field("status"), "Active"),
         ),
       )
       .first();
@@ -417,12 +435,15 @@ export const getRiderCurrentRideByRiderId = query({
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
 
+    const riderDetails = await ctx.db.get(rider.userId);
+    if (riderDetails === null) throw new ConvexError("Invalid user");
+
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid driver");
 
     const vehicle = await ctx.db
       .query("vehicle")
-      .filter((q) => q.eq(q.field("ownerId"), driver._id))
+      .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
       .first();
 
     const user = await ctx.db.get(driver.userId);
@@ -457,7 +478,10 @@ export const getRiderCurrentRideByRiderId = query({
       ...ride,
       distance,
       otp,
-      rider,
+      rider: {
+        ...rider,
+        userDetails: riderDetails
+      },
       vehicle,
       driver: {
         ...driver,
@@ -483,6 +507,7 @@ export const getRiderHistory = query({
 
     const rides = await ctx.db
       .query("ride")
+      .withIndex("by_rider", q => q.eq("riderId", args.riderId))
       .filter((q) => {
         const statusConditions =
           args.statuses.length > 0
@@ -492,10 +517,7 @@ export const getRiderHistory = query({
                 q.eq(q.field("status"), "Canceled"),
               ];
 
-        return q.and(
-          q.eq(q.field("riderId"), rider._id),
-          q.or(...statusConditions),
-        );
+        return q.or(...statusConditions)
       })
       .collect();
 
@@ -513,9 +535,9 @@ export const getDriverCurrentRide = query({
 
     const ride = await ctx.db
       .query("ride")
+      .withIndex("by_driver", q => q.eq("driverId", args.driverId))
       .filter((q) =>
         q.and(
-          q.eq(q.field("driverId"), driver._id),
           q.eq(q.field("requestStatus"), "Accepted"), //not necessary
           q.or(
             q.eq(q.field("status"), "Active"),
@@ -594,9 +616,9 @@ export const getRideRequests = query({
 
     const rides = await ctx.db
       .query("ride")
+      .withIndex("by_driver", q => q.eq("driverId", args.driverId))
       .filter((q) =>
         q.and(
-          q.eq(q.field("driverId"), driver._id),
           q.eq(q.field("status"), "Open"),
           q.eq(q.field("requestStatus"), "Pending"),
         ),
@@ -677,12 +699,8 @@ export const getDriverHistory = query({
 
     const rides = await ctx.db
       .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("driverId"), driver._id),
-          q.eq(q.field("status"), "Completed"),
-        ),
-      )
+      .withIndex("by_driver", q => q.eq("driverId", driver._id))
+      .filter((q) => q.eq(q.field("status"), "Completed"))
       .collect();
 
     const ridesWithRiders = Promise.all(
@@ -750,17 +768,16 @@ export const getRideToStart = query({
     driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
-    const ride = await ctx.db
-      .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("_id"), args.id),
-          q.eq(q.field("driverId"), args.driverId),
-          q.eq(q.field("status"), "Open"),
-          q.eq(q.field("requestStatus"), "Accepted")
-        ),
-      )
-      .first();
+    const ride = await ctx.db.get(args.id);
+
+    if (
+      !ride ||
+      ride.driverId !== args.driverId ||
+      ride.status !== "Open" ||
+      ride.requestStatus !== "Accepted"
+    ) {
+      return null;
+    }
 
     // if (ride === null) throw new ConvexError("ride not found");
     // if (ride.status === "Active")
@@ -784,17 +801,9 @@ export const startRide = internalMutation({
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Invalid user");
 
-    const ride = await ctx.db
-      .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("_id"), args.rideId),
-          q.eq(q.field("driverId"), driver._id),
-        ),
-      )
-      .first();
+    const ride = await ctx.db.get(args.rideId);
 
-    if (ride === null) throw new ConvexError("Ride not found");
+    if (ride === null || ride.driverId !== args.driverId) throw new ConvexError("Ride not found");
     if (ride.status !== "Open")
       throw new ConvexError("Ride cannot be started at this stage");
     if (ride.requestStatus !== "Accepted")
@@ -825,17 +834,9 @@ export const completeRide = internalMutation({
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Invalid user");
 
-    const ride = await ctx.db
-      .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("_id"), args.rideId),
-          q.eq(q.field("driverId"), driver._id),
-        ),
-      )
-      .first();
+    const ride = await ctx.db.get(args.rideId);
 
-    if (ride === null) throw new ConvexError("Ride not found");
+    if (ride === null || ride.driverId !== args.driverId) throw new ConvexError("Ride not found");
     if (ride.status !== "Active")
       throw new ConvexError("Ride cannot be completed at this stage");
 
@@ -844,6 +845,7 @@ export const completeRide = internalMutation({
 
     await ctx.db.patch(ride._id, {
       status: "Completed",
+      completedAt: Date.now(),
       updatedAt: Date.now(),
     });
 
@@ -961,7 +963,7 @@ export const getRiderRatings = query({
   },
 });
 
-// ─── UPDATE ───────────────────────────────────────────────────────────────────
+// UPDATE
 
 export const updateRating = mutation({
   args: {
@@ -1003,7 +1005,7 @@ export const updateRating = mutation({
   },
 });
 
-// ─── DELETE ───────────────────────────────────────────────────────────────────
+// DELETE
 
 export const deleteRating = mutation({
   args: {
