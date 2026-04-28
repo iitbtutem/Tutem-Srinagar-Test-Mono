@@ -1,11 +1,11 @@
 export default {
   expo: {
-    name: "driver-app",
-    slug: "driver-app",
+    name: "tutem-driver",
+    slug: "tutem-driver",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "driver-app",
+    scheme: "tutem-driver",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
@@ -16,7 +16,7 @@ export default {
     assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yameenfarooq.driverapp",
+      bundleIdentifier: "com.driver.tutem",
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to scan barcodes on event tickets.",
         NSLocationWhenInUseUsageDescription: "This app needs to access your location to track your ride.",
@@ -33,7 +33,7 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.yameenfarooq.driverapp",
+      package: "com.driver.tutem",
       googleServicesFile: "./driver-google-services.json",
       config: {
         googleMaps: {
@@ -66,7 +66,7 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "7526ac0c-3fc5-4948-b8a3-9de609c43630"
+        projectId: "5975e692-ecf7-421f-aabb-3e6c78f69da6"
       },
       GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     }
