@@ -7,7 +7,6 @@ import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { cn } from '@/lib/utils';
-import { useColorScheme } from 'nativewind';
 import { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Select,
@@ -27,18 +26,14 @@ import { api } from '@tutem/api';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import ErrorScreen from '@/components/ErrorScreen';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import type { Id } from '@tutem/api';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  BottomSheetBackgroundColor,
-  BottomSheetIndicatorColor,
-  iconColor,
-} from '@/constants/colors';
 import { useNotification } from '@/context/NotificationContext';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const formSchema = z.object({
   firstName: z
@@ -57,8 +52,7 @@ const formSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 export default function Register() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<

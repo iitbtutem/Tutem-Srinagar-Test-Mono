@@ -20,7 +20,6 @@ import * as Location from 'expo-location';
 import { FunctionReturnType } from 'convex/server';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
-import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
 import { router } from 'expo-router';
@@ -35,6 +34,7 @@ import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 
 import PulseDot from '@/components/PulseDot';
 import LiveTimer from '@/components/LiveTimer';
+import useThemeColors from '@/hooks/useColorScheme';
 
 // Types
 
@@ -113,6 +113,7 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 export default function Home() {
   const { userId } = useAuth();
   const { showToast } = useToast();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
   const rideRequests = useQuery(

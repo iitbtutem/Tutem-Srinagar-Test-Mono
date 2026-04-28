@@ -29,8 +29,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
-import { iconBackgroundColor, iconColor } from '@/constants/colors';
 import { cn } from '@/lib/utils';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const EXPANDED_HEADER_HEIGHT = 300;
 const COLLAPSED_HEADER_HEIGHT = 100;
@@ -41,6 +41,7 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const isDark = colorScheme === 'dark';
 
