@@ -7,11 +7,11 @@ import { RideHistoryCard as RideCard } from '../../../components/RideCard';
 import { FunctionReturnType } from 'convex/server';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
-import { BottomSheetBackgroundColor, BottomSheetIndicatorColor } from '@/constants/colors';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StarRating from '@/components/StarRating';
 import { formatFare } from '@/lib/utils';
+import useThemeColors from '@/hooks/useColorScheme';
 
 type RideHistory = NonNullable<
   FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
@@ -19,6 +19,7 @@ type RideHistory = NonNullable<
 
 export default function History() {
   const { userId } = useAuth();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const [selectedRide, setSelectedRide] = useState<RideHistory | null>(null);
 

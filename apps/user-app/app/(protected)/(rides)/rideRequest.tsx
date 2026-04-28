@@ -18,7 +18,7 @@ import PulseDot from '@/components/PulseDot';
 import LiveTimer from '@/components/LiveTimer';
 import * as Location from 'expo-location';
 import { mapStyle } from '@/constants/mapStyles';
-import { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconColor, VERIFICATION_CONFIG } from '@/constants/colors';
+import { VERIFICATION_CONFIG } from '@/constants/colors';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { useSharedValue } from 'react-native-reanimated';
 import NearbyDrivers from '@/components/NearbyDrivers';
@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
 import { distanceFormat } from '../../../../driver-app/lib/utils';
 import { Separator } from '@/components/ui/seperator';
+import useThemeColors from '@/hooks/useColorScheme';
 
 // types
 
@@ -124,6 +125,7 @@ export default function RideRequest() {
   const  {colorScheme}= useColorScheme();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
   const cancelRide = useAction(api.routes.rideActions.cancelRide);

@@ -30,12 +30,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import z from 'zod';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
-import {
-  BottomSheetBackgroundColor,
-  BottomSheetIndicatorColor,
-  iconColor,
-} from '@/constants/colors';
 import { useNotification } from '@/context/NotificationContext';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -57,6 +53,7 @@ export default function RegisterAsRider() {
   const router = useRouter();
   const { showToast } = useToast();  
   const { expoPushToken } = useNotification();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);

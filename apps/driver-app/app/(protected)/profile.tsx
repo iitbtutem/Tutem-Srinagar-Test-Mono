@@ -25,7 +25,6 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import { HorizontalRule } from '@/components/ui/seperator';
 import { Image } from 'react-native';
 import { cn } from '@/lib/utils';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import {
   Dialog,
   DialogContent,
@@ -34,13 +33,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import * as ImagePicker from 'expo-image-picker';
-import {
-  BottomSheetBackgroundColor,
-  BottomSheetIndicatorColor,
-  iconBackgroundColor,
-  iconColor,
-  VERIFICATION_CONFIG,
-} from '@/constants/colors';
+import { VERIFICATION_CONFIG } from '@/constants/colors';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
@@ -52,6 +46,7 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const isDark = colorScheme === 'dark';
   const snapPoints = useMemo(() => ['50%', '80%'], []);
