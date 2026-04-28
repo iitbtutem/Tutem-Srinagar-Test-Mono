@@ -857,7 +857,7 @@ export default function RideRequest() {
         )}
 
         {/* feedback button */}
-        {ride.status !== "Completed" && (
+        {ride.status === "Completed" && (
           <Button
             onPress={() => router.push(`/feedback/${id}`)}
           >

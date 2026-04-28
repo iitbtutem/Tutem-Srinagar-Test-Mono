@@ -12,6 +12,7 @@ import {
   Dimensions,
   ScrollView,
   ImageBackground,
+  Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -113,9 +114,12 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 export default function Home() {
   const { userId } = useAuth();
   const { showToast } = useToast();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
+    useThemeColors();
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails ? {driverId: driver.driverDetails._id} : "skip")
+
   const rideRequests = useQuery(
     api.routes.rides.getRideRequests,
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
@@ -141,7 +145,7 @@ export default function Home() {
 
       activeSheetRef.current?.close();
     } catch (e: any) {
-      console.log("Error", e)
+      console.log('Error', e);
       showToast({
         type: 'error',
         title: 'Failed',
@@ -520,12 +524,12 @@ export default function Home() {
     ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
     : null;
 
-  useEffect(()=> {
-    if(!currentRide){
+  useEffect(() => {
+    if (!currentRide) {
       activeSheetRef.current?.close();
       requestSheetRef.current?.close();
     }
-  }, [currentRide])
+  }, [currentRide]);
 
   if (currentRide) {
     // ACTIVE RIDE LAYOUT — full-screen map + non-closable bottom sheet
@@ -845,6 +849,8 @@ export default function Home() {
     );
   }
 
+
+
   // RIDE REQUESTS LAYOUT — scrollable (map + list scroll together as one page)
   return (
     <View className="flex-1 bg-background">
@@ -879,8 +885,25 @@ export default function Home() {
             {/* Driver marker */}
             {driverLocation && (
               <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-400 bg-slate-800">
-                  <Text className="text-lg">🚗</Text>
+                <View className="h-8 w-8 items-center justify-center rounded-full">
+                  {vehicle?.class === "Cab" &&
+                    <Image source={require('@/assets/images/cab_icon.png')}
+                    style={{ width: 32, height: 32 }}
+                    resizeMode="contain"
+                    />
+                  }
+                  {vehicle?.class === "Bike" &&
+                    <Image source={require('@/assets/images/bike_icon.png')}
+                    style={{ width: 32, height: 32 }}
+                    resizeMode="contain"
+                    />
+                  }
+                  {vehicle?.class === "Auto" &&
+                    <Image source={require('@/assets/images/rickshaw_icon.png')}
+                    style={{ width: 32, height: 32 }}
+                    resizeMode="contain"
+                    />
+                  }
                 </View>
               </Marker>
             )}

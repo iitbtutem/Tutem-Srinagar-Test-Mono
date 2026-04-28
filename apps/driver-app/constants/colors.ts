@@ -1,3 +1,9 @@
+import { useColorScheme } from "nativewind";
+
+const {colorScheme} = useColorScheme();
+const isDark = colorScheme === "dark";
+
+export const iconColor = isDark ? "white" : "black"
 
 export const VERIFICATION_CONFIG = {
   Verified: {
