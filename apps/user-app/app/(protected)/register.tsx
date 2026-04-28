@@ -97,13 +97,9 @@ export default function Register() {
   if (rider && userId) return <Redirect href="/" />;
 
   return (
-    <ImageBackground
-      source={require('@/assets/images/background.png')}
-      imageStyle={{ opacity: 0.15 }}
-      className="flex-1 bg-background">
       <Animated.ScrollView
         entering={FadeInRight.delay(300).duration(400)}
-        className="flex-1 p-3">
+        className="flex-1 bg-background p-3">
         <Text className="my-4 mb-2 text-lg font-semibold">Fill in your details</Text>
         <View className="gap-3 px-3 pb-20 pt-2">
           {/* First name */}
@@ -256,6 +252,5 @@ export default function Register() {
           </Button>
         </View>
       </Animated.ScrollView>
-    </ImageBackground>
   );
 }

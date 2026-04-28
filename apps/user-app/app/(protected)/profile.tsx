@@ -148,10 +148,7 @@ export default function Profile() {
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (
-    <ImageBackground
-      source={require('@/assets/images/background.png')}
-      imageStyle={{ opacity: 0.15 }}
-      className="flex-1 bg-background">
+    <>
       <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
 
       {/* Hero Header */}
@@ -337,7 +334,7 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-    </ImageBackground>
+    </>
   );
 }
 

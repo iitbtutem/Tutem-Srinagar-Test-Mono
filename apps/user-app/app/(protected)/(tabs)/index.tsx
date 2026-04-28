@@ -31,10 +31,6 @@ export default function HomeScreen() {
   const router = useRouter();
 
   return (
-    <ImageBackground
-      source={require('@/assets/images/background.png')}
-      imageStyle={{ opacity: 0.15 }}
-      className="flex-1 bg-background">
       <ScrollView showsVerticalScrollIndicator={false}>
         {/*  Ride Services  */}
         <View className="mt-6 px-6">
@@ -109,7 +105,6 @@ export default function HomeScreen() {
 
         <View className="h-10" />
       </ScrollView>
-    </ImageBackground>
   );
 }
 

@@ -81,11 +81,7 @@ export default function Signin() {
   if (isSignedIn && isAuthenticated) return <Redirect href={'/'} />
 
   return (
-    <ImageBackground
-    source={require('@/assets/images/background.png')}
-    imageStyle={{ opacity: 0.15 }}
-    className="flex-1 bg-background">
-    <View className="flex-1 gap-3 px-4 py-10">
+    <View className="flex-1 bg-background gap-3 px-4 py-10">
       <Text className="text-xl font-[320] tracking-wider">Enter your email address</Text>
 
       {/* Email input */}
@@ -131,6 +127,5 @@ export default function Signin() {
         code will be sent to your email.
       </Text>
     </View>
-    </ImageBackground>
   );
 }
