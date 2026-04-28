@@ -348,7 +348,7 @@ export const getRiderCurrentRideById = query({
 
     const ride = await ctx.db.get(args.id);
 
-    if(ride === null || (ride.status !== "Active" && ride.status !== "Open"))
+    if(ride === null)
       throw new ConvexError("Ride is not available");
 
     const rider = await ctx.db.get(ride.riderId);
