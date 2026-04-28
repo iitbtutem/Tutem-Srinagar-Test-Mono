@@ -32,9 +32,6 @@ import Animated, {
 import { useToast } from '@/components/CustomToast';
 import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
 import {
-  BottomSheetBackgroundColor,
-  BottomSheetIndicatorColor,
-  iconColor,
   VERIFICATION_CONFIG,
 } from '@/constants/colors';
 import { useRouter } from 'expo-router';
@@ -47,6 +44,7 @@ import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useAuth } from '@clerk/expo';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import useThemeColors from '@/hooks/useColorScheme';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -300,6 +298,7 @@ export default function WhereTo() {
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
@@ -804,6 +803,8 @@ export default function WhereTo() {
         onChange={handleSheetChanges}
         enableDynamicSizing={false}
         enablePanDownToClose={false}
+        // backgroundStyle={{ backgroundColor: isDark ? "#0f0f12" : "#FAFAFA", borderRadius: 32 }}
+        // handleIndicatorStyle={{ backgroundColor: isDark ? '#2a2a35' : '#D1D5DB', width: 48, height: 4 }}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
         animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
