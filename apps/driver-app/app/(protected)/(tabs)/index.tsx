@@ -958,11 +958,7 @@ export default function Home() {
         </View>
 
         {/* Ride requests list */}
-        <ImageBackground
-        source={require('@/assets/images/background.png')}
-        imageStyle={{ opacity: 0.15 }}
-        className="flex-1 bg-background">
-        <View className="px-4 pt-4">
+        <View className="flex-1 px-4 pt-4">
           {/* Section header */}
           <View className="mb-3 flex-row items-center justify-between">
             <View>
@@ -1003,7 +999,6 @@ export default function Home() {
             />
           ))}
         </View>
-        </ImageBackground>
       </ScrollView>
 
       {/* Loading overlay */}
