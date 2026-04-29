@@ -203,7 +203,7 @@ export default function RegisterAsRider() {
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
-      <Stack.Screen options={{ headerShown: true }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"

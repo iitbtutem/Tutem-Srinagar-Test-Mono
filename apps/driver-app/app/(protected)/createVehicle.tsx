@@ -198,7 +198,7 @@ export default function CreateVehicle() {
               if(router.canGoBack()){
                 router.back();
               } else {
-                router.push("/profile");
+                router.push("/(protected)/(tabs)");
               }
             }}>
               <MaterialIcons
