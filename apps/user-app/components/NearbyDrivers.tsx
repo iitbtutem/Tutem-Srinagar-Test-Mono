@@ -5,7 +5,7 @@ import { TouchableOpacity } from "react-native";
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { FunctionReturnType } from "convex/server";
 import { api, Id } from "@tutem/api";
-import { cn } from "@/lib/utils";
+import { cn, formatFare } from "@/lib/utils";
 import { Text } from "./ui/text";
 import { Switch } from "./ui/switch";
 import { VERIFICATION_CONFIG } from "@/constants/colors";
@@ -200,7 +200,7 @@ export default function NearbyDrivers({
                 </View>
 
                 {/* Fare */}
-                <Text className="text-base font-bold text-foreground">₹{driver.fare}</Text>
+                <Text className="text-base font-bold text-foreground">{formatFare(driver.fare)}</Text>
               </TouchableOpacity>
             );
           })}

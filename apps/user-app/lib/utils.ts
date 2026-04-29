@@ -27,7 +27,14 @@ export const createBottomSheetTabBarHandlers = (navigation: NavigationProp<Param
 export function formatFare(amount?: number) {
   if (!amount) return '—';
   return `₹${amount.toFixed(0)}`;
-}
+};
+
+export function numberFormat(number: number) {
+  return new Intl.NumberFormat("en-In", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(number);
+};
 
 export function distanceFormat(number: number) {
   return new Intl.NumberFormat("en-In", {

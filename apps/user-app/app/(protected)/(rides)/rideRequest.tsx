@@ -28,7 +28,7 @@ import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
-import { distanceFormat } from '../../../../driver-app/lib/utils';
+import { distanceFormat, formatFare } from '../../../../driver-app/lib/utils';
 import { Separator } from '@/components/ui/seperator';
 import useThemeColors from '@/hooks/useColorScheme';
 
@@ -173,7 +173,7 @@ export default function RideRequest() {
           latitude: ride.destination.latitude,
           longitude: ride.destination.longitude,
         },
-        distance: Number(ride.distance),
+        distance: ride.distance,
         riderId: ride.riderId,
         genderMatch: genderMatch,
         filters: filters,
@@ -1005,12 +1005,12 @@ export default function RideRequest() {
                     <View className="flex-row items-center justify-between rounded-xl bg-muted/30 px-3">
                       <View>
                         <Text className="text-sm text-muted-foreground">
-                          {distanceFormat(Number(ride.distance))}
+                          {distanceFormat(ride.distance)  ?? "-"}
                         </Text>
                       </View>
                       <View className="items-end">
                         <Text className="text-lg font-bold text-foreground">
-                          ₹{selectedDriver.fare}
+                          {formatFare(selectedDriver.fare)}
                         </Text>
                       </View>
                     </View>

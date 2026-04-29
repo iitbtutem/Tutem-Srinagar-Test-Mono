@@ -36,7 +36,7 @@ import {
 } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatFare } from '@/lib/utils';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
@@ -1198,7 +1198,7 @@ export default function WhereTo() {
                       </View> */}
                       <View className="items-end">
                         <Text className="text-lg font-bold text-foreground">
-                          ₹{selectedDriver.fare}
+                          {formatFare(selectedDriver.fare)}
                         </Text>
                         <Text className="text-sm text-muted-foreground">
                           {selectedRoute?.distance.text}

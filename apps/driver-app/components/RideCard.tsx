@@ -76,7 +76,7 @@ export function RideRequestCard({
 
         {/* Footer */}
         <View className="flex-row gap-3">
-          <Text className="text-slate-400 text-xs font-semibold">📍 {ride.distance} km</Text>
+          <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance) ?? "-"}</Text>
           {ride.expectedDuration && (
             <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
           )}
