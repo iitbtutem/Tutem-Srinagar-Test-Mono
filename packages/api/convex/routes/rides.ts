@@ -491,7 +491,7 @@ export const getRiderCurrentRideByRiderId = query({
 export const getRiderHistory = query({
   args: {
     riderId: v.id("rider"),
-    statuses: v.array(v.union(v.literal("Completed"), v.literal("Canceled"))),
+    statuses: v.optional(v.array(v.union(v.literal("Completed"), v.literal("Canceled")))),
   },
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
@@ -502,8 +502,8 @@ export const getRiderHistory = query({
       .withIndex("by_rider", q => q.eq("riderId", args.riderId))
       .filter((q) => {
         const statusConditions =
-          args.statuses.length > 0
-            ? args.statuses.map((status) => q.eq(q.field("status"), status))
+          args.statuses && args.statuses?.length > 0
+            ? args.statuses?.map((status) => q.eq(q.field("status"), status))
             : [
                 q.eq(q.field("status"), "Completed"),
                 q.eq(q.field("status"), "Canceled"),
@@ -513,7 +513,62 @@ export const getRiderHistory = query({
       })
       .collect();
 
-    return rides;
+      const ridesWithDrivers = Promise.all(
+      rides.map(async (ride) => {
+        const driver = await ctx.db.get(ride.driverId);
+        if (driver === null) return { ...ride, driver: null };
+
+        const userDetails = await ctx.db.get(driver.userId);
+        if (userDetails === null) return { ...ride, driver: null };
+
+        // 3. Fetch all ratings where this rider was rated BY drivers (i.e. driver rated the rider)
+        const riderRatings = rider 
+          ? await ctx.db
+              .query("ratings")
+              .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+              .filter((q) => q.eq(q.field("raterType"), "Rider"))
+              .collect()
+          : [];
+
+        // 4. Compute average rating
+        const averageRating =
+          riderRatings.length > 0
+            ? riderRatings.reduce((sum, r) => sum + r.score, 0) /
+              riderRatings.length
+            : null;
+
+        const profilePictureUri = userDetails.profilePictureKey
+          ? await getSignedUrl(
+              s3Client,
+              new GetObjectCommand({
+                Bucket: process.env.MINIO_BUCKET,
+                Key: userDetails.profilePictureKey,
+              }),
+              { expiresIn: 300 },
+            )
+          : undefined;
+
+        return {
+          ...ride,
+          distance: ride.distance / METERS_IN_KM,
+          driver: {
+            ...driver,
+            userDetails: {
+              ...userDetails,
+              profilePictureKey: profilePictureUri,
+            },
+            rating: {
+              average: averageRating
+                ? Math.round(averageRating * 10) / 10
+                : null,
+              totalRatings: riderRatings.length,
+            },
+          },
+        };
+      }),
+    );
+
+    return ridesWithDrivers;
   },
 });
 

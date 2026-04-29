@@ -24,7 +24,6 @@ export const createBottomSheetTabBarHandlers = (navigation: NavigationProp<Param
   },
 });
 
-
 export function formatFare(amount?: number) {
   if (!amount) return '—';
   return `₹${amount.toFixed(0)}`;

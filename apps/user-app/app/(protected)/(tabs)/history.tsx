@@ -3,20 +3,18 @@ import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
-import { RideHistoryCard as RideCard } from '../../../components/RideCard';
+import { RideHistoryCard as RideCard } from '@/components/RideCard';
 import { FunctionReturnType } from 'convex/server';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StarRating from '@/components/StarRating';
-import { distanceFormat, formatFare } from '@/lib/utils';
+import { formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
-import RideSvg from '@/assets/svgs/rides';
+import Rides from '@/assets/svgs/rides';
 
-type RideHistory = NonNullable<
-  FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
->;
+type RideHistory = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderHistory>[number]>;
 
 export default function History() {
   const { userId } = useAuth();
@@ -27,10 +25,10 @@ export default function History() {
 
   const requestSheetRef = useRef<BottomSheet>(null);
 
-  const user = useQuery(api.routes.driver.getDriver, userId ? { clerkId: userId } : 'skip');
+  const user = useQuery(api.routes.rider.getRider, userId ? { clerkId: userId } : 'skip');
   const rides = useQuery(
-    api.routes.rides.getDriverHistory,
-    user && user.driverDetails ? { driverId: user.driverDetails?._id } : 'skip'
+    api.routes.rides.getRiderHistory,
+    user && user.riderDetails ? { riderId: user.riderDetails?._id } : 'skip'
   );
 
   const handleSelectRide = (ride: RideHistory) => {
@@ -67,11 +65,11 @@ export default function History() {
             );
         }}
         ListEmptyComponent={() => (
-          <View className="flex-1 items-center justify-center py-20 mb-20">
-            <RideSvg width={330} height={200} />
+          <View className="flex-1 items-center justify-center py-20">
+            <Rides width={302} height={400} />
             <Text className="text-titles mt-4 text-xl font-semibold">No rides found</Text>
             <Text className="mt-1 text-center text-sm text-gray-500">
-              There are no previous rides available.
+              There are currently no rides available.
             </Text>
           </View>
         )}
@@ -109,30 +107,39 @@ export default function History() {
             <Animated.View entering={FadeInUp.duration(220)}>
               {/* Header */}
               <View className="mb-5 flex-row items-start justify-between border-b border-slate-800 py-4">
-                <View className="flex-row items-center gap-x-1 pr-4">
-                  {/* Avatar */}
+                {/* LEFT */}
+                <View className="min-w-0 flex-1 flex-row items-center gap-x-1 pr-4">
                   <Avatar alt="Profile pic" className="h-12 w-12">
                     <AvatarImage
                       source={
-                        selectedRide.rider?.userDetails?.profilePictureKey?.trim()
-                          ? { uri: selectedRide.rider?.userDetails.profilePictureKey }
+                        selectedRide.driver?.userDetails?.profilePictureKey?.trim()
+                          ? { uri: selectedRide.driver.userDetails.profilePictureKey }
                           : require('@/assets/images/avatar.jpg')
                       }
                     />
                     <AvatarFallback className="bg-white/20">
                       <Text className="text-sm font-bold text-primary">
-                        {selectedRide.rider?.userDetails?.firstName?.[0]}
-                        {selectedRide.rider?.userDetails?.lastName?.[0]}
+                        {selectedRide.driver?.userDetails?.firstName?.[0]}{' '}
+                        {selectedRide.driver?.userDetails?.lastName?.[0]}{' '}
                       </Text>
                     </AvatarFallback>
                   </Avatar>
-                  <Text className="mb-1.5 text-[22px] font-extrabold tracking-tight text-primary">
-                    {`${selectedRide.rider?.userDetails?.firstName ?? ''} ${selectedRide.rider?.userDetails?.lastName ?? ''}`.trim() ||
-                      'Passenger'}
-                  </Text>
-                  {selectedRide.rider && <StarRating rating={selectedRide.rider.rating} />}
+
+                  <View className="min-w-0 flex-1">
+                    <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      className="mb-1.5 text-[22px] font-extrabold tracking-tight text-primary">
+                      {`${selectedRide.driver?.userDetails?.firstName ?? ''} ${selectedRide.driver?.userDetails?.lastName ?? ''}`.trim() ||
+                        'Passenger'}
+                    </Text>
+
+                    {selectedRide.driver && <StarRating rating={selectedRide.driver.rating} />}
+                  </View>
                 </View>
-                <View className="items-end">
+
+                {/* RIGHT */}
+                <View className="flex-shrink-0 items-end">
                   <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                     Est. Fare
                   </Text>
@@ -177,7 +184,7 @@ export default function History() {
                 <View className="flex-row gap-2.5">
                   <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
                     <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {distanceFormat(selectedRide.distance) ?? '—'}
+                      {selectedRide.distance} km
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Distance
