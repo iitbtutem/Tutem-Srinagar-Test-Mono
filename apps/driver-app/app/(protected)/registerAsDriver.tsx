@@ -180,7 +180,7 @@ export default function RegisterAsRider() {
       if (router.canDismiss()) {
         router.dismissAll();
       }
-      router.replace('/');
+      router.replace('/createVehicle');
     } catch (error: any) {
       showToast({
         title: 'Error',
