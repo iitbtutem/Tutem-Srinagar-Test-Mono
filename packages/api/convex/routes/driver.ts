@@ -3,8 +3,9 @@ import { internalQuery, mutation, query } from "../_generated/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Id } from "../_generated/dataModel";
 
-export const registerExpoPushToken = mutation({
+export const login = mutation({
   args: {
     driverId: v.id("driver"),
     expoPushToken: v.string(),
@@ -17,27 +18,29 @@ export const registerExpoPushToken = mutation({
       .first();
     if(driver === null) return;
 
+    const activeRide = await ctx.db.query("ride").withIndex("by_driver", q => q.eq("driverId", driver._id)).first();
+
     await ctx.db.patch(driver._id, {
-      expoPushToken: args.expoPushToken
+      expoPushToken: args.expoPushToken,
+      isAvailableForRide: activeRide ? false : true,
     });
   }
 });
 
-export const removeExpoPushToken = mutation({
+export const logout = mutation({
   args: {
     driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
-    const driver = await ctx.db
-      .query("driver")
-
-      .filter((q) => q.eq(q.field("_id"), args.driverId))
-      .first();
+    const driver = await ctx.db.get(args.driverId);
     if(driver === null) return;
     
     await ctx.db.patch(driver._id, {
+      isOnline: false,
+      isAvailableForRide: false,
       expoPushToken: undefined
     });
+    
   }
 });
 
@@ -58,13 +61,13 @@ export const addDriver = mutation({
   handler: async (ctx, args) => {
     let existingUser = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (existingUser) {
       const existingDriver = await ctx.db
         .query("driver")
-        .filter((q) => q.eq(q.field("userId"), args.clerkId))
+        .withIndex("by_user", (q) => q.eq("userId", args.clerkId as Id<"user">))
         .first();
 
       if (existingDriver) {
@@ -72,10 +75,7 @@ export const addDriver = mutation({
       }
     }
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), args.organizationId))
-      .first();
+    const organization = await ctx.db.get(args.organizationId);
 
     if (organization === null) throw new ConvexError("Organization not found");
 
@@ -128,7 +128,7 @@ export const registerAsDriver = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (user === null) {
       throw new ConvexError("User not found");
@@ -136,7 +136,7 @@ export const registerAsDriver = mutation({
 
     const existingDriver = await ctx.db
       .query("driver")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (existingDriver !== null)
       throw new ConvexError("Driver profile already exists");
@@ -176,14 +176,14 @@ export const getDriver = query({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (user === null) return null;
 
     const driver = await ctx.db
       .query("driver")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
     let licenseFrontImageUri;
@@ -222,12 +222,10 @@ export const getDriver = query({
       )
       : undefined;
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), driver?.organizationId))
-      .first();
-
     if(driver === null) return;
+
+    const organization = await ctx.db.get(driver.organizationId);
+
     const ratings = await ctx.db
       .query("ratings")
       .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
@@ -279,22 +277,19 @@ export const updateDriver = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");
 
     const driver = await ctx.db
       .query("driver")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
     if (driver === null) throw new ConvexError("Driver not found");
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), args.organizationId))
-      .first();
+    const organization = await ctx.db.get(driver.organizationId);
 
     if (organization === null) throw new ConvexError("Organization not found");
 
@@ -345,7 +340,7 @@ export const uploadProfilePicture = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");
@@ -363,7 +358,7 @@ export const removeProfilePictureKey = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");
@@ -382,17 +377,11 @@ export const updateLicense = mutation({
     backImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const driver = await ctx.db
-      .query("driver")
-      .filter((q) => q.eq(q.field("_id"), args.driverId))
-      .first();
+    const driver = await ctx.db.get(args.driverId);
 
-    if (!driver) throw new ConvexError("Driver not found");
+    if (driver === null) throw new ConvexError("Driver not found");
 
-    const organisation = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
-      .first();
+    const organisation = await ctx.db.get(driver.organizationId);
 
     if (organisation === null)
       throw new ConvexError("Driver doesn't belong to any organisation");
@@ -429,20 +418,14 @@ export const toggleAvailability = mutation({
     const driver = await ctx.db.get(args.id);
     if(driver === null) throw new ConvexError("Invalid user");
 
-    const rideRequests = await ctx.db
-    .query("ride")
-    .filter((q) => q.and(
-      q.eq(q.field("driverId"), driver._id),
-      q.eq(q.field("status"), "Open")
-    ))
-    .collect();
+    if(driver.isOnline === true) {
+      const rideRequests = await ctx.db
+      .query("ride")
+      .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+      .filter((q) => q.or(q.eq(q.field("status"), "Open"), q.eq(q.field("status"), "Active")))
+      .collect();
 
-    if(driver.isOnline === true){
-      for(const ride of rideRequests){
-        await ctx.db.patch(ride._id, {
-          requestStatus: "Rejected"
-        })
-      };
+      if(rideRequests.length > 0) throw new ConvexError("You have pending ride requests. Please reject or accept them before going offline.")
     };
 
     await ctx.db.patch(driver._id, {

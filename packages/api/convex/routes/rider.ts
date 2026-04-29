@@ -23,7 +23,7 @@ export const registerExpoPushToken = mutation({
   }
 });
 
-export const removeExpoPushToken = mutation({
+export const logout = mutation({
   args: {
     riderId: v.id("rider"),
   },
