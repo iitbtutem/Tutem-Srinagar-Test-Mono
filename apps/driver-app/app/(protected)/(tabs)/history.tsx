@@ -10,10 +10,9 @@ import { useRef, useState } from 'react';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StarRating from '@/components/StarRating';
-import { formatFare } from '@/lib/utils';
+import { distanceFormat, formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
-import { distanceFormat } from '../../../lib/utils';
 
 type RideHistory = NonNullable<
   FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]

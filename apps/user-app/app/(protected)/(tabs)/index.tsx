@@ -13,8 +13,7 @@ import { api } from '@tutem/api';
 import { useAuth } from '@clerk/expo';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { distanceFormat } from '../../../../driver-app/lib/utils';
-import { formatFare } from '@/lib/utils';
+import { distanceFormat, formatFare } from '@/lib/utils';
 
 const IMAGES = {
   ride_pooling: require('@/assets/images/ride_pooling.png'),
