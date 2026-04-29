@@ -107,13 +107,13 @@ export default function Feedback() {
         </Text>
       </View>
 
-      {/* Driver Card */}
+      {/* Rider Card */}
       <View className="bg-background border border-zinc-800 rounded-2xl p-5 mb-8 flex-row items-center gap-4">
         <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
           <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
           <AvatarFallback>
             <Text className="text-white text-xl font-semibold">
-              {rider.userDetails.firstName?.[0] ?? 'D'}
+              {rider.userDetails.firstName?.[0] ?? 'R'}
             </Text>
           </AvatarFallback>
         </Avatar>
