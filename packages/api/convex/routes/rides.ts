@@ -384,7 +384,7 @@ export const getRiderCurrentRideById = query({
       
     const otp = ride._id.slice(2, OTP_SIZE + 2);
 
-    const distance = numberFormat(ride.distance / METERS_IN_KM); //converting to KM
+    const distance = ride.distance / METERS_IN_KM; //converting to KM
     return {
       ...ride,
       distance,
@@ -465,7 +465,7 @@ export const getRiderCurrentRideByRiderId = query({
       
     const otp = ride._id.slice(2, OTP_SIZE + 2);
 
-    const distance = numberFormat(ride.distance / METERS_IN_KM); //converting to KM
+    const distance = ride.distance / METERS_IN_KM; //converting to KM
     return {
       ...ride,
       distance,
@@ -655,7 +655,7 @@ export const getRideRequests = query({
 
         return {
           ...ride,
-          distance: (ride.distance / 1000).toFixed(1),
+          distance: ride.distance / METERS_IN_KM,
           rider: rider
             ? {
                 _id: rider._id,
