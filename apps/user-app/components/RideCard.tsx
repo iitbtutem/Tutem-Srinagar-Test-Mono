@@ -12,7 +12,7 @@ type RideRequest = NonNullable<
 >;
 
 type RideHistory = NonNullable<
-  FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
+  FunctionReturnType<typeof api.routes.rides.getRiderHistory>[number]
 >;
 
 export function RideRequestCard({
@@ -113,9 +113,9 @@ export function RideHistoryCard({
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
             <Text className="text-primary text-base font-bold mb-1">
-              {`${ride.rider?.userDetails?.firstName ?? ''} ${ride.rider?.userDetails?.lastName ?? ''}`.trim() || 'Passenger'}
+              {`${ride.driver?.userDetails?.firstName ?? ''} ${ride.driver?.userDetails?.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            {ride.rider && <StarRating rating={ride.rider.rating} />}
+            {ride.driver && <StarRating rating={ride.driver.rating} />}
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}

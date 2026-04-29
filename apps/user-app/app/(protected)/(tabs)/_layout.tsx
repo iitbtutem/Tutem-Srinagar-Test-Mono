@@ -1,6 +1,6 @@
 import CustomHeader from '@/components/CustomHeader';
 import { useAuth } from '@clerk/expo';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Octicons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Tabs } from 'expo-router';
@@ -41,6 +41,16 @@ export default function TabsLayout() {
           animation: 'fade',
           tabBarIcon: ({ focused }) => (
             <Feather name="map" size={23} color={focused ? 'blue' : 'gray'} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          animation: 'fade',
+          tabBarIcon: ({ color, size }) => (
+            <Octicons name="history" size={24} color={color} />
           ),
         }}
       />

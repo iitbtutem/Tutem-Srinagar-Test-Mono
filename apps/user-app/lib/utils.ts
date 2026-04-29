@@ -23,3 +23,15 @@ export const createBottomSheetTabBarHandlers = (navigation: NavigationProp<Param
     }
   },
 });
+
+export function formatFare(amount?: number) {
+  if (!amount) return '—';
+  return `₹${amount.toFixed(0)}`;
+}
+
+export function distanceFormat(number: number) {
+  return new Intl.NumberFormat("en-In", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(number) + " km";
+}
