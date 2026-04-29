@@ -663,7 +663,7 @@ export default function RideRequest() {
             </View>
 
             {/* Edit button — highlighted on rejection */}
-            <TouchableOpacity
+            {(ride.status === "Open" || ride.status === "Canceled") && <TouchableOpacity
               onPress={handleShowNearbyDrivers}
               className={cn(
                 'h-10 w-10 items-center justify-center rounded-full',
@@ -677,7 +677,7 @@ export default function RideRequest() {
                 size={18}
                 color={ride.requestStatus === "Rejected" ? "#fff" : iconColor}
               />
-            </TouchableOpacity>
+            </TouchableOpacity>}
           </View>
 
           {/* Vehicle details */}
@@ -760,7 +760,7 @@ export default function RideRequest() {
         {/* Stats */}
         <View className="mb-4 flex-row gap-2">
           <StatCard icon="cash-outline" label="Fare" value={`₹${ride.fare}`} highlight />
-          <StatCard icon="map-outline" label="Distance" value={`${ride.distance} km`} />
+          <StatCard icon="map-outline" label="Distance" value={distanceFormat(ride.distance)} />
           <StatCard
             icon="time-outline"
             label="ETA"
