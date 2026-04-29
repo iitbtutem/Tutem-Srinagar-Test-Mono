@@ -118,7 +118,10 @@ export default function Home() {
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
-  const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails ? {driverId: driver.driverDetails._id} : "skip")
+  const vehicle = useQuery(
+    api.routes.vehicle.getVehicleByDriverId,
+    driver && driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
+  );
 
   const rideRequests = useQuery(
     api.routes.rides.getRideRequests,
@@ -143,7 +146,7 @@ export default function Home() {
         description: 'Ride completed successfully.',
       });
 
-      activeSheetRef.current?.close();
+      // activeSheetRef.current?.close();
     } catch (e: any) {
       console.log('Error', e);
       showToast({
@@ -770,7 +773,10 @@ export default function Home() {
                 <Animated.View entering={FadeInDown.springify()} className="mb-4">
                   <Button
                     className="w-full items-center justify-center rounded-2xl border-2 border-emerald-400 bg-emerald-500"
-                    onPress={() => handleCompleteRide(driverDetails._id, currentRide._id)}>
+                    onPress={() => {
+                      handleCompleteRide(driverDetails._id, currentRide._id);
+                      router.push(`/feedback/${currentRide._id}`);
+                    }}>
                     <Text className="text-[17px] font-extrabold tracking-tight text-white">
                       ✓ Complete Ride
                     </Text>
@@ -867,8 +873,6 @@ export default function Home() {
     );
   }
 
-
-
   // RIDE REQUESTS LAYOUT — scrollable (map + list scroll together as one page)
   return (
     <View className="flex-1 bg-background">
@@ -904,24 +908,27 @@ export default function Home() {
             {driverLocation && (
               <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
                 <View className="h-8 w-8 items-center justify-center rounded-full">
-                  {vehicle?.class === "Cab" &&
-                    <Image source={require('@/assets/images/cab_icon.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
+                  {vehicle?.class === 'Cab' && (
+                    <Image
+                      source={require('@/assets/images/cab_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
                     />
-                  }
-                  {vehicle?.class === "Bike" &&
-                    <Image source={require('@/assets/images/bike_icon.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
+                  )}
+                  {vehicle?.class === 'Bike' && (
+                    <Image
+                      source={require('@/assets/images/bike_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
                     />
-                  }
-                  {vehicle?.class === "Auto" &&
-                    <Image source={require('@/assets/images/rickshaw_icon.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
+                  )}
+                  {vehicle?.class === 'Auto' && (
+                    <Image
+                      source={require('@/assets/images/rickshaw_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
                     />
-                  }
+                  )}
                 </View>
               </Marker>
             )}
