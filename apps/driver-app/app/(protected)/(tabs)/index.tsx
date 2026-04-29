@@ -140,6 +140,7 @@ export default function Home() {
   const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
     try {
       await completeRide({ driverId, rideId });
+      router.push(`/feedback/${rideId}`);
       showToast({
         type: 'success',
         title: 'Ride completed',
@@ -775,7 +776,6 @@ export default function Home() {
                     className="w-full items-center justify-center rounded-2xl border-2 border-emerald-400 bg-emerald-500"
                     onPress={() => {
                       handleCompleteRide(driverDetails._id, currentRide._id);
-                      router.push(`/feedback/${currentRide._id}`);
                     }}>
                     <Text className="text-[17px] font-extrabold tracking-tight text-white">
                       ✓ Complete Ride
