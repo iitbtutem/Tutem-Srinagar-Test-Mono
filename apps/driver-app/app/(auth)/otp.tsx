@@ -60,7 +60,7 @@ export default function OtpScreen() {
           await signUp.finalize({
             navigate: () => {
               if (router.canDismiss()) router.dismissAll();
-              router.replace('/register');
+              router.replace('/(protected)');
             },
           });
         } else {
@@ -79,7 +79,7 @@ export default function OtpScreen() {
           await signIn.finalize({
             navigate: () => {
               if (router.canDismiss()) router.dismissAll();
-              router.replace('/register');
+              router.replace('/(protected)');
             },
           });
         } else {

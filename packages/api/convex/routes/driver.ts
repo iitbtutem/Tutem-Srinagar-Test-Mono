@@ -186,6 +186,25 @@ export const getDriver = query({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
+    const profilePictureUri = user.profilePictureKey
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.profilePictureKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+
+    if(driver === null) {
+      return {
+        ...user,
+        profilePictureKey: profilePictureUri,
+        driverDetails: null
+      }
+    };
+
     let licenseFrontImageUri;
     let licenseBackImageUri;
 
@@ -210,19 +229,6 @@ export const getDriver = query({
         { expiresIn: 300 },
       )
       : undefined;
-
-    const profilePictureUri = user.profilePictureKey
-      ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: user.profilePictureKey,
-        }),
-        { expiresIn: 300 },
-      )
-      : undefined;
-
-    if(driver === null) return;
 
     const organization = await ctx.db.get(driver.organizationId);
 

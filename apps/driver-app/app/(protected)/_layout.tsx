@@ -45,6 +45,7 @@ export default function ProtectedLayout() {
           }}
         />
       </Stack.Protected>
+      <Stack.Screen name="index" />
       <Stack.Screen name="register" />
       <Stack.Screen name="registerAsDriver" />
     </Stack>
