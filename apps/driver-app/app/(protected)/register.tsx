@@ -208,7 +208,7 @@ export default function Register() {
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
       // Navigate to the main app after profile completion
-      router.replace('/(protected)/(tabs)');
+      router.replace('/createVehicle');
     } catch (error: any) {
       showToast({
         title: 'Error',

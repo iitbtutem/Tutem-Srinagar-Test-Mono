@@ -20,7 +20,7 @@ import { api } from '@tutem/api';
 import { useUser } from '@clerk/expo';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -186,14 +186,21 @@ export default function CreateVehicle() {
 
   return (
     <View className="flex-1 bg-background pt-6">
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           {/* NEW wrapper */}
-          <View className="my-4 mb-2 flex-row items-center px-3">
-            <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => router.back()}>
+          <View className="mb-2 flex-row items-center px-3">
+            <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => {
+              if(router.canGoBack()){
+                router.back();
+              } else {
+                router.push("/profile");
+              }
+            }}>
               <MaterialIcons
                 name="keyboard-backspace"
                 size={20}
