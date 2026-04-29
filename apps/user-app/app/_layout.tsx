@@ -8,7 +8,8 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
-import { colorScheme } from 'nativewind';
+import { useColorScheme } from 'nativewind';
+import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/context/NotificationContext';
@@ -44,7 +45,7 @@ const tokenCache = {
 };
 
 export default function RootLayout() {
-  const theme = colorScheme.get();
+  const { colorScheme } = useColorScheme();
   const [launchedOffline, setLaunchedOffline] = useState(false);
   
   const { isOnline, checked } = useInternet();
@@ -55,14 +56,16 @@ export default function RootLayout() {
     }
   }, [checked]);
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }, []);
 
 
   if (!checked) return null;
@@ -80,22 +83,24 @@ export default function RootLayout() {
           <NotificationProvider>
             <ToastProvider>
               <StatusBar
-                style={theme === 'dark' ? 'light' : 'dark'}
-                backgroundColor={theme === 'dark' ? '#000' : '#edeef0'}
+                style={colorScheme === 'dark' ? 'light' : 'dark'}
+                backgroundColor={colorScheme === 'dark' ? '#000' : '#edeef0'}
               />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                }}
-              />
-              {!isOnline && (
-                <View className="bg-red-500 py-2 px-3">
-                  <Text className="text-white text-center text-sm font-medium">
-                    You are offline
-                  </Text>
-                </View>
-              )}
-              <PortalHost />
+              <View className={cn("flex-1 bg-background", colorScheme === 'dark' ? 'dark' : '')}>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                />
+                {!isOnline && (
+                  <View className="bg-red-500 py-2 px-3">
+                    <Text className="text-white text-center text-sm font-medium">
+                      You are offline
+                    </Text>
+                  </View>
+                )}
+                <PortalHost />
+              </View>
             </ToastProvider>
           </NotificationProvider>
         </ConvexProviderWithClerk>
