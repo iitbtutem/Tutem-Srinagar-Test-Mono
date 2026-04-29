@@ -138,12 +138,8 @@ export default function OtpScreen() {
   }, [timer]);
 
   return (
-    <ImageBackground
-    source={require('@/assets/images/background.png')}
-    imageStyle={{ opacity: 0.15 }}
-    className="flex-1 bg-background">
     <ScrollView
-      className="px-4 py-10"
+      className="px-4 py-10 bg-background"
       contentContainerStyle={{ flexGrow: 1, gap: 12 }}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
@@ -230,6 +226,5 @@ export default function OtpScreen() {
         </Button>
       </View>
     </ScrollView>
-    </ImageBackground>
   );
 }

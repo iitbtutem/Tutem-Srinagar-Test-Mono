@@ -26,11 +26,7 @@ export default function RegisterAsRider() {
   if (rider && rider.riderDetails) <Redirect href="/" />;
 
   return (
-     <ImageBackground
-          source={require('@/assets/images/background.png')}
-          imageStyle={{ opacity: 0.15 }}
-          className="flex-1 bg-background">
-    <View className="flex-1 justify-center p-6">
+    <View className="flex-1 bg-background justify-center p-6">
       <View className="items-center justify-center">
         {/* Status Badge */}
         <View className="mb-8 rounded-full bg-green-100 px-4 py-2">
@@ -58,6 +54,5 @@ export default function RegisterAsRider() {
         <Text>Submit Rider Registration</Text>
       </Button>
     </View>
-    </ImageBackground>
   );
 }

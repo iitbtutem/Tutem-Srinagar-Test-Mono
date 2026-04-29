@@ -84,20 +84,16 @@ export default function CreateVehicle() {
     },
   });
 
-  if (driver === null) return <ErrorScreen message='Driver not found' />;
-  if (driver === undefined) return <LoadingScreen message='Fetching details' />
+  if (driver === null) return <ErrorScreen message="Driver not found" />;
+  if (driver === undefined) return <LoadingScreen message="Fetching details" />;
 
-
-  if (driver.driverDetails === null) return <ErrorScreen message='Driver not found' />;
-  if (!driver.driverDetails.organization) return <ErrorScreen message='Organization not found' />;
+  if (driver.driverDetails === null) return <ErrorScreen message="Driver not found" />;
+  if (!driver.driverDetails.organization) return <ErrorScreen message="Organization not found" />;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     const driverDetails = driver.driverDetails;
     try {
-      const rcImageKey = await processUpload(
-        data.rcImageKey,
-        `vehicleRegisration/${driver._id}}`
-      );
+      const rcImageKey = await processUpload(data.rcImageKey, `vehicleRegisration/${driver._id}}`);
       if (driverDetails === null) return;
 
       if (driverDetails.organization?.isVehicleRCVerificationRequired && rcImageKey === undefined) {
@@ -195,17 +191,18 @@ export default function CreateVehicle() {
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-          {/* Back button */}
-          <TouchableOpacity
-            className="mb-2 mt-1 flex-row items-center gap-1.5 self-start"
-            onPress={() => router.back()}>
-            <MaterialIcons name="keyboard-backspace" size={20} color={isDark ? 'white' : 'black'} />
-            <Text className="text-sm font-medium text-foreground opacity-90">Back</Text>
-          </TouchableOpacity>
+          {/* NEW wrapper */}
+          <View className="my-4 mb-2 flex-row items-center px-3">
+            <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => router.back()}>
+              <MaterialIcons
+                name="keyboard-backspace"
+                size={20}
+                color={isDark ? 'white' : 'black'}
+              />
+            </TouchableOpacity>
 
-          <Text className="my-4 mb-2 px-3 text-lg font-semibold text-foreground">
-            Register your vehicle
-          </Text>
+            <Text className="text-lg font-semibold">Register your vehicle</Text>
+          </View>
 
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Registration Number */}
@@ -464,7 +461,7 @@ export default function CreateVehicle() {
                           )}
                           onPress={() => {
                             bottomSheetRef.current?.expand();
-                            clearErrors("rcImageKey");
+                            clearErrors('rcImageKey');
                           }}>
                           <Feather name="upload" size={24} color="gray" />
                           <Text className="font-bold tracking-wider text-gray-500">

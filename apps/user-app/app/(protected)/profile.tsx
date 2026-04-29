@@ -41,7 +41,8 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
+    useThemeColors();
 
   const isDark = colorScheme === 'dark';
 
@@ -148,20 +149,28 @@ export default function Profile() {
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (
-    <ImageBackground
-      source={require('@/assets/images/background.png')}
-      imageStyle={{ opacity: 0.15 }}
-      className="flex-1 bg-background">
+    <>
       <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
 
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className={cn("overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30", {"bg-primary/75": isDark})}>
+        className={cn('overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30', {
+          'bg-primary/75': isDark,
+        })}>
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, right: 0, zIndex: 10 }]}
-          className="flex-row items-center gap-1 pr-4 pt-14">
+          className="flex-row justify-between items-center gap-1 pr-4 pt-14">
+          <TouchableOpacity
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: iconBackgroundColor }}
+            onPress={() =>
+              router.back()
+            }>
+            <MaterialIcons name="arrow-back" size={18} color={iconColor} />
+          </TouchableOpacity>
+
           <TouchableOpacity
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: iconBackgroundColor }}
@@ -337,7 +346,7 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-    </ImageBackground>
+    </>
   );
 }
 

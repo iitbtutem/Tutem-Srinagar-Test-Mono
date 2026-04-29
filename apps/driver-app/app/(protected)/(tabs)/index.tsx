@@ -12,6 +12,7 @@ import {
   Dimensions,
   ScrollView,
   ImageBackground,
+  Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -31,6 +32,7 @@ import StarRating from '@/components/StarRating';
 import { distanceFormat, formatFare, numberFormat } from '@/lib/utils';
 import { RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
+import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 
 import PulseDot from '@/components/PulseDot';
 import LiveTimer from '@/components/LiveTimer';
@@ -111,11 +113,16 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 // Main Screen
 
 export default function Home() {
-  const { userId } = useAuth();
+  const { userId, getToken } = useAuth();
   const { showToast } = useToast();
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const vehicle = useQuery(
+    api.routes.vehicle.getVehicleByDriverId,
+    driver && driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
+  );
+
   const rideRequests = useQuery(
     api.routes.rides.getRideRequests,
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
@@ -133,15 +140,16 @@ export default function Home() {
   const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
     try {
       await completeRide({ driverId, rideId });
+      router.push(`/feedback/${rideId}`);
       showToast({
         type: 'success',
         title: 'Ride completed',
         description: 'Ride completed successfully.',
       });
 
-      activeSheetRef.current?.close();
+      // activeSheetRef.current?.close();
     } catch (e: any) {
-      console.log("Error", e)
+      console.log('Error', e);
       showToast({
         type: 'error',
         title: 'Failed',
@@ -177,6 +185,24 @@ export default function Home() {
   const isRideOpen = currentRide?.status === 'Open';
   const isActive = currentRide?.status === 'Active';
   const driverDetails = driver?.driverDetails;
+
+  // Start / stop background location foreground service whenever the
+  // driver toggles online / offline via the Convex isAvailableForRide flag.
+  useEffect(() => {
+    if (!driverDetails?._id) return;
+
+    if (driverDetails.isAvailableForRide || currentRide) {
+      // Fetch a fresh Clerk token and pass real credentials so the headless
+      // background task publishes to the correct driver Ably channel.
+      getToken().then((authToken) => {
+        startLocationTracking(
+          authToken ? { driverId: driverDetails._id, authToken } : undefined
+        );
+      });
+    } else {
+      stopLocationTracking();
+    }
+  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
 
   // Live GPS
   useEffect(() => {
@@ -520,12 +546,12 @@ export default function Home() {
     ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
     : null;
 
-  useEffect(()=> {
-    if(!currentRide){
+  useEffect(() => {
+    if (!currentRide) {
       activeSheetRef.current?.close();
       requestSheetRef.current?.close();
     }
-  }, [currentRide])
+  }, [currentRide]);
 
   if (currentRide) {
     // ACTIVE RIDE LAYOUT — full-screen map + non-closable bottom sheet
@@ -748,7 +774,9 @@ export default function Home() {
                 <Animated.View entering={FadeInDown.springify()} className="mb-4">
                   <Button
                     className="w-full items-center justify-center rounded-2xl border-2 border-emerald-400 bg-emerald-500"
-                    onPress={() => handleCompleteRide(driverDetails._id, currentRide._id)}>
+                    onPress={() => {
+                      handleCompleteRide(driverDetails._id, currentRide._id);
+                    }}>
                     <Text className="text-[17px] font-extrabold tracking-tight text-white">
                       ✓ Complete Ride
                     </Text>
@@ -879,8 +907,28 @@ export default function Home() {
             {/* Driver marker */}
             {driverLocation && (
               <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-400 bg-slate-800">
-                  <Text className="text-lg">🚗</Text>
+                <View className="h-8 w-8 items-center justify-center rounded-full">
+                  {vehicle?.class === 'Cab' && (
+                    <Image
+                      source={require('@/assets/images/cab_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
+                    />
+                  )}
+                  {vehicle?.class === 'Bike' && (
+                    <Image
+                      source={require('@/assets/images/bike_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
+                    />
+                  )}
+                  {vehicle?.class === 'Auto' && (
+                    <Image
+                      source={require('@/assets/images/rickshaw_icon.png')}
+                      style={{ width: 32, height: 32 }}
+                      resizeMode="contain"
+                    />
+                  )}
                 </View>
               </Marker>
             )}
@@ -958,11 +1006,7 @@ export default function Home() {
         </View>
 
         {/* Ride requests list */}
-        <ImageBackground
-        source={require('@/assets/images/background.png')}
-        imageStyle={{ opacity: 0.15 }}
-        className="flex-1 bg-background">
-        <View className="px-4 pt-4">
+        <View className="flex-1 px-4 pt-4">
           {/* Section header */}
           <View className="mb-3 flex-row items-center justify-between">
             <View>
@@ -1003,7 +1047,6 @@ export default function Home() {
             />
           ))}
         </View>
-        </ImageBackground>
       </ScrollView>
 
       {/* Loading overlay */}

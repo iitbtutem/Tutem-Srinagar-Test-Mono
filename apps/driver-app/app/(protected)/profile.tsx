@@ -172,8 +172,13 @@ export default function Profile() {
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, zIndex: 10 }]}
-          className="flex-row justify-end items-center px-4 pt-14 w-full">
-
+          className="flex-row justify-between items-center px-4 pt-14 w-full">
+            <TouchableOpacity
+              className="h-9 w-9 items-center justify-center rounded-full"
+              style={{ backgroundColor: iconBackgroundColor }}
+              onPress={() => router.back()}>
+              <MaterialIcons name="arrow-back" size={18} color={iconColor} />
+            </TouchableOpacity>
           
           <View className='flex-row items-center gap-1'>
             <TouchableOpacity
@@ -237,7 +242,7 @@ export default function Profile() {
             </View>
           </Animated.View>
 
-          <Animated.View style={nameContainerStyle} className="items-center gap-1">
+          <Animated.View style={nameContainerStyle} className="items-center gap-1 ms-4">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
               {driver.firstName} {driver.lastName}
             </Text>
