@@ -72,7 +72,7 @@ export default function Register() {
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const addDriver = useMutation(api.routes.driver.addDriver);
-  const registerExpoPushToken = useMutation(api.routes.driver.registerExpoPushToken);
+  const login = useMutation(api.routes.driver.login);
   const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
 
@@ -223,7 +223,7 @@ export default function Register() {
   useEffect(() => {
     if(!userId || !driver || !expoPushToken) return;
     if(!driver.driverDetails) return;
-    registerExpoPushToken({ driverId: driver.driverDetails._id, expoPushToken })
+    login({ driverId: driver.driverDetails._id, expoPushToken })
   }, [])
 
   if (driver === undefined) return <LoadingScreen message="Loading registration..." />;

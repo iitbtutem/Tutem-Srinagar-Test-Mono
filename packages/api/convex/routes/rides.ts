@@ -309,17 +309,9 @@ export const acceptRide = internalMutation({
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Invalid user");
 
-    const ride = await ctx.db
-      .query("ride")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("_id"), args.rideId),
-          q.eq(q.field("driverId"), driver._id),
-        )
-      )
-      .first();
+    const ride = await ctx.db.get(args.rideId);    
 
-    if (ride === null) throw new ConvexError("Ride not found");
+    if (ride === null || ride.driverId !== args.driverId) throw new ConvexError("Ride not found");
 
     const rider = await ctx.db.get(ride.riderId);
     if(rider === null) throw new ConvexError("Invalid rider")
