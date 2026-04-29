@@ -16,6 +16,7 @@
     "@gorhom/bottom-sheet": "^5",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/native": "^7.0.0",
     "@rn-primitives/avatar": "^1.2.0",
     "@rn-primitives/checkbox": "^1.4.0",
