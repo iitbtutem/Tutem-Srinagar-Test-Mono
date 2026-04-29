@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StarRating from '@/components/StarRating';
 import { formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
-import Rides from '@/assets/svgs/rides';
+import RideSvg from '@/assets/svgs/rides';
 
 type RideHistory = NonNullable<
   FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
@@ -67,11 +67,11 @@ export default function History() {
             );
         }}
         ListEmptyComponent={() => (
-          <View className="flex-1 items-center justify-center py-20">
-            <Rides width={302} height={400} />
+          <View className="flex-1 items-center justify-center py-20 mb-20">
+            <RideSvg width={330} height={200} />
             <Text className="text-titles mt-4 text-xl font-semibold">No rides found</Text>
             <Text className="mt-1 text-center text-sm text-gray-500">
-              There are currently no rides available.
+              There are no previous rides available.
             </Text>
           </View>
         )}

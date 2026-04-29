@@ -15,6 +15,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/context/NotificationContext';
+import Offline from '@/components/offline';
+import { useInternet } from '@/hooks/useInternet';
+import { useEffect, useState } from 'react';
+import { Text } from '@/components/ui/text';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -45,6 +49,15 @@ const tokenCache = {
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
+  const [launchedOffline, setLaunchedOffline] = useState(false);
+
+  const { isOnline, checked } = useInternet();
+
+  useEffect(() => {
+    if (checked) {
+      setLaunchedOffline(!isOnline);
+    }
+  }, [checked]);
 
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -54,6 +67,12 @@ export default function RootLayout() {
       shouldShowList: true,
     }),
   });
+  
+  if (!checked) return null;
+
+  if (launchedOffline && !isOnline) {
+    return <Offline />;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -69,11 +88,19 @@ export default function RootLayout() {
                   backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
                 />
                 <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
+                  
                   <Stack
                     screenOptions={{
                       headerShown: false,
                     }}
                   />
+                  {!isOnline && (
+                    <View className="bg-red-500 py-2 px-3">
+                      <Text className="text-white text-center text-sm font-medium">
+                        You are offline
+                      </Text>
+                    </View>
+                  )}
                   <PortalHost />
                 </View>
               </KeyboardProvider>
