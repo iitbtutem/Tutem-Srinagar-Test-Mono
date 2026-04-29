@@ -12,7 +12,8 @@ export default defineSchema({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
-  }),
+  })
+  .index("by_clerkId", ["clerkId"]),
 
   //riders
   rider: defineTable({
@@ -20,7 +21,8 @@ export default defineSchema({
     userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
-  }),
+  })
+  .index("by_user", ["userId"]),
 
   // Drivers
   driver: defineTable({
@@ -34,7 +36,9 @@ export default defineSchema({
     userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
-  }).index("by_organizition", ["organizationId"]),
+  })
+  .index("by_user", ["userId"])
+  .index("by_organizition", ["organizationId"]),
 
   // Organizations
   organization: defineTable({

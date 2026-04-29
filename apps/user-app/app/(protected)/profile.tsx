@@ -47,10 +47,10 @@ export default function Profile() {
   const isDark = colorScheme === 'dark';
 
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
-  const removeExpoPushToken = useMutation(api.routes.rider.removeExpoPushToken);
+  const logout = useMutation(api.routes.rider.logout);
 
   const handleLogout = async (riderId: Id<'rider'> | undefined) => {
-    if (riderId !== undefined) await removeExpoPushToken({ riderId });
+    if (riderId !== undefined) await logout({ riderId });
     await signOut();
     router.replace('/signin');
   };

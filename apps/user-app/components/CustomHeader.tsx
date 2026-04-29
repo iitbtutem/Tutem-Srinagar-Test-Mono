@@ -2,7 +2,6 @@ import { FontAwesome5, MaterialCommunityIcons, MaterialIcons } from '@expo/vecto
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from './ui/text';
-import { iconColor } from '@/constants/colors';
 import { cn } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
@@ -21,6 +20,7 @@ import {
 import { useMutation } from 'convex/react';
 import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
+import useThemeColors from '@/hooks/useColorScheme';
 
 type User = FunctionReturnType<typeof api.routes.rider.getRider>;
 type Props = {
@@ -41,6 +41,7 @@ export default function CustomHeader({ user }: Props) {
     setGenderMatching((prev) => !prev);
   };
 
+  const { iconColor } = useThemeColors();
   const {colorScheme}= useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -104,8 +105,9 @@ export default function CustomHeader({ user }: Props) {
 
 function ProfileDropdown({ user, isDark }: { user: User , isDark: boolean}) {
   const { signOut } = useAuth();
-  const removeExpoPushToken = useMutation(api.routes.rider.removeExpoPushToken);
+  const logout = useMutation(api.routes.rider.logout);
 
+  const { iconColor } = useThemeColors();
   const handleLogout = async () => {
     if (
       user === undefined ||
@@ -116,7 +118,7 @@ function ProfileDropdown({ user, isDark }: { user: User , isDark: boolean}) {
 
     const riderId = user.riderDetails._id;
 
-    await removeExpoPushToken({ riderId });
+    await logout({ riderId });
     await signOut();
     router.replace('/(auth)/signin');
   };

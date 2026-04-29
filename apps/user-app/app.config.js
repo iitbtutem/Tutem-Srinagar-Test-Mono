@@ -1,11 +1,11 @@
 export default {
   expo: {
-    name: "user-app",
-    slug: "user-app",
+    name: "tutem-rider",
+    slug: "tutem-rider",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "user-app",
+    scheme: "tutem-rider",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
@@ -18,7 +18,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.rayees.userapp",
+      bundleIdentifier: "com.rider.tutem",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "This app needs to access your location to pick you up and track your ride.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to pick you up and track your ride."
@@ -33,8 +33,8 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.rayees.userapp",
-      googleServicesFile: "./user-google-services.json",
+      package: "com.rider.tutem",
+      googleServicesFile: "./rider-google-services.json",
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -72,9 +72,8 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "b41c7a4d-64c0-49e6-b87a-470f6ddfdae5"
+        projectId: "10149e7f-e9a1-4520-b5e7-3cd5776cc65c"
       },
-    },
-    owner: "rayeesone1"
+    }
   }
 };

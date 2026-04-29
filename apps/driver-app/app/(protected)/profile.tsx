@@ -35,6 +35,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useToast } from '@/components/CustomToast';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
@@ -45,6 +46,7 @@ export default function Profile() {
   const [image, setImage] = useState('');
   const { userId, signOut } = useAuth();
   const router = useRouter();
+  const { showToast } = useToast();
   const { colorScheme } = useColorScheme();
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
@@ -56,12 +58,22 @@ export default function Profile() {
 
   const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
   const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip');
-  const removeExpoPushToken = useMutation(api.routes.driver.removeExpoPushToken);
+  const logout = useMutation(api.routes.driver.logout);
 
   const handleLogout = async (driverId: Id<"driver"> | undefined) => {
-    if(driverId !== undefined) await removeExpoPushToken({ driverId })
-    await signOut();
-    router.replace('/(auth)/signin');
+    try {
+      if(driverId !== undefined) await logout({ driverId })
+      await signOut();
+      router.replace('/signin');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      showToast({
+        type: 'error',
+        title: 'Logout Failed',
+        description: 'An error occurred while logging out. Please try again.',
+        position: "bottom",
+      })
+    }
   };
 
   const handleUploadImage = (imageUri: string): void => {

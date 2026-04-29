@@ -9,7 +9,6 @@ import {
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from './ui/text';
-import { iconColor } from '@/constants/colors';
 import { cn } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
 import { api, Id } from '@tutem/api';
@@ -32,6 +31,7 @@ import { Checkbox } from './ui/checkbox';
 import { useState } from 'react';
 import { mutation } from '../../../packages/api/convex/_generated/server';
 import { useColorScheme } from 'nativewind';
+import useThemeColors from '@/hooks/useColorScheme';
 
 type User = FunctionReturnType<typeof api.routes.driver.getDriver>;
 type Props = {
@@ -46,11 +46,12 @@ export default function CustomHeader({ navigation, options, back, user }: Props)
   const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
 
+  const { iconColor } = useThemeColors();
   const {colorScheme}= useColorScheme();
   const isDark = colorScheme === "dark";
 
   return (
-    <SafeAreaView className="bg-primary-background h-[110px] flex-row items-center justify-between gap-3 bg-cyan-500 px-4">
+    <SafeAreaView className="bg-primary-background flex-row items-center justify-between gap-3 bg-cyan-500 px-4">
       {/* Availability Toggle */}
       <TouchableOpacity
         activeOpacity={0.8}
@@ -78,16 +79,16 @@ export default function CustomHeader({ navigation, options, back, user }: Props)
         </View>
       </TouchableOpacity>
 
-      <View className="flex-row items-center gap-3">
-        <View className="items-end">
+      <View className="flex-1 flex-row items-center justify-end gap-3">
+        <View className="flex-1 items-end">
           <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>
-          <View className="flex-row items-center gap-1">
+          <View className="flex-row items-center gap-1 px-1">
             <View
               className={cn('h-1.5 w-1.5 rounded-full bg-green-500', {
                 'bg-red-500': !user.driverDetails?.isAvailableForRide,
               })}
             />
-            <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Booked'}`}</Text>
+            <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>
           </View>
         </View>
 
@@ -114,7 +115,9 @@ function ProfileDropdown({
   isDark: boolean
 }) {
   const { signOut } = useAuth();
-  const removeExpoPushToken = useMutation(api.routes.driver.removeExpoPushToken);
+  const logout = useMutation(api.routes.driver.logout);
+
+  const { iconColor } = useThemeColors();
 
   const handleLogout = async () => {
     if (
@@ -126,7 +129,7 @@ function ProfileDropdown({
 
     const driverId = user.driverDetails._id;
 
-    await removeExpoPushToken({ driverId });
+    await logout({ driverId });
     await signOut();
     router.replace('/(auth)/signin');
   };

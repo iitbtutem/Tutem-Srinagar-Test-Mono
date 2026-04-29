@@ -1,4 +1,5 @@
 import CustomHeader from '@/components/CustomHeader';
+import Offline from '@/components/offline';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
@@ -9,6 +10,11 @@ export default function ProtectedLayout() {
   const user = useQuery(api.routes.driver.getDriver, userId && userId !== '' ? { clerkId: userId } : 'skip');
 
   const protectedGuard = !!userId && !!user;
+  const isConnected = true;
+
+  if(!isConnected) {
+    return <Offline />
+  };
 
   return (
     <Stack screenOptions={{ 
