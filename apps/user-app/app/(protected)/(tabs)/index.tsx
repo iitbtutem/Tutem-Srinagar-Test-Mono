@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  ImageBackground,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ import { api } from '@tutem/api';
 import { useAuth } from '@clerk/expo';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { distanceFormat, formatFare } from '@/lib/utils';
 
 const IMAGES = {
   ride_pooling: require('@/assets/images/ride_pooling.png'),
@@ -188,8 +188,8 @@ export function ActiveRideCard() {
                 </Text>
               </View>
               <View className="items-end gap-0.5">
-                <Text className="text-sm font-semibold text-foreground">₹{fare}</Text>
-                <Text className="text-xs text-muted-foreground">{distance}</Text>
+                <Text className="text-sm font-semibold text-foreground">{formatFare(fare)}</Text>
+                <Text className="text-xs text-muted-foreground">{distanceFormat(distance)}</Text>
               </View>
             </View>
           </CardContent>

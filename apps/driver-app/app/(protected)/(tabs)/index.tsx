@@ -1154,7 +1154,7 @@ export default function Home() {
                 <View className="flex-row gap-2.5">
                   <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
                     <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {selectedRide.distance} km
+                      {distanceFormat(selectedRide.distance)}
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Distance
