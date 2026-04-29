@@ -31,6 +31,7 @@ import StarRating from '@/components/StarRating';
 import { distanceFormat, formatFare, numberFormat } from '@/lib/utils';
 import { RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
+import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 
 import PulseDot from '@/components/PulseDot';
 import LiveTimer from '@/components/LiveTimer';
@@ -111,7 +112,7 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 // Main Screen
 
 export default function Home() {
-  const { userId } = useAuth();
+  const { userId, getToken } = useAuth();
   const { showToast } = useToast();
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
@@ -177,6 +178,24 @@ export default function Home() {
   const isRideOpen = currentRide?.status === 'Open';
   const isActive = currentRide?.status === 'Active';
   const driverDetails = driver?.driverDetails;
+
+  // Start / stop background location foreground service whenever the
+  // driver toggles online / offline via the Convex isAvailableForRide flag.
+  useEffect(() => {
+    if (!driverDetails?._id) return;
+
+    if (driverDetails.isAvailableForRide || currentRide) {
+      // Fetch a fresh Clerk token and pass real credentials so the headless
+      // background task publishes to the correct driver Ably channel.
+      getToken().then((authToken) => {
+        startLocationTracking(
+          authToken ? { driverId: driverDetails._id, authToken } : undefined
+        );
+      });
+    } else {
+      stopLocationTracking();
+    }
+  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
 
   // Live GPS
   useEffect(() => {

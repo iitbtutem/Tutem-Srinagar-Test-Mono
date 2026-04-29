@@ -20,7 +20,8 @@ export default {
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to scan barcodes on event tickets.",
         NSLocationWhenInUseUsageDescription: "This app needs to access your location to track your ride.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to track your ride."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to track your ride.",
+        UIBackgroundModes: ["location", "fetch"]
       },
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
@@ -35,6 +36,13 @@ export default {
       },
       package: "com.driver.tutem",
       googleServicesFile: "./driver-google-services.json",
+      permissions: [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
@@ -56,7 +64,9 @@ export default {
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],
