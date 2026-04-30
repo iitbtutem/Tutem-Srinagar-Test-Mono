@@ -13,6 +13,7 @@ import StarRating from '@/components/StarRating';
 import { formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import Rides from '@/assets/svgs/rides';
+import { distanceFormat } from '../../../lib/utils';
 
 type RideHistory = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderHistory>[number]>;
 
@@ -184,7 +185,7 @@ export default function History() {
                 <View className="flex-row gap-2.5">
                   <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
                     <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {selectedRide.distance} km
+                      {distanceFormat(selectedRide.distance)}
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Distance
@@ -196,14 +197,6 @@ export default function History() {
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Duration
-                    </Text>
-                  </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      Now
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Scheduled
                     </Text>
                   </View>
                 </View>

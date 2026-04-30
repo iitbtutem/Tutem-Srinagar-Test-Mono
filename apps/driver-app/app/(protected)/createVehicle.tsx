@@ -117,7 +117,11 @@ export default function CreateVehicle() {
         rcImageKey,
       });
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
-      router.back();
+      if(router.canGoBack()){
+        router.back();
+      } else {
+        router.push("/(protected)/(tabs)");
+      }
     } catch (error) {
       console.error(error);
       showToast({ title: 'Something went wrong', type: 'error' });

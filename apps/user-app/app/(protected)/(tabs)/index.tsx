@@ -31,7 +31,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   return (
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} className='bg-background'>
         {/*  Ride Services  */}
         <View className="mt-6 px-6">
           <Text className="mb-4 text-xl font-semibold text-foreground">Ride Services</Text>
@@ -47,7 +47,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push(service.href)}
-                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-[#fbfcf8] dark:bg-zinc-800 shadow-sm">
+                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-card shadow-sm">
                   {/* Icon container */}
                   <View className="h-24 w-24 items-center justify-center rounded-full">
                     <Image

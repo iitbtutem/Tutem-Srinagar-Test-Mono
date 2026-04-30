@@ -25,7 +25,7 @@ export default function History() {
 
   const [selectedRide, setSelectedRide] = useState<RideHistory | null>(null);
 
-  const requestSheetRef = useRef<BottomSheet>(null);
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const user = useQuery(api.routes.driver.getDriver, userId ? { clerkId: userId } : 'skip');
   const rides = useQuery(
@@ -35,7 +35,7 @@ export default function History() {
 
   const handleSelectRide = (ride: RideHistory) => {
     setSelectedRide(ride);
-    requestSheetRef.current?.snapToIndex(1);
+    bottomSheetRef.current?.snapToIndex(1);
   };
 
   if (rides === undefined)
@@ -85,7 +85,7 @@ export default function History() {
       />
 
       <BottomSheet
-        ref={requestSheetRef}
+        ref={bottomSheetRef}
         index={-1}
         snapPoints={['55%', '85%']}
         enablePanDownToClose
@@ -101,7 +101,7 @@ export default function History() {
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}
         onClose={() => {
           setSelectedRide(null);
-          requestSheetRef.current?.close();
+          bottomSheetRef.current?.close();
         }}>
         <BottomSheetScrollView
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 }}>
@@ -189,14 +189,6 @@ export default function History() {
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Duration
-                    </Text>
-                  </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      Now
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Scheduled
                     </Text>
                   </View>
                 </View>
