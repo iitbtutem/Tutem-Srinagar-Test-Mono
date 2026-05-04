@@ -31,6 +31,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const EXPANDED_HEADER_HEIGHT = 300;
 const COLLAPSED_HEADER_HEIGHT = 100;
@@ -367,39 +368,13 @@ function ImagePickerDialog({
   const { userId } = useAuth();
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
+  const { uploadFile } = useFileUpload();
 
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
-  async function processUpload(fileUri: string | undefined, fileKey: string) {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: `${fileKey}-${Date.now()}.${extension}`,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload image");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload image');
-    }
-  }
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
     if (newImgUri === '') return;
     setImageUri(newImgUri);
-    const profilePictureKey = await processUpload(newImgUri, `profilePicture/${userId}}`);
+    const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
     await uploadProfilePicture({ clerkId, profilePictureKey });
   };
 

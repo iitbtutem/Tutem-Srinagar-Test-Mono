@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef } from 'react';
 import { api } from '@tutem/api';
-import { useAction, useMutation } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
@@ -30,6 +30,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useUser } from '@clerk/expo';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
@@ -46,6 +47,8 @@ export default function EditVehicle() {
   const router = useRouter();
   const { showToast } = useToast();
   const { colorScheme } = useColorScheme();
+  const { uploadFile } = useFileUpload();
+
   const isDark = colorScheme === 'dark';
 
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -111,7 +114,7 @@ export default function EditVehicle() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     try {
-      const rcImageKey = await processUpload(
+      const rcImageKey = await uploadFile(
         data.rcImageKey,
         `vehicleRegisration/${currentUser.user?.id}}`
       );
@@ -166,35 +169,6 @@ export default function EditVehicle() {
       setValue('rcImageKey', result.assets[0].uri);
     }
   };
-
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
-
-  async function processUpload(fileUri: string | undefined, fileKey: string) {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: `${fileKey}-${Date.now()}.${extension}`,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload image");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload image');
-    }
-  }
 
   return (
     <View className="flex-1 bg-background">

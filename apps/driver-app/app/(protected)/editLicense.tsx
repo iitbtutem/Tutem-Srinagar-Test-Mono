@@ -16,9 +16,10 @@ import { Input } from '@/components/ui/input';
 import { TextInput } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
-import { useAction, useMutation } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { api, Id } from '@tutem/api';
 import { Button } from '@/components/ui/button';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -37,14 +38,15 @@ export default function EditLicense() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { showToast } = useToast();
+  
+  const { uploadFile } = useFileUpload();
 
   const { licenseNumber, driverId, requiresLicenseImg } = useLocalSearchParams<{
     licenseNumber: string;
     driverId: string;
     requiresLicenseImg: string;
   }>();
-
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  
   const updateLicense = useMutation(api.routes.driver.updateLicense);
   const requiresLicenseImage = requiresLicenseImg === 'true' ? true : false;
 
@@ -97,34 +99,6 @@ export default function EditLicense() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${driverId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (!driverId) {
@@ -150,8 +124,8 @@ export default function EditLicense() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const frontImageKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const backImageKey = await processUpload(data.licenseImageBackKey, 'back');
+      const frontImageKey = await uploadFile(data.licenseImageFrontKey, `licenses/${driverId}-front`);
+      const backImageKey = await uploadFile(data.licenseImageBackKey, `licenses/${driverId}-back`);
 
       await updateLicense({
         driverId: driverId as Id<'driver'>,

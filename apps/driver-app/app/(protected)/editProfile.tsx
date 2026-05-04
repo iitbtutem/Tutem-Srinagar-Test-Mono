@@ -31,6 +31,7 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const formSchema = z.object({
   firstName: z
@@ -55,7 +56,9 @@ export default function EditProfile() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
   const router = useRouter();
-  const { showToast } = useToast();
+  const { showToast } = useToast();  
+  const { uploadFile } = useFileUpload();
+
   const isDark = colorScheme.get() === 'dark';
 
   const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } =
@@ -78,7 +81,6 @@ export default function EditProfile() {
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const updateDriver = useMutation(api.routes.driver.updateDriver);
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
 
   const {
     handleSubmit,
@@ -139,34 +141,6 @@ export default function EditProfile() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${clerkId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
@@ -186,8 +160,8 @@ export default function EditProfile() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
+      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${clerkId}-front`);
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${clerkId}-back`);
       const { dob, gender, ...rest } = data;
       await updateDriver({
         ...rest,

@@ -18,7 +18,7 @@ import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef } from 'react';
 import { api } from '@tutem/api';
 import { useUser } from '@clerk/expo';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
 import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import ErrorScreen from '@/components/ErrorScreen';
 import LoadingScreen from '@/components/LoadingScreen';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
@@ -49,7 +50,8 @@ const vehicleSchema = z.object({
 export default function CreateVehicle() {
   const { user } = useUser();
   const router = useRouter();
-  const { showToast } = useToast();
+  const { showToast } = useToast();  
+  const { uploadFile } = useFileUpload();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -93,7 +95,7 @@ export default function CreateVehicle() {
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     const driverDetails = driver.driverDetails;
     try {
-      const rcImageKey = await processUpload(data.rcImageKey, `vehicleRegisration/${driver._id}}`);
+      const rcImageKey = await uploadFile(data.rcImageKey, `vehicleRegisration/${driver._id}}`);
       if (driverDetails === null) return;
 
       if (driverDetails.organization?.isVehicleRCVerificationRequired && rcImageKey === undefined) {
@@ -156,35 +158,6 @@ export default function CreateVehicle() {
       setValue('rcImageKey', result.assets[0].uri);
     }
   };
-
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
-
-  async function processUpload(fileUri: string | undefined, fileKey: string) {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: `${fileKey}-${Date.now()}.${extension}`,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload image");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload image');
-    }
-  }
 
   const { isVehicleRCVerificationRequired } = driver.driverDetails.organization;
 

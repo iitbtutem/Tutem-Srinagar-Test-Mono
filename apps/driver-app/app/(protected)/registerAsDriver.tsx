@@ -13,13 +13,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
-import { GENDER } from '@/constants';
 import { useAuth } from '@clerk/expo';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -32,6 +31,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -61,7 +61,7 @@ export default function RegisterAsRider() {
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  const { uploadFile } = useFileUpload();
 
   const {
     handleSubmit,
@@ -112,34 +112,6 @@ export default function RegisterAsRider() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${userId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (!userId) {
@@ -160,8 +132,8 @@ export default function RegisterAsRider() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
+      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${userId}-front`);
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
 
