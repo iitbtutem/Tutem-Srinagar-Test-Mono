@@ -29,7 +29,7 @@ export default function startRide() {
     driverId && rideId ? { id: rideId, driverId } : 'skip'
   );
 
-  const startRide = useAction(api.routes.rideActions.startRide);
+  const startRide = useAction(api.actions.ride.startRide);
 
   const handleChange = (value: string, index: number) => {
     const newValue = value.trim();

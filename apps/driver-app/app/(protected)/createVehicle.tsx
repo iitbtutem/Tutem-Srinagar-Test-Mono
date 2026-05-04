@@ -53,7 +53,7 @@ export default function CreateVehicle() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const driver = useQuery(api.routes.driver.getDriver, { clerkId: user?.id ?? '' });
+  const driver = useQuery(api.routes.driver.getUser, { clerkId: user?.id ?? '' });
   const addVehicle = useMutation(api.routes.vehicle.addVehicle);
 
   const modelRef = useRef<TextInput>(null);
@@ -157,7 +157,7 @@ export default function CreateVehicle() {
     }
   };
 
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
 
   async function processUpload(fileUri: string | undefined, fileKey: string) {
     if (!fileUri || !fileUri.startsWith('file://')) return;

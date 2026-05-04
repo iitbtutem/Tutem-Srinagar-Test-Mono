@@ -1,10 +1,11 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, action } from "../_generated/server";
 import { Doc } from "../_generated/dataModel";
-import { TWENTY_FOUR_HOURS, OTP_SIZE } from "../CONSTANTS";
+import { TWENTY_FOUR_HOURS, OTP_SIZE, RESPONSE_TIME } from "../CONSTANTS";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { internal } from "../_generated/api";
 
 // Haversine formula — returns distance in km between two coordinates
 
@@ -193,13 +194,36 @@ export const bookRide = internalMutation({
       fare: args.fare,
       pickup: args.pickup,
       destination: args.destination,
+      requestedAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // await ctx.scheduler.runAfter(RESPONSE_TIME * 60 * 1000, internal.routes.rides.markNoResponse, { rideId })
 
     return {
       rideId,
       driverExpoPushToken: driver.expoPushToken,
     };
+  },
+});
+
+export const markNoResponse = internalMutation({
+  args: {
+    rideId: v.id("ride"),
+  },
+  handler: async (ctx, args) => {
+    const ride = await ctx.db.get(args.rideId);
+    if (ride === null) throw new ConvexError("Ride not found");
+    if (ride.requestStatus !== "Pending") return;
+    
+    await ctx.db.patch(ride._id, {
+      requestStatus: "No Response",
+      updatedAt: Date.now(),
+    });   
+
+    const rider = await ctx.db.get(ride.riderId);
+    if (rider === null) throw new ConvexError("Invalid user");
+    
   },
 });
 
@@ -222,9 +246,9 @@ export const changeDriver = internalMutation({
     }
     await ctx.db.patch(ride._id, {
       updatedAt: Date.now(),
+      requestedAt: Date.now(),
       driverId: args.driverId,
       requestStatus: "Pending",
-      status: "Open",
     });
 
   }

@@ -17,7 +17,7 @@ export function DriverScreen() {
 
   const { userId, getToken } = useAuth();
   const driver = useQuery(
-    api.routes.driver.getDriver,
+    api.routes.driver.getUser,
     userId ? { clerkId: userId } : 'skip'
   );
 

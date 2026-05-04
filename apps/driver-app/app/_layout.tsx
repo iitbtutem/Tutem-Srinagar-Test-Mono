@@ -57,7 +57,7 @@ export default function RootLayout() {
     if (checked) {
       setLaunchedOffline(!isOnline);
     }
-  }, [checked]);
+  }, [checked, isOnline]);
 
   useEffect(() => {
     Notifications.setNotificationHandler({

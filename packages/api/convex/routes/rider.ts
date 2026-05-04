@@ -10,11 +10,7 @@ export const registerExpoPushToken = mutation({
     expoPushToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const rider = await ctx.db
-      .query("rider")
-
-      .filter((q) => q.eq(q.field("_id"), args.riderId))
-      .first();
+    const rider = await ctx.db.get(args.riderId);
     if(rider === null) return;
 
     await ctx.db.patch(rider._id, {
@@ -28,11 +24,7 @@ export const logout = mutation({
     riderId: v.id("rider"),
   },
   handler: async (ctx, args) => {
-    const rider = await ctx.db
-      .query("rider")
-
-      .filter((q) => q.eq(q.field("_id"), args.riderId))
-      .first();
+    const rider = await ctx.db.get(args.riderId);
     if(rider === null) return;
     
     await ctx.db.patch(rider._id, {
@@ -54,8 +46,7 @@ export const addRider = mutation({
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
       .query("user")
-
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (existingUser) {
@@ -80,14 +71,14 @@ export const registerAsRider = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (user === null) {
       throw new ConvexError("User not found");
     };
 
     const existingRider = await ctx.db.query("rider")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (existingRider !== null) throw new ConvexError("Rider profile already exists");
 
@@ -103,14 +94,14 @@ export const getRider = query({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (user === null) return null;
 
     const rider = await ctx.db
       .query("rider")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
     const profilePictureUri = user.profilePictureKey
@@ -142,7 +133,7 @@ export const updateRider = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
@@ -151,7 +142,7 @@ export const updateRider = mutation({
 
     const rider = await ctx.db
       .query("rider")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
     if (rider === null) throw new ConvexError("Rider not found");
@@ -172,7 +163,7 @@ export const uploadProfilePicture = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) {
@@ -192,7 +183,7 @@ export const removeProfilePictureKey = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
     if (!user) throw new ConvexError("User not found");

@@ -51,7 +51,7 @@ type RouteState = {
 };
 
 // NearbyDrivers
-type NearbyDriver = FunctionReturnType<typeof api.routes.actions.getNearbyDrivers>[number];
+type NearbyDriver = FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number];
 
 type VehicleClass = (typeof VEHICLE_CLASS)[number];
 // helpers
@@ -128,7 +128,7 @@ export default function RideRequest() {
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
-  const cancelRide = useAction(api.routes.rideActions.cancelRide);
+  const cancelRide = useAction(api.actions.ride.cancelRide);
   const [cancelling, setCancelling] = useState(false);
   const [changingDriver, setChangingDriver] = useState(false);
   const [routeState, setRouteState] = useState<RouteState | null>(null);
@@ -158,8 +158,8 @@ export default function RideRequest() {
 
   const isDark = colorScheme === 'dark';
   
-  const getNearbyDriversAction = useAction(api.routes.actions.getNearbyDrivers);
-  const changeDriver = useAction(api.routes.rideActions.changeDriver);
+  const getNearbyDriversAction = useAction(api.actions.actions.getNearbyDrivers);
+  const changeDriver = useAction(api.actions.ride.changeDriver);
 
   const fetchDrivers = async () => {
     if(!ride) return;

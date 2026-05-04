@@ -44,7 +44,7 @@ export default function EditLicense() {
     requiresLicenseImg: string;
   }>();
 
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
   const updateLicense = useMutation(api.routes.driver.updateLicense);
   const requiresLicenseImage = requiresLicenseImg === 'true' ? true : false;
 

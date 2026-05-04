@@ -92,7 +92,7 @@ function SheetLayer({ children, animatedIndex, visibleFrom = 0, visibleUntil }: 
 
 // NearbyDriversPanel
 type NearbyDriver = NonNullable<
-  FunctionReturnType<typeof api.routes.actions.getNearbyDrivers>[number]
+  FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number]
 >;
 
 type NearbyDriversPanelProps = {
@@ -290,7 +290,7 @@ function NearbyDriversPanel({
 export default function WhereTo() {
   const { userId } = useAuth();
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
-  const bookRide = useAction(api.routes.rideActions.bookRide);
+  const bookRide = useAction(api.actions.ride.bookRide);
 
   const { colorScheme: currentTheme } = useColorScheme();
   const isDark = currentTheme === 'dark';
@@ -344,7 +344,7 @@ export default function WhereTo() {
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
 
-  const getNearbyDriversAction = useAction(api.routes.actions.getNearbyDrivers);
+  const getNearbyDriversAction = useAction(api.actions.actions.getNearbyDrivers);
 
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);

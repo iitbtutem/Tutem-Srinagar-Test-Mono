@@ -33,7 +33,7 @@ import { mutation } from '../../../packages/api/convex/_generated/server';
 import { useColorScheme } from 'nativewind';
 import useThemeColors from '@/hooks/useColorScheme';
 
-type User = FunctionReturnType<typeof api.routes.driver.getDriver>;
+type User = FunctionReturnType<typeof api.routes.driver.getUser>;
 type Props = {
   navigation: any;
   options: any;

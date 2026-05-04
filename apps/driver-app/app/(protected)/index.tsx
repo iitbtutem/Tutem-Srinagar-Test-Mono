@@ -6,8 +6,9 @@ import { Redirect } from "expo-router"
 
 export default function Protected() {
     const { userId } = useAuth()
-    const user = useQuery(api.routes.driver.getDriver, userId ? { clerkId: userId } : 'skip')
+    const user = useQuery(api.routes.driver.getUser, userId ? { clerkId: userId } : 'skip')
 
+    // return <Redirect href="/payment" />
     if (user === undefined) return <LoadingScreen message="fetching driver" />
     if (user === null) return <Redirect href={'/register'} />
     if (!user.driverDetails) return <Redirect href={'/registerAsDriver'} />

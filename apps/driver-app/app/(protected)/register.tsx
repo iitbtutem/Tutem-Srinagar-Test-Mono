@@ -73,8 +73,8 @@ export default function Register() {
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
 
   const {
     handleSubmit,

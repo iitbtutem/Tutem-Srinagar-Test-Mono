@@ -11,11 +11,7 @@ export const login = mutation({
     expoPushToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const driver = await ctx.db
-      .query("driver")
-
-      .filter((q) => q.eq(q.field("_id"), args.driverId))
-      .first();
+    const driver = await ctx.db.get(args.driverId);
     if(driver === null) return;
 
     const activeRide = await ctx.db.query("ride").withIndex("by_driver", q => q.eq("driverId", driver._id)).first();
@@ -141,10 +137,7 @@ export const registerAsDriver = mutation({
     if (existingDriver !== null)
       throw new ConvexError("Driver profile already exists");
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), args.organizationId))
-      .first();
+    const organization = await ctx.db.get(args.organizationId);
 
     if (organization === null) throw new ConvexError("Organization not found");
 
@@ -169,7 +162,7 @@ export const registerAsDriver = mutation({
   },
 });
 
-export const getDriver = query({
+export const getUser = query({
   args: {
     clerkId: v.string(),
   },
@@ -256,6 +249,73 @@ export const getDriver = query({
       } : null,
     };
   },
+});
+
+export const getDriver = query({
+  args: {
+    id: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.id);
+    if (driver === null) throw new ConvexError("Driver not found");
+
+    const user = await ctx.db.get(driver.userId);
+
+    const licenseFrontImageUri = driver.licenseImageFrontKey
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageFrontKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+
+    const licenseBackImageUri = driver.licenseImageBackKey
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.licenseImageBackKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+    
+    const paymentQrCodeUri = driver.paymentQrCodeKey
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: driver.paymentQrCodeKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+
+    const profilePictureUri = (user !== null && user.profilePictureKey)
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: user.profilePictureKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+
+    return {
+      ...driver,
+      userDetails: user ? {
+        ...user,
+        profilePictureKey: profilePictureUri,
+      } : null,
+      licenseImageFrontKey: licenseFrontImageUri,
+      licenseImageBackKey: licenseBackImageUri,
+      paymentQrCodeKey: paymentQrCodeUri,
+    };    
+  }
 });
 
 export const getDriverExpoPushToken = internalQuery({
@@ -371,6 +431,22 @@ export const removeProfilePictureKey = mutation({
 
     await ctx.db.patch(user._id, {
       profilePictureKey: undefined,
+    });
+  },
+});
+
+export const updatePaymentQrCode = mutation({
+  args: {
+    driverId: v.id("driver"),
+    paymentQrCodeKey: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.driverId);
+
+    if (driver === null) throw new ConvexError("Invalid user");
+
+    await ctx.db.patch(driver._id, {
+      paymentQrCodeKey: args.paymentQrCodeKey,
     });
   },
 });
