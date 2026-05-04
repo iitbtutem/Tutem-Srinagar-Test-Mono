@@ -27,7 +27,7 @@ export default function History() {
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const user = useQuery(api.routes.driver.getDriver, userId ? { clerkId: userId } : 'skip');
+  const user = useQuery(api.routes.driver.getUser, userId ? { clerkId: userId } : 'skip');
   const rides = useQuery(
     api.routes.rides.getDriverHistory,
     user && user.driverDetails ? { driverId: user.driverDetails?._id } : 'skip'

@@ -58,10 +58,10 @@ export default function RegisterAsRider() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
 
   const {
     handleSubmit,

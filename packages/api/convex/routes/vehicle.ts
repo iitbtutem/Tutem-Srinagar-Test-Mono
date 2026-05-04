@@ -46,17 +46,11 @@ export const addVehicle = mutation({
     if (args.seatingCapacity < 2 || args.seatingCapacity > 50)
       throw new ConvexError("Invalid seating capacity");
 
-    const driver = await ctx.db
-      .query("driver")
-      .filter((q) => q.eq(q.field("_id"), args.ownerId))
-      .first();
+    const driver = await ctx.db.get(args.ownerId);
 
     if (driver === null) throw new ConvexError("Driver not found.");
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
-      .first();
+    const organization = await ctx.db.get(driver.organizationId);
 
     if (organization === null)
       throw new ConvexError("Driver not assigned to any organization.");
@@ -66,8 +60,8 @@ export const addVehicle = mutation({
 
     const existingVehicle = await ctx.db
       .query("vehicle")
-      .filter((q) =>
-        q.eq(q.field("registrationNumber"), args.registrationNumber),
+      .withIndex("by_registrationNumber", (q) =>
+        q.eq("registrationNumber", args.registrationNumber)
       )
       .first();
 
@@ -77,7 +71,7 @@ export const addVehicle = mutation({
 
     const userExistingVehicle = await ctx.db
       .query("vehicle")
-      .filter((q) => q.eq(q.field("ownerId"), driver._id))
+      .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
       .first();
     if (userExistingVehicle !== null)
       throw new ConvexError("Vehicle already registered for the driver");
@@ -108,22 +102,15 @@ export const updateVehicle = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...input } = args;
-    const vehicle = await ctx.db
-      .query("vehicle")
-      .filter((q) => q.eq(q.field("_id"), id))
-      .first();
+    const vehicle = await ctx.db.get(args.id);
+    
     if (vehicle === null) throw new ConvexError("Vehicle not found");
 
-    const driver = await ctx.db
-      .query("driver")
-      .filter((q) => q.eq(q.field("_id"), vehicle.ownerId))
-      .first();
+    const driver = await ctx.db.get(vehicle.ownerId);
+    
     if (driver === null) throw new ConvexError("Driver not found");
 
-    const organization = await ctx.db
-      .query("organization")
-      .filter((q) => q.eq(q.field("_id"), driver.organizationId))
-      .first();
+    const organization = await ctx.db.get(driver.organizationId);
 
     if (organization === null)
       throw new ConvexError("Driver not assigned to any organization");

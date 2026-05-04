@@ -117,7 +117,7 @@ export default function Home() {
   const { showToast } = useToast();
   const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
 
-  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const vehicle = useQuery(
     api.routes.vehicle.getVehicleByDriverId,
     driver && driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
@@ -133,14 +133,23 @@ export default function Home() {
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
   );
 
-  const acceptRide = useAction(api.routes.rideActions.acceptRideAction);
-  const rejectRide = useAction(api.routes.rideActions.rejectRide);
-  const completeRide = useAction(api.routes.rideActions.completeRide);
+  const acceptRide = useAction(api.actions.ride.acceptRideAction);
+  const rejectRide = useAction(api.actions.ride.rejectRide);
+  const completeRide = useAction(api.actions.ride.completeRide);
 
   const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
     try {
       await completeRide({ driverId, rideId });
-      router.push(`/feedback/${rideId}`);
+      router.push({
+        pathname: '/payment',
+        params: {
+          rideId: rideId.toString(),
+          driverId: driverId.toString(),
+          rideDistance: currentRide?.distance ?? 0,
+          fare: currentRide?.fare ?? 0,
+          duration: currentRide?.expectedDuration ?? '-',
+        }
+      });
       showToast({
         type: 'success',
         title: 'Ride completed',

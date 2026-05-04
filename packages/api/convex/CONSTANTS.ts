@@ -14,3 +14,5 @@ export const PERMISSIONS = ["Driver", "Rider", "Admin"] as const;
 export const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
 export const OTP_SIZE = 4;
+
+export const RESPONSE_TIME = 2; // in minutes

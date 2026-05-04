@@ -36,6 +36,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useToast } from '@/components/CustomToast';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
@@ -56,7 +57,7 @@ export default function Profile() {
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
-  const driver = useQuery(api.routes.driver.getDriver, { clerkId: userId ?? '' });
+  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip');
   const logout = useMutation(api.routes.driver.logout);
 
@@ -843,42 +844,21 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { userId } = useAuth();
+
+  const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
-
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
-  async function processUpload(fileUri: string | undefined, fileKey: string) {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: `${fileKey}-${Date.now()}.${extension}`,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload image");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload image');
-    }
-  }
+  
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
-    if (newImgUri === '') return;
-    setImageUri(newImgUri);
-    const profilePictureKey = await processUpload(newImgUri, `profilePicture/${userId}}`);
-    await uploadProfilePicture({ clerkId, profilePictureKey });
+    try {
+      if (newImgUri === '') return;
+      setImageUri(newImgUri);
+      const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}}`);
+      await uploadProfilePicture({ clerkId, profilePictureKey });
+    } catch (error) {
+      console.log("Error uploading profile picture:", error);
+    }
   };
 
   const handleDelete = async () => {

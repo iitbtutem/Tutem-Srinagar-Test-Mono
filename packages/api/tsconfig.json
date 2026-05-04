@@ -9,7 +9,8 @@
             "dom"
         ],
         "noEmit": true,
-        "allowImportingTsExtensions": true
+        "allowImportingTsExtensions": true,
+        "types": ["node"]
     },
     "include": [
         "convex"

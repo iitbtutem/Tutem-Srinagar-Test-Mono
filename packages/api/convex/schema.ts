@@ -29,6 +29,7 @@ export default defineSchema({
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
+    paymentQrCodeKey: v.optional(v.string()),
     isLicenseVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
     isOnline: v.boolean(),
     isAvailableForRide: v.boolean(),
@@ -72,7 +73,9 @@ export default defineSchema({
     color: v.string(),
     seatingCapacity: v.number(),
     ownerId: v.id("driver"),
-  }).index("by_owner", ["ownerId"]),
+  })
+  .index("by_owner", ["ownerId"])
+  .index("by_registrationNumber", ["registrationNumber"]),
 
   // permissions
   userPermission: defineTable({
@@ -85,7 +88,7 @@ export default defineSchema({
     driverId: v.id("driver"),
     fare: v.number(),
     status: v.union(v.literal("Open"), v.literal("Active"), v.literal("Completed"), v.literal("Canceled")),
-    requestStatus: v.union(v.literal("Pending"), v.literal("Accepted"), v.literal("Rejected")),
+    requestStatus: v.union(v.literal("Pending"), v.literal("Accepted"), v.literal("Rejected"), v.literal("No Response")),
     pickup: v.object({
       address: v.string(),
       latitude: v.number(),
@@ -99,6 +102,8 @@ export default defineSchema({
     distance: v.number(),
     expectedDuration: v.optional(v.string()),
     updatedAt: v.number(),
+    requestedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
   })

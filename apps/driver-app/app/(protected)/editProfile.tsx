@@ -78,7 +78,7 @@ export default function EditProfile() {
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const updateDriver = useMutation(api.routes.driver.updateDriver);
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
 
   const {
     handleSubmit,

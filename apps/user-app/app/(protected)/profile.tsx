@@ -368,7 +368,7 @@ function ImagePickerDialog({
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
 
-  const getPresignedUrl = useAction(api.routes.upload.getPresignedUrl);
+  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
   async function processUpload(fileUri: string | undefined, fileKey: string) {
     if (!fileUri || !fileUri.startsWith('file://')) return;
 
