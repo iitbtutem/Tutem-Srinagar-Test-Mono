@@ -31,23 +31,21 @@ type Props = {
 };
 
 export default function CustomHeader({ user }: Props) {
-  if (!user) return;
-  const [genderMatching, setGenderMatching] = useState<boolean>(false);
   const toggleGenderMatching = useMutation(api.routes.rider.toggleGenderMatching);
+  
+  const { iconColor } = useThemeColors();
+  const {colorScheme}= useColorScheme();
+  const isDark = colorScheme === "dark";
+  
+  if (!user) return;
 
   const toggleGenderMatch = async () => {
     if (user.riderDetails === null) return;
     await toggleGenderMatching({ id: user.riderDetails?._id });
-    setGenderMatching((prev) => !prev);
   };
 
-  const { iconColor } = useThemeColors();
-  const {colorScheme}= useColorScheme();
-  const isDark = colorScheme === "dark";
-
-
   return (
-    <SafeAreaView className="bg-primary-background h-[110px] flex-row items-start justify-between gap-3 bg-cyan-500 px-4">
+    <SafeAreaView className="bg-primary-background flex-row items-start justify-between gap-3 bg-cyan-500 px-4">
       {/* Gender matching toggle */}
       <View className='mt-1'>
         <TouchableOpacity
@@ -103,6 +101,34 @@ export default function CustomHeader({ user }: Props) {
   );
 }
 
+export function HeaderGreeting({ user }: { user: User }) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  if (!user) return null;
+
+  return (
+    <View 
+      className="px-3 py-2 rounded-br-2xl bg-card self-start"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 10, height: 10 },
+        shadowOpacity: 1,
+        shadowRadius: 20,
+        elevation: 5,
+      }}
+    >
+      <View className="flex-row items-center gap-3 rounded-br-2xl">
+        <ProfileDropdown user={user} isDark={isDark} />
+        <View>
+          <Text className="text-sm text-title font-semibold">Hello</Text>
+          <Text className="text-md text-title font-semibold">{`${user.firstName} ${user.lastName}`}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ProfileDropdown({ user, isDark }: { user: User , isDark: boolean}) {
   const { signOut } = useAuth();
   const logout = useMutation(api.routes.rider.logout);
@@ -129,7 +155,7 @@ function ProfileDropdown({ user, isDark }: { user: User , isDark: boolean}) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <TouchableOpacity className={cn("rounded-full border-2 border-green-600 bg-white/60",{"bg-blue-600/60": isDark})}>
-          <Avatar alt="Profile pic" className="h-11 w-11">
+          <Avatar alt="Profile pic" className="h-9 w-9">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
             <AvatarFallback className="bg-white/20">
               <Text className="text-2xl font-bold text-primary">

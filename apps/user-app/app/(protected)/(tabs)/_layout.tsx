@@ -1,11 +1,14 @@
-import CustomHeader from '@/components/CustomHeader';
+import CustomHeader, { HeaderGreeting } from '@/components/CustomHeader';
 import { useAuth } from '@clerk/expo';
 import { Feather, Octicons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Tabs } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const { userId } = useAuth();
@@ -17,16 +20,16 @@ export default function TabsLayout() {
 
 
   return (
-  <Tabs
+    <Tabs
       screenOptions={{
-        tabBarActiveTintColor: isDark ? '#FFFFFF' : '#000000',
-        tabBarInactiveTintColor: isDark ? '#9CA3AF' : '#6B7280',
-        headerShown: true,
-        header: (props) => user && <CustomHeader {...props} user={user} />,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#bfbfbf',
+        header: () => <View className='bg-primary h-10' />,
+        // header: (props) => user && <CustomHeader {...props} user={user} />,
         tabBarStyle: {
-          backgroundColor: isDark ? '#0A0A0A' : '#FFFFFF',
+          backgroundColor: "#0A6FCC",
           borderTopColor: isDark ? '#262626' : '#E5E7EB',
-          height: 80,
+          height: 65,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -40,7 +43,7 @@ export default function TabsLayout() {
           title: 'Home',
           animation: 'fade',
           tabBarIcon: ({ focused }) => (
-            <Feather name="map" size={23} color={focused ? 'blue' : 'gray'} />
+            <Feather name="map" size={23} color={focused ? '#FFFFFF' : '#bfbfbf'} />
           ),
         }}
       />
@@ -49,8 +52,8 @@ export default function TabsLayout() {
         options={{
           title: 'History',
           animation: 'fade',
-          tabBarIcon: ({ color, size }) => (
-            <Octicons name="history" size={24} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Octicons name="history" size={24} color={focused ? '#FFFFFF' : '#bfbfbf'} />
           ),
         }}
       />

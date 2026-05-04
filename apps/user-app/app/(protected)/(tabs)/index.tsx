@@ -14,6 +14,8 @@ import { useAuth } from '@clerk/expo';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { distanceFormat, formatFare } from '@/lib/utils';
+import { StatusBar } from 'expo-status-bar';
+import { HeaderGreeting } from '@/components/CustomHeader';
 
 const IMAGES = {
   ride_pooling: require('@/assets/images/ride_pooling.png'),
@@ -28,12 +30,19 @@ const SERVICES = [
 ] as const;
 
 export default function HomeScreen() {
+  const { userId } = useAuth();
   const router = useRouter();
 
+  const user = useQuery(api.routes.rider.getRider, userId && userId !== '' ? { clerkId: userId } : 'skip');
+
   return (
+    <View className="flex-1 bg-background">
+      <StatusBar backgroundColor='#0A6FCC' style='light' translucent />
+
+      {user && <HeaderGreeting user={user} />}
       <ScrollView showsVerticalScrollIndicator={false} className='bg-background'>
         {/*  Ride Services  */}
-        <View className="mt-6 px-6">
+        <View className="mt-6 px-4">
           <Text className="mb-4 text-xl font-semibold text-foreground">Ride Services</Text>
           <FlatList
             data={SERVICES}
@@ -43,7 +52,7 @@ export default function HomeScreen() {
             columnWrapperStyle={{ gap: 14 }}
             contentContainerStyle={{ gap: 14 }}
             renderItem={({ item: service }) => (
-              <View className="flex-1 gap-3">
+              <View className="flex-1 gap-1 bg-slate-950/5 rounded-xl p-3">
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push(service.href)}
@@ -105,6 +114,7 @@ export default function HomeScreen() {
 
         <View className="h-10" />
       </ScrollView>
+    </View>
   );
 }
 
