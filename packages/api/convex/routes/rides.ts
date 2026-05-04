@@ -167,9 +167,13 @@ export const bookRide = internalMutation({
     if (rider === null) throw new ConvexError("Invalid user");
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Driver doesn't exist");
+    
+    if(rider.userId === driver.userId)
+      throw new ConvexError("Driver and rider cannot be same user");
+    
     if (driver.isAvailableForRide === false || driver.isOnline === false)
       throw new ConvexError("Driver not available");
-
+    
     const existingRide = await ctx.db
       .query("ride")
       .withIndex("by_rider", q => q.eq("riderId", rider._id))
@@ -375,32 +379,56 @@ export const getRiderCurrentRideById = query({
     
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid driver");
-
+    
     const vehicle = await ctx.db
-      .query("vehicle")
-      .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
-      .first();
+    .query("vehicle")
+    .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
+    .first();
+    
+    const driverDetails = await ctx.db.get(driver.userId);
+    if (driverDetails === null) throw new ConvexError("Invalid Driver");
 
-    const user = await ctx.db.get(driver.userId);
-
-    const ratings = await ctx.db
+    const driverRatings = await ctx.db
       .query("ratings")
       .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
       .filter((q) => q.eq(q.field("raterType"), "Rider"))
       .collect();
 
-    const averageRating =
-      ratings.length === 0
-        ? null
-        : ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
-    const totalRating = ratings.length;
+    const riderRatings = await ctx.db
+      .query("ratings")
+      .withIndex("by_rider", (q) => q.eq("riderId", rider._id))
+      .filter((q) => q.eq(q.field("raterType"), "Driver"))
+      .collect();
 
-    const profilePictureUri = user?.profilePictureKey
+    const driverAverageRating =
+      driverRatings.length === 0
+        ? null
+        : driverRatings.reduce((sum, r) => sum + r.score, 0) / driverRatings.length;
+    const driverTotalRating = driverRatings.length;
+
+    const riderAverageRating =
+      riderRatings.length === 0
+        ? null
+        : riderRatings.reduce((sum, r) => sum + r.score, 0) / riderRatings.length;
+    const riderTotalRating = riderRatings.length;
+
+    const driverProfilePictureUri = driverDetails.profilePictureKey
       ? await getSignedUrl(
           s3Client,
           new GetObjectCommand({
             Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
+            Key: driverDetails.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
+
+    const riderProfilePictureUri = riderDetails.profilePictureKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: riderDetails.profilePictureKey,
           }),
           { expiresIn: 300 },
         )
@@ -415,16 +443,21 @@ export const getRiderCurrentRideById = query({
       otp,
       rider: {
         ...rider,
-        userDetails: riderDetails
+        averageRating: riderAverageRating,
+        totalRating: riderTotalRating,
+        userDetails: {
+          ...riderDetails,          
+          profilePictureKey: riderProfilePictureUri,
+        }
       },
       vehicle,
       driver: {
         ...driver,
-        averageRating,
-        totalRating,
+        averageRating: driverAverageRating,
+        totalRating: driverTotalRating,
         userDetails: {
-          ...user,
-          profilePictureKey: profilePictureUri,
+          ...driverDetails,
+          profilePictureKey: driverProfilePictureUri,
         },
       },
     };

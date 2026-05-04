@@ -16,6 +16,7 @@ import {
 import { Star } from 'lucide-react-native';
 import { Separator } from '@/components/ui/seperator';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -93,7 +94,7 @@ export default function Feedback() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="px-6 pt-14 pb-12"
+      contentContainerClassName="px-6 pt-6 pb-24"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -194,7 +195,7 @@ export default function Feedback() {
       </View> */}
 
       {/* Comment */}
-      <View className="mb-8 mt-4">
+      <View className="mb-6 mt-4">
         <Text className="text-primary/50 text-xs font-medium tracking-widest uppercase mb-3">
           Leave a comment{' '}
           <Text className="text-primary/80 normal-case tracking-normal">
@@ -219,11 +220,10 @@ export default function Feedback() {
       <Button
         onPress={handleSubmit}
         disabled={isSubmitting || score === 0}
-        className={`rounded-2xl ${
-          score === 0
-            ? 'bg-zinc-800'
-            : 'bg-violet-600 active:bg-violet-700'
-        }`}
+        className={cn("rounded-2xl", {
+          'bg-zinc-800': score === 0,
+          'bg-violet-600 active:bg-violet-700' : score > 0,
+        })}
       >
         {isSubmitting ? (
           <ActivityIndicator size="small" color="#ffffff" />

@@ -198,6 +198,7 @@ export default function Home() {
   // Start / stop background location foreground service whenever the
   // driver toggles online / offline via the Convex isAvailableForRide flag.
   useEffect(() => {
+    stopLocationTracking();
     if (!driverDetails?._id) return;
 
     if (driverDetails.isAvailableForRide || currentRide) {
@@ -333,7 +334,7 @@ export default function Home() {
             console.error('Failed to get location for heartbeat:', e);
           }
         }
-      }, 10000); // 10 seconds
+      }, 1000 * 1000); // 10 seconds
 
       // Initial presence entry
       if (driverDetails?._id && driverDetails.isAvailableForRide && !currentRide) {
