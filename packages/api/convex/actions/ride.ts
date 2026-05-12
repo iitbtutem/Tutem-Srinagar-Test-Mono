@@ -3,8 +3,10 @@
 import { action } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { sendNotification } from "../../pushNotifications";
+import { sendNotification } from "../helpers/pushNotifications";
 import { Id } from "../_generated/dataModel";
+import { fetchRoute } from "../helpers/maps";
+import { METERS_IN_KM } from "../CONSTANTS";
 
 export const acceptRideAction = action({
   args: {
@@ -80,7 +82,7 @@ export const changeDriver = action({
     driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
-    await ctx.runMutation(
+    const ride = await ctx.runMutation(
       internal.routes.rides.changeDriver, 
       {
         rideId: args.rideId,
@@ -96,12 +98,12 @@ export const changeDriver = action({
       }
     );
 
-    // if (driverExpoPushToken)
-    //   await sendNotification({
-    //     pushTokens: [driverExpoPushToken],
-    //     title: "New Ride Request 🚖",
-    //     body: "You have received a new ride request. Open the app to view trip details and accept it.",
-    //   });
+    if (driverExpoPushToken && ride.requestStatus === "Accepted")
+      await sendNotification({
+        pushTokens: [driverExpoPushToken],
+        title: "Ride Canceled 🚖",
+        body: "Your current ride has been canceled by rider. You can now a accept new ride request.",
+      });
   }
 });
 
@@ -111,7 +113,7 @@ export const cancelRide = action({
     rideId: v.id("ride"),
   },
   handler: async (ctx, args) => {
-    const riderExpoPushToken = await ctx.runMutation(
+    const driverExpoPushToken = await ctx.runMutation(
       internal.routes.rides.cancelRide,
       {
         riderId: args.riderId,
@@ -119,15 +121,82 @@ export const cancelRide = action({
       },
     );
 
+    if (!driverExpoPushToken) return;
+
+    // Send push notification (requires Node.js)
+    await sendNotification({
+      pushTokens: [driverExpoPushToken],
+      title: "Ride Cancelled ❌",
+      body: "Your ride request has been cancelled successfully.",
+    });
+  },
+});
+
+export const calculateDriverCancelRideCharges = action({
+  args: {
+    id: v.id("ride"),
+    driverLocation: v.object({
+      latitude: v.number(),
+      longitude: v.number()
+    })
+  },
+  handler: async (ctx, args): Promise<{ calculatedFare: number; baseDistance: number; basePrice: number; ratePerKm: number; chargableDistance: number;  remainingDistance: number }> => {
+    const rideDetails = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.id });
+
+    const { address, ...cords } = rideDetails.destination;
+    const route = await fetchRoute(args.driverLocation, cords);
+
+    console.log("Route : ", route)
+    
+    const remainingDistance = Number(route?.distance.value) ?? 0
+    const { organizationRate, ride } = await ctx.runQuery(internal.routes.rides.rideOrganizationRate, { id: rideDetails._id });
+    
+    const baseDistance = organizationRate.baseDistance;
+    const basePrice = organizationRate.baseDistanceRate;
+    const ratePerKm = organizationRate.ratePerKm;
+    
+    const chargableDistance = ride.distance - remainingDistance;
+
+    const calculatedFare = chargableDistance > baseDistance 
+    ? (basePrice + ((chargableDistance - baseDistance)/METERS_IN_KM) * ratePerKm)
+    : ((chargableDistance/METERS_IN_KM) * ratePerKm);
+    
+    console.log('calculatedFare ', calculatedFare )
+    return  {
+      calculatedFare: Math.max(0, calculatedFare),
+      baseDistance,
+      basePrice,
+      ratePerKm,
+      chargableDistance: Math.max(0, chargableDistance/METERS_IN_KM),
+      remainingDistance: route?.distance.value ? route.distance.value/METERS_IN_KM : 0,
+    }
+  }
+});
+
+export const driverCancelRide = action({
+  args: {
+    rideId: v.id("ride"),
+    driverId: v.id("driver"),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const riderExpoPushToken = await ctx.runMutation(
+      internal.routes.rides.driverCancelRide,
+      {
+        rideId: args.rideId,
+        driverId: args.driverId,
+        reason: args.reason,
+      }
+    );
     if (!riderExpoPushToken) return;
 
     // Send push notification (requires Node.js)
     await sendNotification({
       pushTokens: [riderExpoPushToken],
-      title: "Ride Cancelled ❌",
-      body: "Your ride request has been cancelled successfully.",
+      title: "Ride Aborted 🚫",
+      body: "The driver aborted your ride. Please book a new ride or change your driver if possible.",
     });
-  },
+  }
 });
 
 export const rejectRide = action({
@@ -155,11 +224,62 @@ export const rejectRide = action({
   },
 });
 
+export const driverArrived = action({
+  args: {
+    rideId: v.id("ride"),
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const crypto = require("crypto");
+    const otp = crypto.randomInt(1000, 10000);
+
+    console.log("otp : ", otp)
+    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.driverArrived, {
+      driverId: args.driverId,
+      rideId: args.rideId,
+      otp
+    });
+
+    if (!riderExpoPushToken) return;
+
+    // Send push notification (requires Node.js)
+    await sendNotification({
+      pushTokens: [riderExpoPushToken],
+      title: "Driver Arrived 🚗",
+      body: "Your driver has reached the pickup location. Please share the OTP from ride details to begin the ride.",
+    });
+  }
+});
+
+export const generateRideOtp = action({
+  args: {
+    rideId: v.id("ride"),
+  },
+  handler: async (ctx, args) => {
+    const crypto = require("crypto");
+    const otp = crypto.randomInt(1000, 10000);
+    
+    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.generateRideOtp, {
+      id: args.rideId,
+      otp
+    });
+
+    if (!riderExpoPushToken) return;
+
+    // Send push notification (requires Node.js)
+    await sendNotification({
+      pushTokens: [riderExpoPushToken],
+      title: "OTP generated",
+      body: "New Ride OTP has been generated. Please share the OTP from ride details to begin the ride.",
+    });
+  }
+});
+
 export const startRide = action({
   args: {
     driverId: v.id("driver"),
     rideId: v.id("ride"),
-    otp: v.string(),
+    otp: v.number(),
   },
   handler: async (ctx, args) => {
     const riderExpoPushToken = await ctx.runMutation(

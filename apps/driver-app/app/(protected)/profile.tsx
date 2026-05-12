@@ -176,12 +176,12 @@ export default function Profile() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-zinc-950">
       <Stack.Screen options={{ headerShown: false}} />
-      <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
+      <StatusBar style='dark' />
 
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className={cn("overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30", {"bg-slate-600": isDark} )}>
+        className={cn("overflow-hidden bg-slate-800 pt-12", {"bg-slate-600": isDark} )}>
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, zIndex: 10 }]}
@@ -417,11 +417,6 @@ export default function Profile() {
                   {/* Model + Reg Number Row */}
                   <TouchableOpacity
                     onPress={() => {
-                      if (
-                        vehicle.rcImageKey === undefined ||
-                        driver.driverDetails?.organization?.isVehicleRCVerificationRequired === false
-                      )
-                        return;
                       vehicleBottomSheetRef.current?.snapToIndex(0);
                     }}
                     className="flex-row items-center justify-between">
@@ -442,10 +437,7 @@ export default function Profile() {
                         </Text>
                       </View>
                     </View>
-                    {!(
-                      vehicle.rcImageKey === undefined ||
-                      driver.driverDetails?.organization?.isVehicleRCVerificationRequired === false
-                    ) && <Feather name="chevron-right" size={16} color="#94a3b8" />}
+                    <Feather name="chevron-right" size={16} color="#94a3b8" />
                   </TouchableOpacity>
 
                   <View className="mx-1 h-px bg-slate-100 dark:bg-zinc-800" />
@@ -576,7 +568,7 @@ export default function Profile() {
               <TouchableOpacity
                 onPress={() => {
                   router.push({
-                    pathname: '/(protected)/editLicense',
+                    pathname: '/editLicense',
                     params: {
                       licenseNumber: driver.driverDetails?.licenseNumber,
                       driverId: driver.driverDetails?._id,
@@ -681,7 +673,7 @@ export default function Profile() {
                   style={{ backgroundColor: iconBackgroundColor }}
                   onPress={() => {
                     router.push({
-                      pathname: '/(protected)/editVehicle',
+                      pathname: '/editVehicle',
                       params: {
                         vehicleId: vehicle._id,
                         registrationNumber: vehicle.registrationNumber,
@@ -695,10 +687,13 @@ export default function Profile() {
                         isRcRequired: driver.driverDetails?.organization?.isVehicleRCVerificationRequired
                           ? 'true'
                           : 'false',
+                        isInsuranceImageRequired: driver.driverDetails?.organization?.isVehicleInsuranceImageRequired 
+                          ? "true" 
+                          : "false",
                       },
                     });
                   }}>
-                  <MaterialIcons name="edit" size={18} color={iconColor} />
+                  <MaterialIcons name="edit" size={18} color={"black"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -720,7 +715,8 @@ export default function Profile() {
 
             {/* Images */}
             <View className="mt-3 gap-2 px-6">
-              <RcImageCard label="RC Image" uri={vehicle?.rcImageKey} isDark={isDark} />
+              <ImageCard label="RC Image" uri={vehicle?.rcImageKey} />
+              <ImageCard label="Insurance Image" uri={vehicle?.insuranceImageKey} />
             </View>
           </BottomSheetView>
         </BottomSheet>
@@ -779,14 +775,12 @@ const LicenseImageCard = ({
   );
 };
 
-const RcImageCard = ({
+const ImageCard = ({
   label,
   uri,
-  isDark,
 }: {
   label: string;
   uri?: string | null;
-  isDark: boolean;
 }) => {
   const [errored, setErrored] = useState(false);
   const showFallback = !uri || errored;
@@ -798,7 +792,7 @@ const RcImageCard = ({
         <Feather
           name={label === 'Front Side' ? 'maximize' : 'minimize'}
           size={11}
-          color={isDark ? '#71717a' : '#9ca3af'}
+          color='#9ca3af'
         />
         <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
           {label}
@@ -810,7 +804,7 @@ const RcImageCard = ({
         {showFallback ? (
           <View className="items-center gap-2">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <Feather name="image" size={20} color={isDark ? '#52525b' : '#9ca3af'} />
+              <Feather name="image" size={20} color='#9ca3af' />
             </View>
             <Text className="text-xs text-slate-400 dark:text-zinc-600">
               {!uri ? 'Image not available' : 'Failed to load'}

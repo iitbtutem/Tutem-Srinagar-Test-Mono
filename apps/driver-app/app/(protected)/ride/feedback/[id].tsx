@@ -100,10 +100,10 @@ export default function Feedback() {
     >
       {/* Header */}
       <View className="mb-10">
-        <Text className="text-primary/90 text-sm font-medium tracking-widest uppercase mb-1">
+        <Text className="text-title/90 text-sm font-medium tracking-widest uppercase mb-1">
           Rate your ride
         </Text>
-        <Text className="text-primary/50 text-3xl font-bold leading-tight">
+        <Text className="text-title/50 text-3xl font-bold leading-tight">
           How was your{'\n'}experience?
         </Text>
       </View>
@@ -119,7 +119,7 @@ export default function Feedback() {
           </AvatarFallback>
         </Avatar>
         <View className="flex-1">
-          <Text className="text-primary text-lg font-semibold">
+          <Text className="text-title text-lg font-semibold">
             {`${rider.userDetails.firstName} ${rider.userDetails?.lastName}`}
           </Text>
           <Text className="text-zinc-400 text-sm mt-0.5">
@@ -163,42 +163,11 @@ export default function Feedback() {
       {/* Divider */}
       <Separator />
 
-      {/* Quick tags */}
-      {/* <View className="mb-7">
-        <Text className="text-zinc-400 text-xs font-medium tracking-widest uppercase mb-4">
-          What stood out?
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {QUICK_TAGS.map((tag) => {
-            const active = selectedTags.includes(tag);
-            return (
-              <Pressable
-                key={tag}
-                onPress={() => toggleTag(tag)}
-                className={`px-4 py-2 rounded-full border ${
-                  active
-                    ? 'bg-violet-600 border-violet-500'
-                    : 'bg-zinc-900 border-zinc-700'
-                }`}
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    active ? 'text-white' : 'text-zinc-400'
-                  }`}
-                >
-                  {active ? '✓ ' : ''}{tag}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View> */}
-
       {/* Comment */}
       <View className="mb-6 mt-4">
-        <Text className="text-primary/50 text-xs font-medium tracking-widest uppercase mb-3">
+        <Text className="text-title/50 text-xs font-medium tracking-widest uppercase mb-3">
           Leave a comment{' '}
-          <Text className="text-primary/80 normal-case tracking-normal">
+          <Text className="text-title/80 normal-case tracking-normal">
             (optional)
           </Text>
         </Text>
@@ -208,7 +177,7 @@ export default function Feedback() {
           onChangeText={setComment}
           numberOfLines={4}
           maxLength={500}
-          className="border-zinc-700 placeholder:text-primary/50 rounded-xl text-sm leading-relaxed"
+          className="border-zinc-700 placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
           textAlignVertical="top"
         />
         <Text className="text-zinc-600 text-xs text-right mt-1.5">

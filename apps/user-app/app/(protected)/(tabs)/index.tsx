@@ -78,6 +78,8 @@ export default function HomeScreen() {
           />
         </View>
 
+        <ActiveRideCard />
+
         {/* -------- Insights -------- */}
         <View className="mt-8">
           <Text className="mx-6 mb-4 text-xl font-semibold text-foreground">Insights</Text>
@@ -109,8 +111,6 @@ export default function HomeScreen() {
             )}
           />
         </View>
-
-        <ActiveRideCard />
 
         <View className="h-10" />
       </ScrollView>
@@ -158,10 +158,10 @@ export function ActiveRideCard() {
                 className={`rounded-full px-3 py-1 ${statusColor[status] ?? 'bg-muted dark:bg-gray-300 text-muted-foreground'}`}>
                 <Text className="text-xs font-medium capitalize">{status}</Text>
               </View>
-              <View className="items-end">
+              {otp && <View className="items-end">
                 <Text className="text-xs text-muted-foreground">OTP</Text>
                 <Text className="text-lg font-bold tracking-widest text-foreground">{otp}</Text>
-              </View>
+              </View>}
             </View>
 
             {/* Route */}

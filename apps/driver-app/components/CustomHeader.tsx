@@ -27,11 +27,10 @@ import {
 } from './ui/dropdown-menu';
 import { useMutation } from 'convex/react';
 import { Switch } from './ui/switch';
-import { Checkbox } from './ui/checkbox';
 import { useState } from 'react';
-import { mutation } from '../../../packages/api/convex/_generated/server';
 import { useColorScheme } from 'nativewind';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useToast } from './CustomToast';
 
 type User = FunctionReturnType<typeof api.routes.driver.getUser>;
 type Props = {
@@ -42,64 +41,86 @@ type Props = {
 };
 
 export default function CustomHeader({ navigation, options, back, user }: Props) {
-  if (!user) return;
-  const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
-  const [genderMatching, setGenderMatching] = useState<boolean>(false);
-
-  const { iconColor } = useThemeColors();
+  const { showToast } = useToast();
   const {colorScheme}= useColorScheme();
   const isDark = colorScheme === "dark";
 
+  const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
+  const [genderMatching, setGenderMatching] = useState<boolean>(false);
+  
+  if (!user) return;
   return (
-    <SafeAreaView className="bg-primary-background flex-row items-center justify-between gap-3 bg-cyan-500 px-4">
-      {/* Availability Toggle */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        className={cn('flex-row items-center gap-2 rounded-2xl px-2.5 py-1.5', {
-          'bg-green-100': user.driverDetails?.isOnline,
-          'bg-red-100': !user.driverDetails?.isOnline,
-        })}
-        onPress={async () => {
-          if (!user.driverDetails) return;
-          await toggleAvailability({ id: user.driverDetails._id });
-        }}>
-        <View
-          className={cn('h-7 w-7 items-center justify-center rounded-full', {
-            'bg-green-500': user.driverDetails?.isOnline,
-            'bg-red-600': !user.driverDetails?.isOnline,
-          })}>
-          <Feather name="power" size={16} color="white" />
-        </View>
-
-        <View>
-          <Text className="text-[10px] text-gray-500">Status</Text>
-          <Text className={cn("text-xs font-semibold text-primary", {"text-black": isDark})}>
-            {user.driverDetails?.isOnline ? 'Online' : 'Offline'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-
-      <View className="flex-1 flex-row items-center justify-end gap-3">
-        <View className="flex-1 items-end">
-          <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>
-          <View className="flex-row items-center gap-1 px-1">
-            <View
-              className={cn('h-1.5 w-1.5 rounded-full bg-green-500', {
-                'bg-red-500': !user.driverDetails?.isAvailableForRide,
-              })}
+    <View>
+      <SafeAreaView edges={['top']} className="bg-primary" />
+      <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-1.5">
+        {/* Availability Toggle */}
+        {back ? (
+          <TouchableOpacity className="mr-2 flex-row gap-2 items-center" onPress={() => navigation.goBack()}>
+            <MaterialIcons
+              name="keyboard-backspace"
+              size={24}
+              color={'#000'}
             />
-            <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>
+            <Text className='font-semibold text-md'>Back</Text>
+          </TouchableOpacity>
+        ) : (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          className={cn('flex-row items-center gap-2 rounded-2xl px-2.5 py-1.5', {
+            'bg-green-100': user.driverDetails?.isOnline,
+            'bg-red-100': !user.driverDetails?.isOnline,
+          })}
+          onPress={async () => {
+            if (!user.driverDetails) return;
+            try {
+              await toggleAvailability({ id: user.driverDetails._id });
+            } catch (error: any) {
+              console.log("error", error);
+              showToast({
+                type: "error",
+                title: "Failed",
+                description: error.data ?? "Failed to switch"
+              })
+            }
+          }}>
+          <View
+            className={cn('h-7 w-7 items-center justify-center rounded-full', {
+              'bg-green-500': user.driverDetails?.isOnline,
+              'bg-red-600': !user.driverDetails?.isOnline,
+            })}>
+            <Feather name="power" size={16} color="white" />
           </View>
-        </View>
 
-        <ProfileDropdown
-          user={user}
-          genderMatching={genderMatching}
-          setGenderMatching={setGenderMatching}
-          isDark={isDark}
-        />
+          <View>
+            <Text className="text-[10px] text-gray-500">Status</Text>
+            <Text className={cn("text-xs font-semibold text-primary", {"text-black": isDark})}>
+              {user.driverDetails?.isOnline ? 'Online' : 'Offline'}
+            </Text>
+          </View>
+        </TouchableOpacity>)}
+
+        <View className="flex-1 flex-row items-center justify-end gap-3">
+          <View className="flex-1 items-end">
+            <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>
+            <View className="flex-row items-center gap-1 px-1">
+              <View
+                className={cn('h-1.5 w-1.5 rounded-full bg-green-500', {
+                  'bg-red-500': !user.driverDetails?.isAvailableForRide,
+                })}
+              />
+              <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>
+            </View>
+          </View>
+
+          <ProfileDropdown
+            user={user}
+            genderMatching={genderMatching}
+            setGenderMatching={setGenderMatching}
+            isDark={isDark}
+          />
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -154,7 +175,7 @@ function ProfileDropdown({
             { 'border-red-600': !user.driverDetails?.isAvailableForRide },
             {"bg-blue-600/60": isDark}
           )}>
-          <Avatar alt="Profile pic" className="h-11 w-11">
+          <Avatar alt="Profile pic" className="h-9 w-9">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
             <AvatarFallback className="bg-white/20">
               <Text className="text-2xl font-bold text-primary">

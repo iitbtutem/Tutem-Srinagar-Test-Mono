@@ -5,24 +5,6 @@ import { NavigationProp, ParamListBase } from '@react-navigation/native';
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-export const createBottomSheetTabBarHandlers = (navigation: NavigationProp<ParamListBase>) => ({
-  onAnimate: (fromIndex: number, toIndex: number): void => {
-    if (toIndex > -1) {
-      navigation.setOptions({
-        tabBarStyle: { display: 'none' },
-        contentStyle: { height: 60, opacity: 0 },
-      });
-    }
-  },
-  onChange: (index: number): void => {
-    if (index < 0) {
-      navigation.setOptions({
-        tabBarStyle: { display: 'flex' },
-        contentStyle: { height: undefined },
-      });
-    }
-  },
-});
 
 export function formatFare(amount?: number) {
   if (!amount) return '—';
@@ -41,4 +23,37 @@ export function distanceFormat(number: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   }).format(number) + " km";
-}
+};
+
+export function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * METERS_IN_KM; //return differnce between two locations in meters
+};
+
+export function isNearby (
+  location1: { latitude: number, longitude: number }, 
+  location2: { latitude: number, longitude: number }, 
+  differenceInMts: number
+){
+  const differnce = haversineDistance(
+    location1.latitude,
+    location1.longitude,
+    location2.latitude,
+    location2.longitude
+  );
+  return differnce < differenceInMts;
+};

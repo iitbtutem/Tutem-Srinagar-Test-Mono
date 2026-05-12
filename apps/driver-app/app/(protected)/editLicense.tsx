@@ -3,7 +3,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
@@ -20,6 +20,7 @@ import { useMutation } from 'convex/react';
 import { api, Id } from '@tutem/api';
 import { Button } from '@/components/ui/button';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { Stack } from 'expo-router';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -148,10 +149,11 @@ export default function EditLicense() {
       setIsSubmitting(false);
     }
   });
-  return (
-    <View className="flex-1 bg-background">
-      <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
 
+  const isIos = Platform.OS === "ios";
+  return (
+    <View className={cn("flex-1 bg-background", { "pt-6": isIos })}>
+      <Stack.Screen options={{ headerShown: isIos ? false : true }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         showsVerticalScrollIndicator={false}
@@ -159,7 +161,21 @@ export default function EditLicense() {
         className="flex-1">
         <Animated.View className="flex-1 gap-4 px-3 py-4">
           {/* Title */}
-          <Text className="mb-4 text-lg font-semibold">Edit License Details</Text>
+          <View className="mb-2 flex-row items-center px-3">
+            {isIos && <TouchableOpacity 
+              className="mr-2 flex-row items-center" 
+              onPress={() => {
+                router.back();
+            }}>
+              <MaterialIcons
+                name="keyboard-backspace"
+                size={20}
+                color={isDark ? 'white' : 'black'}
+              />
+            </TouchableOpacity>}
+
+            <Text className="text-lg font-semibold">Edit your License details</Text>
+          </View>
 
           {/* License number */}
           <View>
@@ -249,11 +265,11 @@ export default function EditLicense() {
               ))}
             </View>
           )}
-          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting}>
+          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting} className='mt-4'>
             {isSubmitting || formIsSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text>Submit</Text>
+              <Text className='text-white'>Submit</Text>
             )}
           </Button>
         </Animated.View>

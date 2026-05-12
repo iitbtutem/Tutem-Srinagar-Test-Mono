@@ -569,11 +569,24 @@ export default function WhereTo() {
     }
   };
 
-  const handleLocatePress = () => {
+  const handleLocatePress = async () => {
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        console.log('Permission denied');
+        return;
+      }
+
+      // Get current location
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
     mapRef.current?.animateToRegion(
       {
-        latitude: pickupLocation?.coords?.latitude || 28.5367,
-        longitude: pickupLocation?.coords?.longitude || 77.1178,
+        latitude: currentLocation.coords.latitude || 28.5367,
+        longitude: currentLocation.coords.longitude || 77.1178,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       },
@@ -779,7 +792,7 @@ export default function WhereTo() {
             {isPickupSearching || isDestinationSearching ? (
               <ActivityIndicator
                 size="large"
-                color={isDark ? 'white' : 'black'}
+                color={'black'}
                 className="-mt-8"
               />
             ) : (
@@ -803,8 +816,6 @@ export default function WhereTo() {
         onChange={handleSheetChanges}
         enableDynamicSizing={false}
         enablePanDownToClose={false}
-        // backgroundStyle={{ backgroundColor: isDark ? "#0f0f12" : "#FAFAFA", borderRadius: 32 }}
-        // handleIndicatorStyle={{ backgroundColor: isDark ? '#2a2a35' : '#D1D5DB', width: 48, height: 4 }}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
         animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
@@ -828,7 +839,7 @@ export default function WhereTo() {
                   {/* Header with back option to re-plan */}
                   <View className="flex-row items-center px-4 py-2">
                     <TouchableOpacity onPress={handleBackToPlanning} className="p-2">
-                      <Ionicons name="arrow-back" size={24} color={isDark ? 'white' : 'black'} />
+                      <Ionicons name="arrow-back" size={24} color={'black'} />
                     </TouchableOpacity>
                     <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
                       Choose a driver
@@ -890,7 +901,7 @@ export default function WhereTo() {
                   {/* Header */}
                   <View className="flex-row items-center px-4 py-2">
                     <TouchableOpacity onPress={() => router.back()} className="p-2">
-                      <Ionicons name="arrow-back" size={24} color={isDark ? 'white' : 'black'} />
+                      <Ionicons name="arrow-back" size={24} color={'black'} />
                     </TouchableOpacity>
                     <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
                       Plan your ride
@@ -945,17 +956,17 @@ export default function WhereTo() {
                                 height: 50,
                                 fontSize: 16,
                                 fontWeight: '600',
-                                color: isDark ? 'white' : 'black',
+                                color: 'black',
                                 paddingHorizontal: 12,
                               },
                               listView: {
                                 position: 'absolute',
                                 top: 50,
-                                backgroundColor: isDark ? '#1C1C1E' : 'white',
+                                backgroundColor: isDark ? 'white' : 'white',
                                 maxHeight: 250,
                               },
-                              row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
-                              description: { color: isDark ? '#E5E5E7' : 'black' },
+                              row: { padding: 12, backgroundColor: isDark ? 'white' : 'white' },
+                              description: { color: isDark ? 'black' : 'black' },
                             }}
                           />
                         )}
@@ -999,18 +1010,18 @@ export default function WhereTo() {
                                 height: 50,
                                 fontSize: 16,
                                 fontWeight: '600',
-                                color: isDark ? 'white' : 'black',
+                                color: 'black',
                                 paddingHorizontal: 12,
                               },
                               listView: {
                                 position: 'absolute',
                                 top: 50,
-                                backgroundColor: isDark ? '#1C1C1E' : 'white',
+                                backgroundColor: isDark ? 'white' : 'white',
                                 zIndex: 3001,
                                 maxHeight: 250,
                               },
-                              row: { padding: 12, backgroundColor: isDark ? '#1C1C1E' : 'white' },
-                              description: { color: isDark ? '#E5E5E7' : 'black' },
+                              row: { padding: 12, backgroundColor: isDark ? 'white' : 'white' },
+                              description: { color: isDark ? 'black' : 'black' },
                             }}
                           />
                         )}
@@ -1027,14 +1038,14 @@ export default function WhereTo() {
                         <MaterialIcons
                           name="location-pin"
                           size={20}
-                          color={isDark ? 'white' : 'black'}
+                          color={'black'}
                         />
                       </View>
                       <Text className="flex-1 text-base font-bold text-foreground">
                         Set location on map
                       </Text>
                       <Animated.View style={rotationStyle}>
-                        <Feather name="chevron-down" size={20} color={isDark ? 'white' : 'black'} />
+                        <Feather name="chevron-down" size={20} color={'black'} />
                       </Animated.View>
                     </TouchableOpacity>
 
@@ -1361,7 +1372,7 @@ export default function WhereTo() {
                             ? pickupLocation?.title || 'Set pickup'
                             : destination?.title || 'Where to?'}
                     </Text>
-                    <Feather name="search" size={20} color={isDark ? 'white' : 'black'} />
+                    <Feather name="search" size={20} color={"black"} />
                   </Button>
 
                   {/* Confirm button */}

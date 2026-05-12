@@ -182,7 +182,7 @@ export default function OtpScreen() {
         </View>
       )}
 
-      {/* OTP action buttons */}
+      {/* resend otp */}
       <View className="mt-3 gap-y-4">
         <Button
           className="self-start rounded-full"
@@ -197,13 +197,7 @@ export default function OtpScreen() {
       </View>
 
       {/* Navigation Buttons */}
-      <View
-        style={{
-          marginTop: 'auto',
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingTop: 24,
-        }}>
+      <View className='mt-auto flex-row justify-between pt-6'>
         <Button
           className="h-12 w-12 items-center justify-center rounded-full"
           onPress={goBack}

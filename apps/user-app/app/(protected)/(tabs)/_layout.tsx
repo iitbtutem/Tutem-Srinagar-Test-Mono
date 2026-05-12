@@ -29,8 +29,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: "#0A6FCC",
           borderTopColor: isDark ? '#262626' : '#E5E7EB',
-          height: 65,
+          height: 75,
           paddingTop: 6,
+          paddingBottom: 6
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -42,8 +43,8 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           animation: 'fade',
-          tabBarIcon: ({ focused }) => (
-            <Feather name="map" size={23} color={focused ? '#FFFFFF' : '#bfbfbf'} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="map" size={23} color={color} />
           ),
         }}
       />
@@ -52,8 +53,8 @@ export default function TabsLayout() {
         options={{
           title: 'History',
           animation: 'fade',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Octicons name="history" size={24} color={focused ? '#FFFFFF' : '#bfbfbf'} />
+          tabBarIcon: ({ color }) => (
+            <Octicons name="history" size={24} color={color} />
           ),
         }}
       />
@@ -62,8 +63,8 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           animation: 'fade',
-          tabBarIcon: ({ focused }) => (
-            <Feather name="user" size={23} color={focused ? 'blue' : 'gray'} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="user" size={23} color={color} />
           ),
         }}
       /> */}

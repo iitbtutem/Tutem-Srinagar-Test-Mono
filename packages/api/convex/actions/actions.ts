@@ -27,7 +27,6 @@ function haversineDistance(
 }
 
 const RADIUS_KM = 5;
-const METERS_IN_KM = 1000;
 
 // ✅ Export directly — no intermediate variable
 export const getNearbyDrivers = action({
@@ -68,6 +67,11 @@ export const getNearbyDrivers = action({
       const presenceSet: any[] = await response.json();
       console.log("Raw Presence Set from Ably:", presenceSet);
 
+      if(presenceSet.length === 0) {
+        console.log("Raw Presence is empty");
+        return [];
+      }
+
       const nearbyDriversInfo = presenceSet
         .map((m) => {
           // Ably data can sometimes arrive as a stringified JSON
@@ -93,17 +97,17 @@ export const getNearbyDrivers = action({
           latitude: Number(m!.parsedData.latitude),
           longitude: Number(m!.parsedData.longitude),
         }))
-        .filter((driver) => {
-          const dist = haversineDistance(
-            Number(args.pickup.latitude),
-            Number(args.pickup.longitude),
-            driver.latitude,
-            driver.longitude
-          );
-          const isNearby = dist <= RADIUS_KM;
-          console.log(`Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`);
-          return isNearby;
-        });
+      .filter((driver) => {
+        const dist = haversineDistance(
+          Number(args.pickup.latitude),
+          Number(args.pickup.longitude),
+          driver.latitude,
+          driver.longitude
+        );
+        const isNearby = dist <= RADIUS_KM;
+        console.log(`Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`);
+        return isNearby;
+      });
 
 
       console.log("Final nearbyDrivers list:", nearbyDriversInfo);
@@ -114,13 +118,13 @@ export const getNearbyDrivers = action({
       if (nearbyDriversInfo.length === 0) return [];
 
       const result = await ctx.runQuery(internal.routes.rides.getNearbyDriversQueryResult, {
-          driversInfo: nearbyDriversInfo,
-          genderMatch: args.genderMatch,
-          filters: args.filters,
-          distance: args.distance,
-          riderId: args.riderId,
-        }
-      );
+        driversInfo: nearbyDriversInfo,
+        genderMatch: args.genderMatch,
+        filters: args.filters,
+        distance: args.distance,
+        riderId: args.riderId,
+      }
+    );
 
       return result;
     } catch (error) {

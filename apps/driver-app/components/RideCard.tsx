@@ -5,6 +5,8 @@ import StarRating from "./StarRating";
 import { distanceFormat, formatFare } from "@/lib/utils";
 import { FunctionReturnType } from "convex/server";
 import { api } from "@tutem/api";
+import { Feather } from "@expo/vector-icons";
+import { format } from "date-fns";
 
 
 type RideRequest = NonNullable<
@@ -47,7 +49,7 @@ export function RideRequestCard({
         {/* Header */}
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
-            <Text className="text-primary text-base font-bold mb-1">
+            <Text className="text-title text-base font-bold mb-1">
               {`${ride.riderProfile?.firstName ?? ''} ${ride.riderProfile?.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
             <StarRating rating={ride.riderRating} />
@@ -112,10 +114,9 @@ export function RideHistoryCard({
         {/* Header */}
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
-            <Text className="text-primary text-base font-bold mb-1">
+            <Text className="text-title text-base font-bold mb-1">
               {`${ride.rider?.userDetails?.firstName ?? ''} ${ride.rider?.userDetails?.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            {ride.rider && <StarRating rating={ride.rider.rating} />}
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}
@@ -138,14 +139,14 @@ export function RideHistoryCard({
             </Text>
           </View>
         </View>
-
-        {/* Footer */}
-        <View className="flex-row gap-3">
-          <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance)}</Text>
-          {/* {ride.expectedDuration && (
-            <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
-          )} */}
-        </View>
+        {ride.startedAt && <View className="flex-row justify-end items-center border-t border-gray-100">
+          <View className="flex-row items-center">
+            <Feather name="calendar" size={14} color="#9CA3AF" />
+            <Text className="text-gray-500 text-xs ml-1.5">
+              {format(new Date(ride.startedAt), 'dd MMM yyyy')}
+            </Text>
+          </View>
+        </View>}
       </TouchableOpacity>
     </Animated.View>
   );

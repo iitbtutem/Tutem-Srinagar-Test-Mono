@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { sendNotification } from "../../pushNotifications";
+import { sendNotification } from "../helpers/pushNotifications";
 
 export const sendPushNotification = internalAction({
   args: {

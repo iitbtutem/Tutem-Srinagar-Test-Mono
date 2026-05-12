@@ -10,7 +10,6 @@ import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
 import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import * as Notifications from 'expo-notifications';
@@ -85,26 +84,21 @@ export default function RootLayout() {
           <NotificationProvider>
             <ToastProvider>
               <KeyboardProvider>
-                <StatusBar
-                  style={colorScheme === 'dark' ? 'light' : 'dark'}
-                  backgroundColor={colorScheme === 'dark' ? '#000' : '#fff'}
-                />
-                <View className={cn("flex-1", colorScheme === 'dark' ? 'dark' : '')}>
+                <StatusBar style="light" translucent backgroundColor="#0A6FCC" />
                   
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                    }}
-                  />
-                  {!isOnline && (
-                    <View className="bg-red-500 py-2 px-3">
-                      <Text className="text-white text-center text-sm font-medium">
-                        You are offline
-                      </Text>
-                    </View>
-                  )}
-                  <PortalHost />
-                </View>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                />
+                {!isOnline && (
+                  <View className="bg-red-500 py-2 px-3">
+                    <Text className="text-white text-center text-sm font-medium">
+                      You are offline
+                    </Text>
+                  </View>
+                )}
+                <PortalHost />
               </KeyboardProvider>
             </ToastProvider>
           </NotificationProvider>

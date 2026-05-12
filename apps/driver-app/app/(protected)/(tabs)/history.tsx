@@ -5,14 +5,10 @@ import { useQuery } from 'convex/react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '../../../components/RideCard';
 import { FunctionReturnType } from 'convex/server';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import StarRating from '@/components/StarRating';
-import { distanceFormat, formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
+import { router } from 'expo-router';
 
 type RideHistory = NonNullable<
   FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
@@ -20,23 +16,13 @@ type RideHistory = NonNullable<
 
 export default function History() {
   const { userId } = useAuth();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
-    useThemeColors();
-
-  const [selectedRide, setSelectedRide] = useState<RideHistory | null>(null);
-
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const { iconColor } = useThemeColors();
 
   const user = useQuery(api.routes.driver.getUser, userId ? { clerkId: userId } : 'skip');
   const rides = useQuery(
     api.routes.rides.getDriverHistory,
     user && user.driverDetails ? { driverId: user.driverDetails?._id } : 'skip'
   );
-
-  const handleSelectRide = (ride: RideHistory) => {
-    setSelectedRide(ride);
-    bottomSheetRef.current?.snapToIndex(1);
-  };
 
   if (rides === undefined)
     return <ActivityIndicator className="flex-1" color={iconColor} size="large" />;
@@ -46,7 +32,7 @@ export default function History() {
       <FlatList
         data={rides}
         keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <RideCard ride={item} onPress={handleSelectRide} />}
+        renderItem={({ item }) => <RideCard ride={item} onPress={() => router.push(`/ride/${item._id}`)} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -83,120 +69,6 @@ export default function History() {
           ) : null
         }
       />
-
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={['55%', '85%']}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.55}
-          />
-        )}
-        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
-        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}
-        onClose={() => {
-          setSelectedRide(null);
-          bottomSheetRef.current?.close();
-        }}>
-        <BottomSheetScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 }}>
-          {selectedRide && (
-            <Animated.View entering={FadeInUp.duration(220)}>
-              {/* Header */}
-              <View className="mb-5 flex-row items-start justify-between border-b border-slate-800 py-4">
-                <View className="flex-row items-center gap-x-1 pr-4">
-                  {/* Avatar */}
-                  <Avatar alt="Profile pic" className="h-12 w-12">
-                    <AvatarImage
-                      source={
-                        selectedRide.rider?.userDetails?.profilePictureKey?.trim()
-                          ? { uri: selectedRide.rider?.userDetails.profilePictureKey }
-                          : require('@/assets/images/avatar.jpg')
-                      }
-                    />
-                    <AvatarFallback className="bg-white/20">
-                      <Text className="text-sm font-bold text-primary">
-                        {selectedRide.rider?.userDetails?.firstName?.[0]}
-                        {selectedRide.rider?.userDetails?.lastName?.[0]}
-                      </Text>
-                    </AvatarFallback>
-                  </Avatar>
-                  <Text className="mb-1.5 text-[22px] font-extrabold tracking-tight text-primary">
-                    {`${selectedRide.rider?.userDetails?.firstName ?? ''} ${selectedRide.rider?.userDetails?.lastName ?? ''}`.trim() ||
-                      'Passenger'}
-                  </Text>
-                  {selectedRide.rider && <StarRating rating={selectedRide.rider.rating} />}
-                </View>
-                <View className="items-end">
-                  <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                    Est. Fare
-                  </Text>
-                  <Text className="text-3xl font-extrabold tracking-tight text-emerald-400">
-                    {formatFare(selectedRide.fare)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Route visual */}
-              <View className="mb-5 flex-row gap-3 px-1">
-                <View className="items-center pt-[18px]">
-                  <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-                  <View className="my-1 w-px flex-1 bg-slate-700" />
-                  <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-                </View>
-                <View className="flex-1">
-                  <View className="mb-3.5">
-                    <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
-                      Pickup
-                    </Text>
-                    <Text className="text-[15px] font-semibold leading-5 text-primary">
-                      {selectedRide.pickup?.address ?? 'Not set'}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
-                      Destination
-                    </Text>
-                    <Text className="text-[15px] font-semibold leading-5 text-primary">
-                      {selectedRide.destination?.address ?? 'Not set'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Stats */}
-              <View className="mb-5">
-                <Text className="mb-2.5 text-[10px] font-bold uppercase tracking-[1.5px] text-slate-600">
-                  Trip Details
-                </Text>
-                <View className="flex-row gap-2.5">
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {distanceFormat(selectedRide.distance) ?? '—'}
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Distance
-                    </Text>
-                  </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {selectedRide.expectedDuration ?? '—'}
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Duration
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-          )}
-        </BottomSheetScrollView>
-      </BottomSheet>
     </View>
   );
 }

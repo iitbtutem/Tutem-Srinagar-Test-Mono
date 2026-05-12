@@ -19,8 +19,8 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMutation, useQuery } from 'convex/react';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import ErrorScreen from '@/components/ErrorScreen';
@@ -32,6 +32,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const formSchema = z.object({
   firstName: z
@@ -186,19 +187,21 @@ export default function EditProfile() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background">
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, padding: 12, paddingTop: 0 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           {/* NEW wrapper */}
           <View className="my-4 mb-2 flex-row items-center px-3">
             <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => router.back()}>
               <MaterialIcons
                 name="keyboard-backspace"
-                size={20}
-                color={isDark ? 'white' : 'black'}
+                size={24}
+                color={'black'}
               />
             </TouchableOpacity>
 
@@ -509,7 +512,7 @@ export default function EditProfile() {
               </View>
             )}
 
-            <Button onPress={onSubmit}>
+            <Button onPress={onSubmit} className='my-4'>
               <Text>Submit</Text>
             </Button>
           </View>
@@ -547,6 +550,6 @@ export default function EditProfile() {
           </View>
         </BottomSheetView>
       </BottomSheet>
-    </View>
+    </SafeAreaView>
   );
 }

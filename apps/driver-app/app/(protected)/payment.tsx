@@ -122,7 +122,7 @@ export default function Payment() {
                 {distanceFormat(Number(rideDistance))}
               </Text>
             </View>
-            <View>
+            <View className='hidden'>
               <Text className="text-amber-800 text-xs font-medium">Duration</Text>
               <Text className="text-amber-950 font-semibold text-sm">
                 {duration}
@@ -223,7 +223,7 @@ export default function Payment() {
       </Text>
 
       <Button onPress={() => {
-        router.push(`/feedback/${rideId}`)
+        router.push(`/ride/feedback/${rideId}`)
       }}>
         <Text className=''>
           Give Feedback

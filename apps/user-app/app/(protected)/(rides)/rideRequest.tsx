@@ -769,7 +769,7 @@ export default function RideRequest() {
         </View>
 
         {/* OTP */}
-        {ride.status === 'Open' && (
+        {(ride.status === 'Driver Arrived' && ride.otp) && (
           <View className="mb-4 items-center rounded-2xl bg-indigo-50 dark:bg-zinc-800 px-6 py-7">
             <Text className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
               Share with your driver
@@ -841,10 +841,11 @@ export default function RideRequest() {
 
         {/* Cancel button */}
         {ride.status === 'Open' && (
-          <TouchableOpacity
+          <Button
             onPress={handleCancel}
+            variant={"destructive"}
             disabled={cancelling || ride.status !== 'Open'}
-            className={cn("my-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 active:opacity-70", { "pointer-events-none": sheetIndex !== -1 })}>
+            className={cn("my-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50", { "pointer-events-none": sheetIndex !== -1 })}>
             {cancelling ? (
               <ActivityIndicator size="small" color="#dc2626" />
             ) : (
@@ -853,7 +854,7 @@ export default function RideRequest() {
             <Text className="text-sm font-semibold text-red-600">
               {cancelling ? 'Cancelling…' : 'Cancel Ride Request'}
             </Text>
-          </TouchableOpacity>
+          </Button>
         )}
 
         {/* feedback button */}
