@@ -2,7 +2,7 @@ import { METERS_IN_KM } from '@/constants';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import { formatDistance, formatDistanceStrict } from 'date-fns';
+import { differenceInYears, formatDistance, formatDistanceStrict } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -63,20 +63,14 @@ export function isNearby (
 };
 
 export const getAge = (birthDate: Date): string => {
-    if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
-        throw new Error('Invalid date provided');
-    }
-    
-    const today: Date = new Date();
-    const yearsDifference: number = today.getFullYear() - birthDate.getFullYear();
-    const age = today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) 
-        ? yearsDifference - 1 
-        : yearsDifference;
+  if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
+    throw new Error("Invalid date provided");
+  }
 
-    return age + " yrs"
+  const age = differenceInYears(new Date(), birthDate);
+
+  return `${age} yrs`;
 };
-
-import { differenceInHours, differenceInMinutes, differenceInSeconds } from 'date-fns';
 
 export const getTimeBetweenFormatted = (
   startDate: Date,

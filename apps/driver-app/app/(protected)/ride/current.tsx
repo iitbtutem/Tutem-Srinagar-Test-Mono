@@ -213,7 +213,7 @@ export default function Ride() {
     try {
       await completeRide({ driverId, rideId });
       router.push({
-        pathname: '/payment',
+        pathname: '/ride/payment',
         params: {
           rideId: rideId.toString(),
           driverId: driverId.toString(),
@@ -244,7 +244,7 @@ export default function Ride() {
       router.replace("/")
     } else {
       router.replace({
-        pathname: "/payment",
+        pathname: "/ride/payment",
         params: {
           rideId: id,
           driverId: driverId,

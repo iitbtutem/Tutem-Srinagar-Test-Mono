@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
+import { differenceInYears } from 'date-fns';
+import { METERS_IN_KM } from '@/constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -56,4 +57,53 @@ export function isNearby (
     location2.longitude
   );
   return differnce < differenceInMts;
+};
+
+export const getAge = (birthDate: Date): string => {
+  if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
+    throw new Error("Invalid date provided");
+  }
+
+  const age = differenceInYears(new Date(), birthDate);
+
+  return `${age} yrs`;
+};
+
+export const getTimeBetweenFormatted = (
+  startDate: Date,
+  endDate: Date = new Date(),
+  options?: { unit?: 'auto' | 'hours' | 'minutes' | 'seconds'; decimals?: number }
+): string => {
+  const { unit = 'auto', decimals = 1 } = options || {};
+  
+  const earlier = startDate < endDate ? startDate : endDate;
+  const later = startDate < endDate ? endDate : startDate;
+  
+  const diffMs = later.getTime() - earlier.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  const diffMinutes = diffMs / (1000 * 60);
+  const diffSeconds = diffMs / 1000;
+  
+  // If unit is explicitly specified, use that
+  if (unit !== 'auto') {
+    switch (unit) {
+      case 'hours':
+        return `${diffHours.toFixed(decimals)} hrs`;
+      case 'minutes':
+        return `${Math.round(diffMinutes)} mins`;
+      case 'seconds':
+        return `${Math.round(diffSeconds)} secs`;
+    }
+  }
+  
+  // Auto mode: choose appropriate unit
+  if (diffHours >= 1) {
+    return `${diffHours.toFixed(decimals)} hrs`;
+  } else if (diffMinutes >= 1) {
+    // Round to nearest integer for minutes when less than 1 hour
+    return `${Math.round(diffMinutes)} mins`;
+  } else {
+    // Round to nearest integer for seconds when less than 1 minute
+    return `${Math.round(diffSeconds)} secs`;
+  }
 };
