@@ -6,11 +6,12 @@ import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-nati
 import { api, Id } from '@tutem/api';
 import { Separator } from '@/components/ui/seperator';
 import ErrorScreen from '@/components/ErrorScreen';
-import { distanceFormat, getTimeBetweenFormatted } from '@/lib/utils';
-import { formatFare, getAge } from '../../../lib/utils';
+import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FunctionReturnType } from 'convex/server';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Gender from '@/components/Gender';
+import Age from '@/components/Age';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
 
@@ -100,10 +101,8 @@ function RiderCard({
               <Phone size={11} color="#94a3b8" strokeWidth={2} />
               <Text className="text-xs text-slate-500">{details.phoneNumber}</Text>
             </View>
-            <Text className="text-slate-300">·</Text>
-            <Text className="text-xs text-slate-500">{details.gender}</Text>
-            <Text className="text-slate-300">·</Text>
-            <Text className="text-xs text-slate-500">{getAge(new Date(details.dob))}</Text>
+            <Gender gender={details.gender} />
+            <Age dob={details.dob} />
           </View>
         </View>
         {ratings.average !== null && (
@@ -124,12 +123,12 @@ function RiderCard({
 // route card
 
 function RouteCard({
-  pickup,
-  destination,
+  ride
 }: {
-  pickup: { address: string };
-  destination: { address: string };
+  ride: Ride
 }) {
+  const dropOffAddress = ride.dropOff?.address;
+  
   return (
     <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <SectionHeader title="Route" />
@@ -141,9 +140,25 @@ function RouteCard({
         </View>
         <View className="flex-1 pb-2">
           <Text className="mb-0.5 text-xs text-slate-400">Pickup</Text>
-          <Text className="text-sm font-medium leading-snug text-slate-800">{pickup.address}</Text>
+          <Text className="text-sm font-medium leading-snug text-slate-800">{ride.pickup.address}</Text>
         </View>
       </View>
+
+      {/* if ride was aborted halfway */}
+      {(ride.status === "Abort" && ride.dropOff) && (
+        <View className="flex-row items-start gap-3">
+          <View className="items-center" style={{ width: 22 }}>
+            <MaterialCommunityIcons name="map-marker-minus-outline" size={14} color="#e11d48" />
+          </View>
+          <View className="flex-1">
+            <Text className="mb-0.5 text-xs text-slate-400">Drop Off</Text>
+            <Text className="text-sm font-medium leading-snug text-slate-800">
+              {ride.destination.address}
+            </Text>
+          </View>
+        </View> 
+      )}
+
       {/* Destination */}
       <View className="flex-row items-start gap-3">
         <View className="items-center" style={{ width: 22 }}>
@@ -152,10 +167,25 @@ function RouteCard({
         <View className="flex-1">
           <Text className="mb-0.5 text-xs text-slate-400">Destination</Text>
           <Text className="text-sm font-medium leading-snug text-slate-800">
-            {destination.address}
+            {ride.destination.address}
           </Text>
         </View>
       </View>
+
+      {/* if ride was exceeded destination */}
+      {(ride.status === "Completed" && ride.dropOff) && (
+        <View className="flex-row items-start gap-3">
+          <View className="items-center" style={{ width: 22 }}>
+            <MaterialCommunityIcons name="map-marker-plus-outline" size={14} color="#e11d48" />
+          </View>
+          <View className="flex-1">
+            <Text className="mb-0.5 text-xs text-slate-400">Drop Off</Text>
+            <Text className="text-sm font-medium leading-snug text-slate-800">
+              {ride.destination.address}
+            </Text>
+          </View>
+        </View> 
+      )}
     </View>
   );
 }
@@ -366,7 +396,7 @@ export default function RideDetailScreen() {
 
         {/* route */}
         <Animated.View entering={FadeInDown.delay(60).duration(400).springify()}>
-          <RouteCard pickup={ride.pickup} destination={ride.destination} />
+          <RouteCard ride={ride} />
         </Animated.View>
 
         {/* rider */}

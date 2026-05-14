@@ -92,7 +92,7 @@ export default function startRide() {
   }
 
   if (ride === undefined) return <ActivityIndicator />;
-  if (ride === null) return;
+  if (ride === null || ride.status !== "Driver Arrived") return;
 
   return (
     <Animated.View entering={FadeInDown.delay(200)} className="flex-1 p-6 mb-4 items-center">

@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { Doc } from "../_generated/dataModel";
-import { TWENTY_FOUR_HOURS, OTP_SIZE, RADIUS_KM, METERS_IN_KM } from "../CONSTANTS";
+import { TWENTY_FOUR_HOURS, OTP_SIZE, RADIUS_KM, METERS_IN_KM, ARRIVED_RADIUS_IN_MTS } from "../CONSTANTS";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -194,6 +194,7 @@ export const bookRide = internalMutation({
       fare: args.fare,
       pickup: args.pickup,
       destination: args.destination,
+      hasReachedDestionation: false,
       requestedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -293,7 +294,14 @@ export const driverCancelRide = internalMutation({
   args: {
     rideId: v.id("ride"),
     driverId: v.id("driver"),
-    reason: v.string()
+    reason: v.string(),
+    distance: v.number(),
+    calculatedFare: v.number(),
+    dropOff: v.optional(v.object({
+      address: v.string(),
+      latitude: v.number(),
+      longitude: v.number(),
+    }))
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
@@ -321,6 +329,9 @@ export const driverCancelRide = internalMutation({
     } else{
       await ctx.db.patch(ride._id, {
         status: "Abort",
+        ...args.dropOff ? [{ dropOff: args.dropOff }] : [],
+        distance: args.distance,
+        fare: args.calculatedFare,
         updatedAt: Date.now(),
       });
     }
@@ -927,25 +938,23 @@ export const getRideRequests = query({
             )
           : undefined;
 
+        if(rider === null || riderUser === null) return;
+
         return {
           ...ride,
           distance: ride.distance / METERS_IN_KM,
-          rider: rider
-            ? {
-                _id: rider._id,
-                isVerified: rider.isVerified,
-                expoPushToken: rider.expoPushToken,
-              }
-            : null,
-          riderProfile: riderUser
-            ? {
-                ...riderUser,
-                profilePictureKey: profilePictureUri,
-              }
-            : null,
-          riderRating: {
-            average: averageRating ? Math.round(averageRating * 10) / 10 : null,
-            totalRatings: riderRatings.length,
+          rider:  {
+            _id: rider._id,
+            isVerified: rider.isVerified,
+            expoPushToken: rider.expoPushToken,
+            details: {
+              ...riderUser,
+              profilePictureKey: profilePictureUri,
+            },
+            ratings: {
+              average: averageRating ? Math.round(averageRating * 10) / 10 : null,
+              totalRatings: riderRatings.length,
+            },
           },
         };
       }),
@@ -1140,10 +1149,33 @@ export const startRide = internalMutation({
   },
 });
 
+export const hasReachedDestination = mutation({
+  args: {
+    rideId: v.id("ride"),
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const ride = await ctx.db.get(args.rideId);
+    if(ride === null || ride.status !== "Active" || ride.hasReachedDestionation === true) return;
+    if(ride.driverId !== args.driverId) throw new ConvexError("Invalid user");
+    
+    await ctx.db.patch(ride._id, {
+      hasReachedDestionation: true,
+    });
+  }
+});
+
 export const completeRide = internalMutation({
   args: {
     driverId: v.id("driver"),
     rideId: v.id("ride"),
+    distance: v.number(),
+    calculatedFare: v.number(),
+    dropOff: v.optional(v.object({
+      address: v.string(),
+      latitude: v.number(),
+      longitude: v.number(),
+    }))
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
@@ -1155,11 +1187,17 @@ export const completeRide = internalMutation({
     if (ride.status !== "Active")
       throw new ConvexError("Ride cannot be completed at this stage");
 
+    if(ride.hasReachedDestionation === false)
+      throw new ConvexError("You can only complete ride once you reach destination")
+
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid rider");
 
     await ctx.db.patch(ride._id, {
       status: "Completed",
+      ...args.dropOff ? [{ dropOff: args.dropOff }] : [],
+      distance: args.distance,
+      fare: args.calculatedFare,
       completedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1169,7 +1207,7 @@ export const completeRide = internalMutation({
       isAvailableForRide: true,
     });
 
-    return ride.expectedDuration;
+    return rider.expoPushToken;
   },
 });
 

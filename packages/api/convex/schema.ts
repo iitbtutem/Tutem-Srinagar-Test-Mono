@@ -89,6 +89,7 @@ export default defineSchema({
     riderId: v.id("rider"),
     driverId: v.id("driver"),
     fare: v.number(),
+    hasReachedDestionation: v.boolean(),
     status: v.union(v.literal("Open"), v.literal("Active"), v.literal("Driver Arrived"), v.literal("Abort"), v.literal("Completed"), v.literal("Canceled")),
     requestStatus: v.union(v.literal("Pending"), v.literal("Accepted"), v.literal("Rejected"), v.literal("No Response")),
     pickup: v.object({
@@ -101,6 +102,11 @@ export default defineSchema({
       latitude: v.number(),
       longitude: v.number(),
     }),
+    dropOff: v.optional(v.object({
+      address: v.string(),
+      latitude: v.number(),
+      longitude: v.number(),
+    })),
     distance: v.number(),
     expectedDuration: v.optional(v.string()),
     otp: v.optional(v.number()),

@@ -48,9 +48,9 @@ export function RideRequestCard({
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
             <Text className="text-primary text-base font-bold mb-1">
-              {`${ride.riderProfile?.firstName ?? ''} ${ride.riderProfile?.lastName ?? ''}`.trim() || 'Passenger'}
+              {`${ride.rider.details?.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            <StarRating rating={ride.riderRating} />
+            <StarRating rating={ride.rider.ratings} />
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}

@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
 import { api, Id } from '@tutem/api';
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Linking, Platform, Dimensions } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -12,8 +12,8 @@ import { useToast } from '@/components/CustomToast';
 import { router, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchRoute } from '@/lib/maps';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { distanceFormat, formatFare, getAge, isNearby } from '@/lib/utils';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { distanceFormat, formatFare, getTimeBetweenFormatted, isNearby } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
 import { ARRIVED_RADIUS_IN_MTS } from '@/constants';
@@ -31,6 +31,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { FunctionReturnType } from 'convex/server';
+import Gender from '@/components/Gender';
+import Age from '@/components/Age';
 
 // Types
 
@@ -46,6 +48,8 @@ type RouteState = {
   };
   remainingDuration?: string;
 };
+
+type CancelStep = 'reason' | 'confirm';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -81,7 +85,6 @@ function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
   );
 }
 
-const FARE_PER_KM = 12;
 const CANCEL_REASONS = [
   'Rider at wrong location',
   'Safety concern with rider',
@@ -89,9 +92,6 @@ const CANCEL_REASONS = [
   'Personal emergency',
   'Other reason',
 ];
-
-// Cancel step type
-type CancelStep = 'reason' | 'confirm';
 
 export default function Ride() {
   const { id, driverId } = useLocalSearchParams<{ id: Id<'ride'>; driverId: Id<'driver'> }>();
@@ -106,7 +106,7 @@ export default function Ride() {
     'driverArrived' | 'starting' | 'completing' | 'canceling' | null
   >(null);
 
-  // ── Cancel flow state ────────────────────────────────────────────────────
+  // Cancel flow state
   const [cancelStep, setCancelStep] = useState<CancelStep | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [canceledRideCharges, setCanceledRideCharges] = useState<{
@@ -126,10 +126,8 @@ export default function Ride() {
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);
   const cancelRide = useAction(api.actions.ride.driverCancelRide);
-  const calculateDriverCancelRideCharges = useAction(
-    api.actions.ride.calculateDriverCancelRideCharges
-  );
-
+  const calculateDriverCancelRideCharges = useAction(api.actions.ride.calculateDriverCancelRideCharges);
+  const hasReachedDestination = useMutation(api.routes.rides.hasReachedDestination)
   const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, ride ? { driverId } : 'skip');
 
   // Map / route logic
@@ -151,7 +149,7 @@ export default function Ride() {
   }, [driverLocation, ride]);
 
   async function configRoute(cords: Cords) {
-    if (!driverLocation) return;
+    if (!driverLocation || !ride) return;
     try {
       const route = await fetchRoute(driverLocation, cords);
       setRouteState({
@@ -159,8 +157,20 @@ export default function Ride() {
         remainingDistance: route?.distance,
         remainingDuration: route?.duration,
       });
-      if (route?.distance.value < ARRIVED_RADIUS_IN_MTS && cancelStep !== null) {
-        setCancelStep(null);
+      if (route?.distance.value < ARRIVED_RADIUS_IN_MTS) {
+        if(cancelStep !== null) setCancelStep(null);
+        if(ride.status === "Active" && ride.hasReachedDestionation === false){
+          try {
+            await hasReachedDestination({ driverId: driverId, rideId: ride._id })
+          } catch (error: any) {
+            console.log(`error: ${error}`);
+            showToast({
+              type: "error",
+              title: "Error",
+              description: "Failed to update destination reached status"
+            })
+          }
+        }
       }
     } catch (e) {
       console.log(e);
@@ -210,16 +220,18 @@ export default function Ride() {
   };
 
   const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
+    if(!ride) return;
     try {
-      await completeRide({ driverId, rideId });
+      if(driverLocation === null) throw new Error("Failed to access your location")
+      const result = await completeRide({ driverId, rideId, driverLocation });
       router.push({
         pathname: '/ride/payment',
         params: {
           rideId: rideId.toString(),
           driverId: driverId.toString(),
-          rideDistance: ride?.distance ?? 0,
-          fare: ride?.fare ?? 0,
-          duration: ride?.expectedDuration ?? '-',
+          rideDistance: result?.distance ?? ride.distance,
+          fare: result?.fare ?? ride.fare,
+          duration: (ride.startedAt && ride.completedAt) ? getTimeBetweenFormatted(new Date(ride.startedAt), new Date(ride.completedAt)) : "-",
         },
       });
       showToast({
@@ -259,10 +271,12 @@ export default function Ride() {
   const handleConfirmCancel = async () => {
     setLoading('canceling');
     try {
+      if(driverLocation === null) throw new Error("Failed to access your location")
       await cancelRide({
         rideId: id,
         driverId,
         reason: selectedReason,
+        driverLocation
       });
       setCancelStep(null);
       setSelectedReason("");
@@ -662,25 +676,8 @@ export default function Ride() {
                         {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
                           'Rider'}
                       </Text>
-                      <View className='rounded-xl px-3 bg-slate-300 border border-slate-400/60'>
-                        <Text className='text-xs'>{getAge(new Date(ride.rider.details.dob))}</Text>
-                      </View>
-                      <View className="flex-row items-center gap-1.5 self-start rounded-full bg-green-500/25 px-3 py-1">
-                        <MaterialIcons
-                          name={
-                            ride.rider.details.gender === 'Male'
-                              ? 'male'
-                              : ride.rider.details?.gender === 'Female'
-                                ? 'female'
-                                : 'transgender'
-                          }
-                          size={13}
-                          color="black"
-                        />
-                        <Text className="text-xs font-medium text-primary">
-                          {ride.rider.details.gender}
-                        </Text>
-                      </View>
+                      <Gender gender={ride.rider.details.gender} />
+                      <Age dob={ride.rider.details.dob} />
                       {ride.rider.ratings?.average != null && (
                         <View className="mt-0.5 flex-row items-center gap-1">
                           <Text className="text-xs text-amber-400">★</Text>
@@ -735,7 +732,7 @@ export default function Ride() {
                 )}
 
                 {/* Complete / Cancel */}
-                {isActive && isDriverNearby ? (
+                {ride.hasReachedDestionation ? (
                   <Button
                     className="my-2 w-full items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
                     disabled={loading === 'completing'}

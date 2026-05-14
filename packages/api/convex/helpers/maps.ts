@@ -1,7 +1,7 @@
-export async function getAddressFromCoords(
+export async function getAddressFromCoords(cords: {
   latitude: number,
   longitude: number,
-): Promise<string> {
+}): Promise<string> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
     throw new Error("Google maps apikey not configured in Convex environment");
@@ -15,7 +15,7 @@ export async function getAddressFromCoords(
   if (apiKey) {
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${cords.latitude},${cords.longitude}&key=${apiKey}`,
       );
       const data = await response.json();
       if (data.status === "OK" && data.results.length > 0) {

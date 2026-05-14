@@ -1,12 +1,12 @@
 "use node";
 
 import { action } from "../_generated/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
-import { sendNotification } from "../helpers/pushNotifications";
 import { Id } from "../_generated/dataModel";
-import { fetchRoute } from "../helpers/maps";
-import { METERS_IN_KM } from "../CONSTANTS";
+import { fetchRoute, getAddressFromCoords } from "../helpers/maps";
+import { ARRIVED_RADIUS_IN_MTS, METERS_IN_KM } from "../CONSTANTS";
+import { sendNotification } from "../helpers/notifications";
 
 export const acceptRideAction = action({
   args: {
@@ -23,12 +23,11 @@ export const acceptRideAction = action({
     );
 
     if (!riderExpoPushToken) return;
-
-    // Send push notification (requires Node.js)
+    
     await sendNotification({
       pushTokens: [riderExpoPushToken],
       title: "Ride Accepted 🚗",
-      body: "Your driver has accepted the ride. Share the OTP with the driver to start your trip.",
+      body: "Your driver is on the way. Please be ready at the pickup location.",
     });
   },
 });
@@ -91,16 +90,16 @@ export const changeDriver = action({
       }
     );
 
-    const driverExpoPushToken = await ctx.runQuery(
-      internal.routes.driver.getDriverExpoPushToken,
+    const driver = await ctx.runQuery(
+      internal.routes.driver.getDriverInternal,
       {
         id: args.driverId,
       }
     );
 
-    if (driverExpoPushToken && ride.requestStatus === "Accepted")
+    if (driver.expoPushToken && ride.requestStatus === "Accepted")
       await sendNotification({
-        pushTokens: [driverExpoPushToken],
+        pushTokens: [driver.expoPushToken],
         title: "Ride Canceled 🚖",
         body: "Your current ride has been canceled by rider. You can now a accept new ride request.",
       });
@@ -127,7 +126,7 @@ export const cancelRide = action({
     await sendNotification({
       pushTokens: [driverExpoPushToken],
       title: "Ride Cancelled ❌",
-      body: "Your ride request has been cancelled successfully.",
+      body: "The passenger has cancelled the ride. You are now available for new requests."
     });
   },
 });
@@ -145,8 +144,6 @@ export const calculateDriverCancelRideCharges = action({
 
     const { address, ...cords } = rideDetails.destination;
     const route = await fetchRoute(args.driverLocation, cords);
-
-    console.log("Route : ", route)
     
     const remainingDistance = Number(route?.distance.value) ?? 0
     const { organizationRate, ride } = await ctx.runQuery(internal.routes.rides.rideOrganizationRate, { id: rideDetails._id });
@@ -178,14 +175,56 @@ export const driverCancelRide = action({
     rideId: v.id("ride"),
     driverId: v.id("driver"),
     reason: v.string(),
+    driverLocation: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    })
   },
   handler: async (ctx, args) => {
+    const ride = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.rideId });
+
+    const driver = await ctx.runQuery(
+      internal.routes.driver.getDriverInternal,
+      {
+        id: ride.driverId,
+      }
+    );
+
+    const organizationRates = await ctx.runQuery(
+      internal.routes.organizations.getOrganizationRatesInternal,
+      {
+        organizationId: driver.organizationId
+      }
+    );
+
+    const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
+    if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
+
+    const { address, ...cords } = ride.destination;
+    const route = await fetchRoute(args.driverLocation, cords);
+    const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
+
+    const remainingDistanceInKms = remainingDistanceInMts/METERS_IN_KM;
+    
+    const dropOffAddress = remainingDistanceInMts > ARRIVED_RADIUS_IN_MTS ? await getAddressFromCoords(args.driverLocation) : null;
+
+    const chargableDistanceInKms = ride.distance/METERS_IN_KM - orgRate.baseDistance + remainingDistanceInKms ;
+    const fare = chargableDistanceInKms > 0 ? (orgRate.baseDistanceRate + chargableDistanceInKms * orgRate.ratePerKm): orgRate.baseDistanceRate;
+    
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.driverCancelRide,
       {
         rideId: args.rideId,
         driverId: args.driverId,
         reason: args.reason,
+        calculatedFare: fare,
+        distance: chargableDistanceInKms * METERS_IN_KM,
+        ...(remainingDistanceInMts > ARRIVED_RADIUS_IN_MTS && dropOffAddress) ? [{
+          dropOff: {
+          ...args.driverLocation,
+          address: dropOffAddress,
+        }
+        }] : [],
       }
     );
     if (!riderExpoPushToken) return;
@@ -246,7 +285,7 @@ export const driverArrived = action({
     await sendNotification({
       pushTokens: [riderExpoPushToken],
       title: "Driver Arrived 🚗",
-      body: "Your driver has reached the pickup location. Please share the OTP from ride details to begin the ride.",
+      body: "Your driver has reached the pickup point. Please provide the OTP from ride details to start the ride."
     });
   }
 });
@@ -306,23 +345,67 @@ export const completeRide = action({
   args: {
     driverId: v.id("driver"),
     rideId: v.id("ride"),
+    driverLocation: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    })
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ fare: number, distance: number }> => {
+
+    const ride = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.rideId });
+
+    const driver = await ctx.runQuery(
+      internal.routes.driver.getDriverInternal,
+      {
+        id: ride.driverId,
+      }
+    );
+
+    const organizationRates = await ctx.runQuery(
+      internal.routes.organizations.getOrganizationRatesInternal,
+      {
+        organizationId: driver.organizationId
+      }
+    );
+
+    const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
+    if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
+
+    const { address, ...cords } = ride.destination;
+    const route = await fetchRoute(args.driverLocation, cords);
+    
+    const extraDistanceInMts = route ? route.distance.value : 0;
+    const extraDistanceInKms = extraDistanceInMts > ARRIVED_RADIUS_IN_MTS ? extraDistanceInMts/METERS_IN_KM : 0;
+    
+    const dropOffAddress = extraDistanceInMts > ARRIVED_RADIUS_IN_MTS ? await getAddressFromCoords(args.driverLocation) : null;
+
+    const chargableDistanceInKms = ride.distance/METERS_IN_KM - orgRate.baseDistance + extraDistanceInKms ;
+    const fare = chargableDistanceInKms > 0 ? (orgRate.baseDistanceRate + chargableDistanceInKms * orgRate.ratePerKm): orgRate.baseDistanceRate;
+    
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.completeRide,
       {
         driverId: args.driverId,
         rideId: args.rideId,
+        calculatedFare: fare,
+        distance: chargableDistanceInKms * METERS_IN_KM,
+        ...(extraDistanceInMts > ARRIVED_RADIUS_IN_MTS && dropOffAddress) ? [{
+          dropOff: {
+          ...args.driverLocation,
+          address: dropOffAddress,
+        }
+        }] : [],
       },
     );
+    
+    if (riderExpoPushToken){
+      await sendNotification({
+        pushTokens: [riderExpoPushToken],
+        title: "Ride Completed 🎉",
+        body: "Your ride has been completed successfully. Thank you for riding with us. View your ride fare in ride details.",
+      });
+    }
 
-    if (!riderExpoPushToken) return;
-
-    // Send push notification (requires Node.js)
-    await sendNotification({
-      pushTokens: [riderExpoPushToken],
-      title: "Ride Completed 🎉",
-      body: "Your ride has been completed successfully. Thank you for riding with us!",
-    });
+    return { fare, distance: chargableDistanceInKms };
   },
 });

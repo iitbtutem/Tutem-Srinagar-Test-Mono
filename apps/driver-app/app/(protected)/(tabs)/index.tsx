@@ -1,14 +1,12 @@
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
-import { api, Id } from '@tutem/api';
+import { api } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Linking,
-  Platform,
   Dimensions,
   ScrollView,
 } from 'react-native';
@@ -27,15 +25,17 @@ import { useToast } from '@/components/CustomToast';
 import { Link, Redirect } from 'expo-router';
 import { mapStyle } from '../../../../user-app/constants/mapStyles';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
-import { cn, distanceFormat, formatFare, getAge, isNearby } from '@/lib/utils';
+import { distanceFormat, formatFare } from '@/lib/utils';
 import { RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import Gender from '@/components/Gender';
+import Age from '@/components/Age';
 
 // Types
 
@@ -611,45 +611,30 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
                   <Avatar alt="Profile pic" className="h-12 w-12">
                     <AvatarImage
                       source={
-                        selectedRide.riderProfile?.profilePictureKey?.trim()
-                          ? { uri: selectedRide.riderProfile.profilePictureKey }
+                        selectedRide.rider.details.profilePictureKey?.trim()
+                          ? { uri: selectedRide.rider.details.profilePictureKey }
                           : require('@/assets/images/avatar.jpg')
                       }
                     />
                     <AvatarFallback className="bg-white/20">
                       <Text className="text-sm font-bold text-primary">
-                        {selectedRide.riderProfile?.firstName?.[0]}
-                        {selectedRide.riderProfile?.lastName?.[0]}
+                        {selectedRide.rider.details.firstName?.[0]}
+                        {selectedRide.rider.details.lastName?.[0]}
                       </Text>
                     </AvatarFallback>
                   </Avatar>
                   <View>
                     <View className="flex-row gap-2">
                       <Text className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight">
-                        {`${selectedRide.riderProfile?.firstName ?? ''} ${selectedRide.riderProfile?.lastName ?? ''}`.trim() ||
+                        {`${selectedRide.rider.details?.firstName ?? ''} ${selectedRide.rider.details?.lastName ?? ''}`.trim() ||
                           'Passenger'}
                       </Text>
-                      <StarRating rating={selectedRide.riderRating} />
+                      <StarRating rating={selectedRide.rider.ratings} />
                     </View>
-                    <View className='flex-row gap-2'>
-                      <View className='rounded-xl px-3 bg-slate-300 border border-slate-400/60'>
-                        <Text className='text-xs'>{getAge(new Date(driver.dob))}</Text>
-                      </View>
-                      <View className="flex-row items-center gap-1.5 self-start rounded-full bg-slate-900/30 px-3">
-                        <MaterialIcons
-                          name={
-                            driver.gender === 'Male'
-                              ? 'male'
-                              : driver?.gender === 'Female'
-                                ? 'female'
-                                : 'transgender'
-                          }
-                          size={13}
-                          color="rgba(255,255,255,0.8)"
-                        />
-                        <Text>{driver.gender}</Text>
-                      </View>
-                    </View>
+                    {selectedRide.rider.details && <View className='flex-row gap-2'>
+                      <Gender gender={selectedRide.rider.details.gender} />
+                      <Age dob={selectedRide.rider.details.dob} />
+                    </View>}
                   </View>
                 </View>
                 <View className="items-end">
