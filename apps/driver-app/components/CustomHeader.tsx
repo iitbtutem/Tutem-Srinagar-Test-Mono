@@ -2,6 +2,7 @@ import {
   AntDesign,
   Feather,
   FontAwesome5,
+  Ionicons,
   MaterialCommunityIcons,
   MaterialIcons,
   Octicons,
@@ -31,6 +32,7 @@ import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useToast } from './CustomToast';
+import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 
 type User = FunctionReturnType<typeof api.routes.driver.getUser>;
 type Props = {
@@ -236,5 +238,33 @@ function ProfileDropdown({
         </Animated.View>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+export function BasicHeader({ navigation, options, back }: NativeStackHeaderProps) {
+  return (
+    <View>
+      <SafeAreaView edges={['top']} className="bg-primary" />
+      <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-2">
+        
+        {back ? (
+          <TouchableOpacity className="mr-2 flex-row gap-2 items-center" onPress={() => navigation.goBack()}>
+            <MaterialIcons
+              name="keyboard-backspace"
+              size={24}
+              color={'#000'}
+            />
+            <Text className='font-semibold text-md'>{options.headerBackTitle ?? "Back"}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View className="min-w-[72px]" />
+        )}
+
+        <Text className="flex-1 font-semibold text-center text-base text-slate-900">
+          {options.title ?? ''}
+        </Text>
+        <View className='w-1/4' />
+      </View>
+    </View>
   );
 }

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { NearbyDriverResult } from "../routes/rides";
+import { METERS_IN_KM } from "../CONSTANTS";
 
 type ReturnValue = NearbyDriverResult[];
 
@@ -25,8 +26,6 @@ function haversineDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-
-const RADIUS_KM = 5;
 
 // ✅ Export directly — no intermediate variable
 export const getNearbyDrivers = action({
@@ -53,6 +52,9 @@ export const getNearbyDrivers = action({
     }
 
     try {
+      const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+      const NearByRadius = settings.nearbyRadius / METERS_IN_KM;
+
       const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
       const response = await fetch(
         "https://rest.ably.io/channels/global:active-drivers/presence",
@@ -104,7 +106,7 @@ export const getNearbyDrivers = action({
           driver.latitude,
           driver.longitude
         );
-        const isNearby = dist <= RADIUS_KM;
+        const isNearby = dist <= NearByRadius;
         console.log(`Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`);
         return isNearby;
       });
@@ -117,7 +119,7 @@ export const getNearbyDrivers = action({
 
       if (nearbyDriversInfo.length === 0) return [];
 
-      const result = await ctx.runQuery(internal.routes.rides.getNearbyDriversQueryResult, {
+      const result = await ctx.runQuery(internal.routes.rides.getNearbyDriversQueryResultInternal, {
         driversInfo: nearbyDriversInfo,
         genderMatch: args.genderMatch,
         filters: args.filters,

@@ -138,4 +138,10 @@ export default defineSchema({
   .index("by_rider", ["riderId"])
   .index("by_driver", ["driverId"]),
 
+  rideSettings: defineTable({
+    nearbyRadius: v.number(),
+    arrivedDistance: v.number(),
+    driverResponseTime: v.number(),
+  })
+
 });

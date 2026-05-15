@@ -5,7 +5,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { fetchRoute, getAddressFromCoords } from "../helpers/maps";
-import { ARRIVED_RADIUS_IN_MTS, METERS_IN_KM } from "../CONSTANTS";
+import { METERS_IN_KM } from "../CONSTANTS";
 import { sendNotification } from "../helpers/notifications";
 
 export const acceptRideAction = action({
@@ -15,7 +15,7 @@ export const acceptRideAction = action({
   },
   handler: async (ctx, args) => {
     const riderExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.acceptRide,
+      internal.routes.rides.acceptRideInternal,
       {
         driverId: args.driverId,
         rideId: args.rideId,
@@ -52,7 +52,7 @@ export const bookRide = action({
   },
   handler: async (ctx, args): Promise<Id<"ride">> => {
     const ride = await ctx.runMutation(
-      internal.routes.rides.bookRide,
+      internal.routes.rides.bookRideInternal,
       {
         riderId: args.riderId,
         driverId: args.driverId,
@@ -82,11 +82,10 @@ export const changeDriver = action({
   },
   handler: async (ctx, args) => {
     const ride = await ctx.runMutation(
-      internal.routes.rides.changeDriver, 
+      internal.routes.rides.changeDriverInternal, 
       {
         rideId: args.rideId,
         riderId: args.riderId,
-        driverId: args.driverId,
       }
     );
 
@@ -113,7 +112,7 @@ export const cancelRide = action({
   },
   handler: async (ctx, args) => {
     const driverExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.cancelRide,
+      internal.routes.rides.cancelRideInternal,
       {
         riderId: args.riderId,
         rideId: args.rideId,
@@ -140,13 +139,13 @@ export const calculateDriverCancelRideCharges = action({
     })
   },
   handler: async (ctx, args): Promise<{ calculatedFare: number; baseDistance: number; basePrice: number; ratePerKm: number; chargableDistance: number;  remainingDistance: number }> => {
-    const rideDetails = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.id });
+    const rideDetails = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.id });
 
     const { address, ...cords } = rideDetails.destination;
     const route = await fetchRoute(args.driverLocation, cords);
     
     const remainingDistance = Number(route?.distance.value) ?? 0
-    const { organizationRate, ride } = await ctx.runQuery(internal.routes.rides.rideOrganizationRate, { id: rideDetails._id });
+    const { organizationRate, ride } = await ctx.runQuery(internal.routes.rides.rideOrganizationRateInternal, { id: rideDetails._id });
     
     const baseDistance = organizationRate.baseDistance;
     const basePrice = organizationRate.baseDistanceRate;
@@ -158,7 +157,6 @@ export const calculateDriverCancelRideCharges = action({
     ? (basePrice + ((chargableDistance - baseDistance)/METERS_IN_KM) * ratePerKm)
     : ((chargableDistance/METERS_IN_KM) * ratePerKm);
     
-    console.log('calculatedFare ', calculatedFare )
     return  {
       calculatedFare: Math.max(0, calculatedFare),
       baseDistance,
@@ -181,7 +179,7 @@ export const driverCancelRide = action({
     })
   },
   handler: async (ctx, args) => {
-    const ride = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.rideId });
+    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.rideId });
 
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
@@ -197,6 +195,9 @@ export const driverCancelRide = action({
       }
     );
 
+    const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+    const arrivedRadiusInMts = settings.arrivedDistance / METERS_IN_KM;
+
     const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
     if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
 
@@ -206,25 +207,25 @@ export const driverCancelRide = action({
 
     const remainingDistanceInKms = remainingDistanceInMts/METERS_IN_KM;
     
-    const dropOffAddress = remainingDistanceInMts > ARRIVED_RADIUS_IN_MTS ? await getAddressFromCoords(args.driverLocation) : null;
+    const dropOffAddress = remainingDistanceInMts > arrivedRadiusInMts ? await getAddressFromCoords(args.driverLocation) : null;
 
     const chargableDistanceInKms = ride.distance/METERS_IN_KM - orgRate.baseDistance + remainingDistanceInKms ;
     const fare = chargableDistanceInKms > 0 ? (orgRate.baseDistanceRate + chargableDistanceInKms * orgRate.ratePerKm): orgRate.baseDistanceRate;
     
     const riderExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.driverCancelRide,
+      internal.routes.rides.driverCancelRideInternal,
       {
         rideId: args.rideId,
         driverId: args.driverId,
         reason: args.reason,
         calculatedFare: fare,
         distance: chargableDistanceInKms * METERS_IN_KM,
-        ...(remainingDistanceInMts > ARRIVED_RADIUS_IN_MTS && dropOffAddress) ? [{
+        ...(remainingDistanceInMts > arrivedRadiusInMts && dropOffAddress) ? {
           dropOff: {
           ...args.driverLocation,
           address: dropOffAddress,
         }
-        }] : [],
+        } : undefined,
       }
     );
     if (!riderExpoPushToken) return;
@@ -245,7 +246,7 @@ export const rejectRide = action({
   },
   handler: async (ctx, args) => {
     const riderExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.rejectRide,
+      internal.routes.rides.rejectRideInternal,
       {
         driverId: args.driverId,
         rideId: args.rideId,
@@ -273,7 +274,7 @@ export const driverArrived = action({
     const otp = crypto.randomInt(1000, 10000);
 
     console.log("otp : ", otp)
-    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.driverArrived, {
+    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.driverArrivedInternal, {
       driverId: args.driverId,
       rideId: args.rideId,
       otp
@@ -298,7 +299,7 @@ export const generateRideOtp = action({
     const crypto = require("crypto");
     const otp = crypto.randomInt(1000, 10000);
     
-    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.generateRideOtp, {
+    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.generateRideOtpInternal, {
       id: args.rideId,
       otp
     });
@@ -322,7 +323,7 @@ export const startRide = action({
   },
   handler: async (ctx, args) => {
     const riderExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.startRide,
+      internal.routes.rides.startRideInternal,
       {
         driverId: args.driverId,
         rideId: args.rideId,
@@ -352,7 +353,7 @@ export const completeRide = action({
   },
   handler: async (ctx, args): Promise<{ fare: number, distance: number }> => {
 
-    const ride = await ctx.runQuery(internal.routes.rides.getDetails, { id: args.rideId });
+    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.rideId });
 
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
@@ -368,6 +369,9 @@ export const completeRide = action({
       }
     );
 
+    const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+    const arrivedRadiusInMts = settings.arrivedDistance / METERS_IN_KM;
+
     const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
     if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
 
@@ -375,21 +379,21 @@ export const completeRide = action({
     const route = await fetchRoute(args.driverLocation, cords);
     
     const extraDistanceInMts = route ? route.distance.value : 0;
-    const extraDistanceInKms = extraDistanceInMts > ARRIVED_RADIUS_IN_MTS ? extraDistanceInMts/METERS_IN_KM : 0;
+    const extraDistanceInKms = extraDistanceInMts > arrivedRadiusInMts ? extraDistanceInMts/METERS_IN_KM : 0;
     
-    const dropOffAddress = extraDistanceInMts > ARRIVED_RADIUS_IN_MTS ? await getAddressFromCoords(args.driverLocation) : null;
+    const dropOffAddress = extraDistanceInMts > arrivedRadiusInMts ? await getAddressFromCoords(args.driverLocation) : null;
 
     const chargableDistanceInKms = ride.distance/METERS_IN_KM - orgRate.baseDistance + extraDistanceInKms ;
     const fare = chargableDistanceInKms > 0 ? (orgRate.baseDistanceRate + chargableDistanceInKms * orgRate.ratePerKm): orgRate.baseDistanceRate;
     
     const riderExpoPushToken = await ctx.runMutation(
-      internal.routes.rides.completeRide,
+      internal.routes.rides.completeRideInternal,
       {
         driverId: args.driverId,
         rideId: args.rideId,
         calculatedFare: fare,
         distance: chargableDistanceInKms * METERS_IN_KM,
-        ...(extraDistanceInMts > ARRIVED_RADIUS_IN_MTS && dropOffAddress) ? [{
+        ...(extraDistanceInMts > arrivedRadiusInMts && dropOffAddress) ? [{
           dropOff: {
           ...args.driverLocation,
           address: dropOffAddress,

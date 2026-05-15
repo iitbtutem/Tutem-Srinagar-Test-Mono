@@ -59,6 +59,7 @@ export default function CreateVehicle() {
   const isDark = colorScheme === 'dark';
 
   const [imagePickupKey, setImagePickupKey] = useState<PickupImageKey>();
+  const [loading, setLoading] = useState(false); 
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: user?.id ?? '' });
   const addVehicle = useMutation(api.routes.vehicle.addVehicle);
@@ -99,6 +100,7 @@ export default function CreateVehicle() {
   if (!driver.driverDetails.organization) return <ErrorScreen message="Organization not found" />;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
+    setLoading(true);
     const driverDetails = driver.driverDetails;
     try {
       const rcImageKey = await uploadFile(data.rcImageKey, `vehicleRegisration/${driver._id}}`);
@@ -145,10 +147,13 @@ export default function CreateVehicle() {
         router.back();
       } else {
         router.push("/(protected)/(tabs)");
+        if(router.canDismiss()) router.dismissAll();
       }
     } catch (error) {
       console.error(error);
       showToast({ title: 'Something went wrong', type: 'error' });
+    } finally {
+      setLoading(true);
     }
   });
 
@@ -542,8 +547,12 @@ export default function CreateVehicle() {
               <Text className="text-md text-destructive">{errors.insuranceImageKey.message}</Text>
             )}
 
-            <Button onPress={onSubmit} className='my-4'>
-              <Text>Register Vehicle</Text>
+            <Button 
+              onPress={onSubmit}
+              disabled={ loading }
+              className='my-4'
+              >
+              <Text>{loading ? "Registering…" : "Register Vehicle"}</Text>
             </Button>
           </View>
         </Animated.View>

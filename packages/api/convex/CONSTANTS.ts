@@ -15,8 +15,4 @@ export const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
 export const OTP_SIZE = 4;
 
-export const RESPONSE_TIME = 2; // in minutes
-
 export const METERS_IN_KM = 1000;
-export const RADIUS_KM = 3000;
-export const ARRIVED_RADIUS_IN_MTS = 100;

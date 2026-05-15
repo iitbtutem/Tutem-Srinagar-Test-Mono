@@ -507,7 +507,7 @@ export default function Profile() {
                 </Text>
                 <Button
                   className="flex-row items-center gap-2 rounded-xl bg-primary"
-                  onPress={() => router.push('/(protected)/createVehicle')}>
+                  onPress={() => router.push('/createVehicle')}>
                   <MaterialIcons name="add" size={18} color={isDark ? '#000' : '#fff'} />
                   <Text className="text-sm font-bold text-primary-foreground">
                     Register Vehicle

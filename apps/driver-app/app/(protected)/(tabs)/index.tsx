@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
 import { distanceFormat, formatFare } from '@/lib/utils';
-import { RideRequestCard as RideCard } from '@/components/RideCard';
+import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -36,22 +36,15 @@ import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import Gender from '@/components/Gender';
 import Age from '@/components/Age';
+import { router } from 'expo-router';
 
 // Types
 
 type RideRequest = NonNullable<FunctionReturnType<typeof api.routes.rides.getRideRequests>[number]>;
 type Driver = NonNullable<FunctionReturnType<typeof api.routes.driver.getUser>>;
+type CurrentRide = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverCurrentRideByDriverId>>;
 
 type Cords = { latitude: number; longitude: number };
-
-type RouteState = {
-  polyline: Cords[];
-  remainingDistance: {
-    text: string;
-    value: number;
-  };
-  remainingDuration?: string;
-};
 
 // Constants
 
@@ -271,6 +264,11 @@ export default function Home() {
     })();
   }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
 
+  useEffect(() => {
+    if(currentRide && !router.canGoBack())
+      router.push({pathname: "/ride/current", params: { id: currentRide._id, driverId: currentRide.driverId }});
+  }, [currentRide]);
+
   if (driver === undefined || currentRide === undefined)
     return (
       <View className="flex-1 items-center justify-center">
@@ -280,12 +278,11 @@ export default function Home() {
     );
   if (driver === null) return <Redirect href={'/register'} />;
   if (driver.driverDetails === null) return <Redirect href={'/registerAsDriver'} />;
-  if(currentRide !== null) return <Redirect href={{pathname: "/ride/current", params: { id: currentRide._id, driverId: driver.driverDetails._id }}} />
 
-  return <RideRequests driver={driver} />;
+  return <RideRequests driver={driver} currentRide={currentRide} />;
 }
 
-export const RideRequests = memo(({ driver }: { driver: Driver }) => {
+export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, currentRide: CurrentRide | null }) => {
   const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
   const driverLocation = useDriverLiveLocation();
@@ -441,6 +438,12 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
   const selectedDest = selectedRide
     ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
     : null;
+
+  const handleClick = () => {
+    if(currentRide)
+      router.push({pathname: "/ride/current", params: { id: currentRide._id, driverId: currentRide.driverId }});
+  }
+
   return (
     <View className="flex-1 bg-background">
       <ScrollView
@@ -450,12 +453,12 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
         scrollEventThrottle={16}
         contentContainerStyle={{ flexGrow: 1 }}>
         {/* MAP BLOCK - fixed height when rides exist, taller when no rides */}
-        <View style={{ height: hasRides ? MAP_HEIGHT : SCREEN_HEIGHT * 0.6 }} className="relative">
+        <View style={{ height: currentRide ? SCREEN_HEIGHT * 0.5 : hasRides ? MAP_HEIGHT : SCREEN_HEIGHT * 0.6 }} className="relative">
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={{ flex: 1 }}
-            customMapStyle={isDark ? mapStyle.dark : []}
+            customMapStyle={[]}
             showsUserLocation={false}
             showsMyLocationButton={false}
             showsCompass={false}
@@ -505,6 +508,17 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {currentRide ? (
+          <View className='flex-1 mx-4 items-center justify-center bg-background'>
+            <CurrentRideCard
+              key={currentRide._id}
+              ride={currentRide}
+              onPress={handleClick}
+            />
+          </View>
+        ) : (
+          <>
 
         {/* Ride requests list - takes remaining space when rides exist */}
         {!vehicle ? (
@@ -573,6 +587,7 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
             )}
           </View>
         )}
+        </>)}
       </ScrollView>
 
       {/* Loading overlay */}
@@ -699,14 +714,6 @@ export const RideRequests = memo(({ driver }: { driver: Driver }) => {
                     </Text>
                     <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Duration
-                    </Text>
-                  </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      Now
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Scheduled
                     </Text>
                   </View>
                 </View>

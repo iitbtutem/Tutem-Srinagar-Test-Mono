@@ -8,76 +8,56 @@ type Cords = {
 };
 
 const DISTANCE_THRESHOLD = 1; // meters
-const INTERVAL = 1000 * 2; // 2 seconds
 
 export function useDriverLiveLocation() {
   const [currentLocation, setCurrentLocation] = useState<Cords | null>(null);
-
-  const lastSentLocation = useRef<Cords | null>(null);
+  const lastLocation = useRef<Cords | null>(null);
 
   useEffect(() => {
-    let interval: any;
-
-    const getAndUpdateLocation = async () => {
-      try {
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-
-        const newCoords: Cords = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        };
-
-        // Initial location
-        if (!lastSentLocation.current) {
-          lastSentLocation.current = newCoords;
-          setCurrentLocation(newCoords);
-
-          // socket/API update here
-          console.log("Initial location:", newCoords);
-
-          return;
-        }
-
-        const distance = haversineDistance(
-          lastSentLocation.current.latitude,
-          lastSentLocation.current.longitude,
-          newCoords.latitude,
-          newCoords.longitude
-        );
-
-        // Update only if moved >= 1 meter
-        if (distance >= DISTANCE_THRESHOLD) {
-          lastSentLocation.current = newCoords;
-          setCurrentLocation(newCoords);
-
-          // socket/API update here
-          console.log("Driver moved:", distance, "meters");
-          console.log("Updated location:", newCoords);
-        }
-      } catch (error) {
-        console.log("Location error:", error);
-      }
-    };
+    let watcher: Location.LocationSubscription;
 
     const startTracking = async () => {
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
-
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") return;
 
-      // Fetch initial location immediately
-      await getAndUpdateLocation();
+      watcher = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 1 },
+        (location) => {
+          const newLocation = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
 
-      // Then track every 10 seconds
-      interval = setInterval(getAndUpdateLocation, INTERVAL);
+          // First location
+          if (!lastLocation.current) {
+            lastLocation.current = newLocation;
+            setCurrentLocation(newLocation);
+            return;
+          }
+
+          // Check distance moved
+          const distance = haversineDistance(
+            lastLocation.current.latitude,
+            lastLocation.current.longitude,
+            newLocation.latitude,
+            newLocation.longitude
+          );
+
+          console.log("diffence : ", distance)
+
+          // Only update if moved at least 1 meter
+          if (distance >= DISTANCE_THRESHOLD) {
+            lastLocation.current = newLocation;
+            setCurrentLocation(newLocation);
+          }
+        }
+      );
     };
 
     startTracking();
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (watcher) watcher.remove();
     };
   }, []);
 

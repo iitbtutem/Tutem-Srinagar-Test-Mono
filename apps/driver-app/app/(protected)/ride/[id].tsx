@@ -12,6 +12,7 @@ import { FunctionReturnType } from 'convex/server';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Gender from '@/components/Gender';
 import Age from '@/components/Age';
+import { BasicHeader } from '@/components/CustomHeader';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
 
@@ -343,6 +344,7 @@ export default function RideDetailScreen() {
     <>
       <Stack.Screen
         options={{
+          header: (props) => <BasicHeader {...props} />,
           title: 'Ride Details',
           headerBackTitle: 'Back',
           headerStyle: { backgroundColor: '#f8fafc' },

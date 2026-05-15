@@ -9,14 +9,14 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useColorScheme } from 'nativewind';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
-import { router, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, router, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchRoute } from '@/lib/maps';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { distanceFormat, formatFare, getTimeBetweenFormatted, isNearby } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
-import { ARRIVED_RADIUS_IN_MTS } from '@/constants';
+import { METERS_IN_KM } from '@/constants';
 import { MapPinCheck } from 'lucide-react-native';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
@@ -33,6 +33,7 @@ import {
 import { FunctionReturnType } from 'convex/server';
 import Gender from '@/components/Gender';
 import Age from '@/components/Age';
+import { BasicHeader } from '@/components/CustomHeader';
 
 // Types
 
@@ -51,10 +52,18 @@ type RouteState = {
 
 type CancelStep = 'reason' | 'confirm';
 
+const CANCEL_REASONS = [
+  'Rider at wrong location',
+  'Safety concern with rider',
+  'Vehicle breakdown / issue',
+  'Personal emergency',
+  'Other reason',
+];
+
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Map takes ~62% of screen height in the scrollable layout
-const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.35);
+const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.60);
 
 function openNavigation(lat: number, lng: number) {
   const url = Platform.select({
@@ -85,13 +94,51 @@ function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
   );
 }
 
-const CANCEL_REASONS = [
-  'Rider at wrong location',
-  'Safety concern with rider',
-  'Vehicle breakdown / issue',
-  'Personal emergency',
-  'Other reason',
-];
+function RouteCard ({ pickup, destination }: { pickup: { address : string } & Cords, destination: { address: string } & Cords }) {
+  return (
+    <View className="bg-primary-background my-2 mb-4 rounded-2xl border border-slate-800 p-4">
+    <View className="mb-4 flex-row items-start gap-3">
+      <View className="mt-1 items-center">
+        <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
+        <View className="mt-1 h-8 w-px bg-slate-700" />
+      </View>
+      <View className="flex-1">
+        <TouchableOpacity
+          onPress={() => openNavigation(pickup.latitude, pickup.longitude)}
+          activeOpacity={0.75}
+          className="flex-1">
+          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
+            Pickup
+          </Text>
+          <Text className="text-title text-[14px] font-semibold leading-5">
+            {pickup?.address ?? 'Pickup not set'}
+          </Text>
+          <Text className="text-xs font-bold text-teal-400">Navigate →</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+    <View className="flex-row items-start gap-3">
+      <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
+      <View className="flex-1">
+        <TouchableOpacity
+          onPress={() =>
+            openNavigation(destination.latitude, destination.longitude)
+          }
+          activeOpacity={0.75}
+          className="flex-1">
+          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
+            Destination
+          </Text>
+          <Text className="text-title text-[14px] font-semibold leading-5">
+            {destination?.address ?? 'Destination not set'}
+          </Text>
+          <Text className="text-xs font-bold text-violet-400">Navigate →</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+  )
+}
 
 export default function Ride() {
   const { id, driverId } = useLocalSearchParams<{ id: Id<'ride'>; driverId: Id<'driver'> }>();
@@ -108,7 +155,7 @@ export default function Ride() {
 
   // Cancel flow state
   const [cancelStep, setCancelStep] = useState<CancelStep | null>(null);
-  const [selectedReason, setSelectedReason] = useState<string>("");
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [canceledRideCharges, setCanceledRideCharges] = useState<{
     calculatedFare: number;
     baseDistance: number;
@@ -123,28 +170,26 @@ export default function Ride() {
   const activeSheetRef = useRef<BottomSheet>(null);
 
   const ride = useQuery(api.routes.rides.getRide, id ? { id } : 'skip');
+  const settings = useQuery(api.routes.settings.rideSettings)
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);
   const cancelRide = useAction(api.actions.ride.driverCancelRide);
   const calculateDriverCancelRideCharges = useAction(api.actions.ride.calculateDriverCancelRideCharges);
   const hasReachedDestination = useMutation(api.routes.rides.hasReachedDestination)
   const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, ride ? { driverId } : 'skip');
+  
+  const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 
   // Map / route logic
   useEffect(() => {
-    if (!driverLocation) return;
-    mapRef.current?.animateToRegion(
-      { ...driverLocation, latitudeDelta: 0.05, longitudeDelta: 0.05 },
-      1000
-    );
-    if (!ride) return;
+    if (!ride || !driverLocation) return;
     const pickupCords = { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude };
     const destCords = {
       latitude: ride.destination.latitude,
       longitude: ride.destination.longitude,
     };
     const cords: Cords = ride.status === 'Open' ? pickupCords : destCords;
-    const isDriverNearby = isNearby(driverLocation, cords, ARRIVED_RADIUS_IN_MTS);
+    const isDriverNearby = isNearby(driverLocation, cords, arrivedRadiusInMts);
     if (isDriverNearby && routeState === null) configRoute(cords);
   }, [driverLocation, ride]);
 
@@ -157,7 +202,7 @@ export default function Ride() {
         remainingDistance: route?.distance,
         remainingDuration: route?.duration,
       });
-      if (route?.distance.value < ARRIVED_RADIUS_IN_MTS) {
+      if (route?.distance.value < arrivedRadiusInMts) {
         if(cancelStep !== null) setCancelStep(null);
         if(ride.status === "Active" && ride.hasReachedDestionation === false){
           try {
@@ -182,7 +227,7 @@ export default function Ride() {
     fitMap([
       { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude },
       { latitude: ride.destination.latitude, longitude: ride.destination.longitude },
-    ]);
+    ])
   }, [ride]);
 
   const fitMap = useCallback(
@@ -192,7 +237,7 @@ export default function Ride() {
       if (extra) coords.push(...extra);
       if (coords.length === 0) return;
       mapRef.current?.fitToCoordinates(coords, {
-        edgePadding: { top: 10, right: 60, bottom: 80, left: 20 },
+        edgePadding: { top: 10, right: 20, bottom: 100, left: 20 },
         animated: true,
       });
     },
@@ -250,9 +295,7 @@ export default function Ride() {
   };
 
   const pushToPayments = () => {
-    if (canceledRideCharges === null) return;
-    if(router.canDismiss()) router.dismissAll();
-    if(canceledRideCharges.calculatedFare <= 0 ){
+    if(canceledRideCharges === null || canceledRideCharges.calculatedFare <= 0){
       router.replace("/")
     } else {
       router.replace({
@@ -272,6 +315,7 @@ export default function Ride() {
     setLoading('canceling');
     try {
       if(driverLocation === null) throw new Error("Failed to access your location")
+        if(selectedReason === null) throw new Error("Please select a valid reason")
       await cancelRide({
         rideId: id,
         driverId,
@@ -279,7 +323,7 @@ export default function Ride() {
         driverLocation
       });
       setCancelStep(null);
-      setSelectedReason("");
+      setSelectedReason(null);
       showToast({
         type: 'success',
         title: 'Ride cancelled',
@@ -299,10 +343,10 @@ export default function Ride() {
   };
 
   const calculateCancelRide = async () => {
-    if (driverLocation === null) return;
+    if (driverLocation === null || !ride) return;
     setLoading("canceling")
     try {
-      const result = await calculateDriverCancelRideCharges({ id, driverLocation });
+      const result = ride.status !== "Active" ? null : await calculateDriverCancelRideCharges({ id, driverLocation });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error) {
@@ -317,15 +361,17 @@ export default function Ride() {
     calculateCancelRide();
   }, [ride?.status])
 
+  console.log("RRRRRRRRR ::::: ", ride)
   // Guards
-  if (ride === undefined || vehicle === undefined)
+  if (ride === undefined || vehicle === undefined || settings === undefined)
     return (
       <View className="absolute inset-0 items-center justify-center bg-background">
         <ActivityIndicator size="large" color="purple" />
         <Text className="mt-3 text-sm font-medium text-purple-800">Loading…</Text>
       </View>
     );
-  if (ride === null) return null;  
+
+  if (ride === null) return <Redirect href={"/"} />;  
 
   const handleLocateDriver = () => {
     const { address: pickupAddress, ...pickupCords } = ride.pickup;
@@ -335,9 +381,8 @@ export default function Ride() {
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';
-  const isActive = ride.status === 'Active';
   const isDriverNearby = routeState
-    ? routeState.remainingDistance.value < ARRIVED_RADIUS_IN_MTS
+    ? routeState.remainingDistance.value < arrivedRadiusInMts
     : false;
 
   const driverChanged = ride.driverId !== driverId;
@@ -347,12 +392,22 @@ export default function Ride() {
 
   return (
     <View className="flex-1">
-      <View className="flex-1 " style={{ height: MAP_HEIGHT }} pointerEvents={driverChanged ? 'none' : 'auto'}>
+      <Stack.Screen
+        options={{
+          header: (props) => <BasicHeader {...props} />,
+          title: 'Current Ride',
+          headerBackTitle: 'Back',
+          headerStyle: { backgroundColor: '#f8fafc' },
+          headerShadowVisible: false,
+          headerTitleStyle: { fontWeight: '700', color: '#0f172a' },
+        }}
+      />
+      <View style={{ height: MAP_HEIGHT }} pointerEvents={driverChanged ? 'none' : 'auto'}>
         {/* Full-screen map */}
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          style={{ flex: 1 }}
           showsUserLocation={false}
           showsMyLocationButton={false}
           showsCompass={false}
@@ -379,6 +434,7 @@ export default function Ride() {
             pinColor="red"
           />
         </MapView>
+      </View>
 
         {/* Map controls */}
         <View
@@ -470,7 +526,7 @@ export default function Ride() {
                       setSelectedReason("");
                     }}
                     className="flex-1 border-primary/90">
-                    <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
+                    <Text className="text-[15px] font-bold text-slate-200">← Back btn</Text>
                   </Button>
                   <Button
                     disabled={selectedReason === null || loading === "canceling"}
@@ -521,37 +577,26 @@ export default function Ride() {
                 </View>
 
                 {/* Trip stats card */}
-                {canceledRideCharges && <View className="mb-5 overflow-hidden rounded-2xl border border-slate-700/70">
+                {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-5 overflow-hidden rounded-2xl border border-slate-700/70">
                   {/* Covered */}
-                  <View className="flex-row items-center justify-between border-b border-slate-800/60 px-5 py-4">
+                  <View className="flex-row items-center justify-between px-5 pt-4">
                     <View className="flex-row items-center gap-2.5">
                       <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
                         <MaterialCommunityIcons name="map-marker-check" size={16} color="#10b981" />
                       </View>
-                      <Text className="text-sm font-semibold">Distance Covered</Text>
-                    </View>
-                    <Text className="text-base font-extrabold text-emerald-400">
-                      {distanceFormat(ride.distance - canceledRideCharges.remainingDistance)}
-                    </Text>
-                  </View>
-
-                  {/* Remaining */}
-                  <View className="flex-row items-center justify-between border-b border-slate-800/60 px-5 py-4">
-                    <View className="flex-row items-center gap-2.5">
-                      <View className="h-8 w-8 items-center justify-center rounded-full bg-amber-500/15">
-                        <MaterialCommunityIcons
-                          name="map-marker-distance"
-                          size={16}
-                          color="#f59e0b"
-                        />
+                      <View>
+                        <Text className="text-xs font-lighter text-primary/50">Distance Covered</Text>
+                        <Text className="text-xs font-lighter text-primary/50">Remaining Distance</Text>
                       </View>
-                      <Text className="text-sm font-semibold">
-                        Remaining Distance
+                    </View>
+                    <View>
+                      <Text className="text-xs font-lighter text-right text-emerald-400">
+                        {distanceFormat(ride.distance - canceledRideCharges.remainingDistance)}
+                      </Text>
+                      <Text className="text-xs font-lighter text-right text-amber-400">
+                        {distanceFormat(canceledRideCharges.remainingDistance)}
                       </Text>
                     </View>
-                    <Text className="text-base font-extrabold text-amber-400">
-                      {distanceFormat(canceledRideCharges.remainingDistance)}
-                    </Text>
                   </View>
 
                   {/* Cancellation fare */}
@@ -561,11 +606,11 @@ export default function Ride() {
                         <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
                           <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
                         </View>
-                        <View className='gap-2'>
-                          <Text className="text-sm font-semibold">
-                            Cancellation Fare
+                        <View>
+                          <Text className="text-sm font-semibold pb-0.5">
+                            Calculated Fare
                           </Text>
-                          <View className="flex-row justify-between gap-2">
+                          <View className="flex-row justify-between gap-2 hidden">
                             <View className="gap-1">
                               <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
                               <Text className="text-[10px] text-slate-600">
@@ -597,8 +642,8 @@ export default function Ride() {
                 {/* Selected reasons recap */}
                 <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
                   <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    { (ride.status === "Abort" || ride.status === "Driver Arrived" || ride.status === "Active")
-                    ? "Aborting Reason"
+                    { (ride.status === "Driver Arrived" || ride.status === "Active")
+                    ? "Abort Reason"
                     : "Cancellation Reason"}
                   </Text>
                   <View key={id} className="mb-1 flex-row items-center gap-2">
@@ -631,7 +676,7 @@ export default function Ride() {
                       ) : (
                         <View className="flex-row items-center gap-2">
                           <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
-                          <Text className="text-[15px] font-extrabold text-red-400">Abort Ride</Text>
+                          <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
                         </View>
                       )}
                     </Button>
@@ -653,7 +698,7 @@ export default function Ride() {
                 <RideStatusBanner ride={ride} />
 
                 {/* Rider + fare */}
-                <View className="mb-4 flex-row items-center justify-between border-b border-slate-800/60 pb-4">
+                <View className="mb-2 flex-row items-center justify-between border-b border-slate-800/60 pb-3">
                   <View className="flex-1 flex-row items-center gap-3">
                     <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
                       <Avatar alt="Profile pic" className="h-12 w-12">
@@ -676,8 +721,10 @@ export default function Ride() {
                         {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
                           'Rider'}
                       </Text>
-                      <Gender gender={ride.rider.details.gender} />
-                      <Age dob={ride.rider.details.dob} />
+                      <View className='flex-row gap-2'>
+                        <Gender gender={ride.rider.details.gender} />
+                        <Age dob={ride.rider.details.dob} />
+                      </View>
                       {ride.rider.ratings?.average != null && (
                         <View className="mt-0.5 flex-row items-center gap-1">
                           <Text className="text-xs text-amber-400">★</Text>
@@ -700,6 +747,8 @@ export default function Ride() {
                     </Text>
                   </View>
                 </View>
+
+                <RouteCard pickup={ ride.pickup } destination={ ride.destination } />
 
                 {/* Arrived button */}
                 {isRideOpen && isDriverNearby && (
@@ -764,53 +813,11 @@ export default function Ride() {
                   </Button>
                 )}
 
-                {/* Route address card */}
-                <View className="bg-primary-background my-4 mb-4 rounded-2xl border border-slate-800 p-4">
-                  <View className="mb-4 flex-row items-start gap-3">
-                    <View className="mt-1 items-center">
-                      <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-                      <View className="mt-1 h-6 w-px bg-slate-700" />
-                    </View>
-                    <View className="flex-1">
-                      <TouchableOpacity
-                        onPress={() => openNavigation(ride.pickup.latitude, ride.pickup.longitude)}
-                        activeOpacity={0.75}
-                        className="flex-1">
-                        <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
-                          Pickup
-                        </Text>
-                        <Text className="text-title text-[14px] font-semibold leading-5">
-                          {ride.pickup?.address ?? 'Pickup not set'}
-                        </Text>
-                        <Text className="text-xs font-bold text-teal-400">Navigate →</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View className="flex-row items-start gap-3">
-                    <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-                    <View className="flex-1">
-                      <TouchableOpacity
-                        onPress={() =>
-                          openNavigation(ride.destination.latitude, ride.destination.longitude)
-                        }
-                        activeOpacity={0.75}
-                        className="flex-1">
-                        <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
-                          Destination
-                        </Text>
-                        <Text className="text-title text-[14px] font-semibold leading-5">
-                          {ride.destination?.address ?? 'Destination not set'}
-                        </Text>
-                        <Text className="text-xs font-bold text-violet-400">Navigate →</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
+                
               </Animated.View>
             )}
           </BottomSheetScrollView>
         </BottomSheet>
-      </View>
       {driverChanged && <DriverChangedAlert />}
       {rideCanceled && <RideCanceled cancelReason={cancelReason} />}
     </View>

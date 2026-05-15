@@ -815,7 +815,7 @@ export default function RideRequest() {
                     ? "Pending" 
                     : ride.requestStatus === "Rejected" 
                       ? "Driver Un-available"
-                      : 'Driver Assigned'
+                      : 'Request Accepted'
                   : 'Ride in Progress'
                 }
               </Text>
