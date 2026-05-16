@@ -268,15 +268,11 @@ export default function Ride() {
     if(!ride) return;
     try {
       if(driverLocation === null) throw new Error("Failed to access your location")
-      const result = await completeRide({ driverId, rideId, driverLocation });
+      await completeRide({ driverId, rideId, driverLocation });
       router.push({
         pathname: '/ride/payment',
         params: {
           rideId: rideId.toString(),
-          driverId: driverId.toString(),
-          rideDistance: result?.distance ?? ride.distance,
-          fare: result?.fare ?? ride.fare,
-          duration: (ride.startedAt && ride.completedAt) ? getTimeBetweenFormatted(new Date(ride.startedAt), new Date(ride.completedAt)) : "-",
         },
       });
       showToast({
@@ -301,11 +297,7 @@ export default function Ride() {
       router.replace({
         pathname: "/ride/payment",
         params: {
-          rideId: id,
-          driverId: driverId,
-          rideDistance: canceledRideCharges.chargableDistance,
-          fare: canceledRideCharges.calculatedFare,
-          duration: 0
+          rideId: id.toString(),
         }
       })
     }
@@ -523,10 +515,10 @@ export default function Ride() {
                     disabled={ loading === "canceling"}
                     onPress={() => {
                       setCancelStep(null);
-                      setSelectedReason("");
+                      setSelectedReason(null);
                     }}
                     className="flex-1 border-primary/90">
-                    <Text className="text-[15px] font-bold text-slate-200">← Back btn</Text>
+                    <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
                   </Button>
                   <Button
                     disabled={selectedReason === null || loading === "canceling"}

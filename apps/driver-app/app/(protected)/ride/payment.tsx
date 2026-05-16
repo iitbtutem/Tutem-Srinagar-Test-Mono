@@ -22,31 +22,14 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useRouter } from 'expo-router';
 
 export default function Payment() {
-  const { 
-    rideId, 
-    // driverId, 
-    // rideDistance, 
-    // fare, 
-    // duration
-   } = useLocalSearchParams<{
-    rideId: Id<'ride'>;
-    // driverId: Id<'driver'>;
-    // rideDistance: string;
-    // fare: string;
-    // duration: string;
-  }>();
+  const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const [uploading, setUploading] = useState(false);
   const { uploadFile } = useFileUpload();
   const router = useRouter();
 
   const ride = useQuery(api.routes.rides.getRide, { id: rideId });
-  // const driver = useQuery(
-  //   api.routes.driver.getDriver,
-  //   driverId ? { id: driverId } : 'skip'
-  // );
 
   const updatePaymentQrCode = useMutation(api.routes.driver.updatePaymentQrCode);
-
 
   const handlePickImage = useCallback(async () => {
     if(!ride) return;
@@ -118,7 +101,7 @@ export default function Payment() {
               Total Fare
             </Text>
           </View>
-          <Text className="text-5xl font-black text-amber-950 tracking-tight">
+          <Text className="text-5xl font-black text-emerald-600 tracking-tight">
             {formatFare(Number(ride.fare))}
           </Text>
           <Separator className="my-3 bg-amber-400/60" />
@@ -145,7 +128,7 @@ export default function Payment() {
               <Text className="text-amber-800 text-xs font-medium">Status</Text>
               <View className="flex-row items-center gap-1">
                 <CheckCircle2 size={12} color="#451a03" strokeWidth={2.5} />
-                <Text className="text-amber-950 font-semibold text-sm">Completed</Text>
+                <Text className="text-amber-950 font-semibold text-sm">{ride.status}</Text>
               </View>
             </View>
           </View>
