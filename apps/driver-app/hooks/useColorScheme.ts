@@ -1,15 +1,11 @@
-import { useColorScheme } from "nativewind";
 
 export const useThemeColors = () => {
-  const { colorScheme } = useColorScheme();
-
-  const isDark = colorScheme === "dark";
 
   return {
-    BottomSheetBackgroundColor: isDark ? "#0f0f12" : "#FAFAFA",
-    BottomSheetIndicatorColor: isDark ? "#2a2a35" : "#D1D5DB",
-    iconColor: isDark ? "#826611" : "#826611",
-    iconBackgroundColor: isDark ? "#00000035" : "#ffffff35",
+    BottomSheetBackgroundColor: "#FAFAFA",
+    BottomSheetIndicatorColor: "#D1D5DB",
+    iconColor: "#FAFAFA",
+    iconBackgroundColor: "#ffffff35",
   };
 };
 

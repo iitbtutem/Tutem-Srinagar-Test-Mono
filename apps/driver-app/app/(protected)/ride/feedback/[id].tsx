@@ -16,6 +16,7 @@ import {
 import { Star } from 'lucide-react-native';
 import { Separator } from '@/components/ui/seperator';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -93,16 +94,16 @@ export default function Feedback() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="px-6 pt-14 pb-12"
+      contentContainerClassName="px-6 pt-6 pb-24"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
       {/* Header */}
       <View className="mb-10">
-        <Text className="text-primary/90 text-sm font-medium tracking-widest uppercase mb-1">
+        <Text className="text-title/90 text-sm font-medium tracking-widest uppercase mb-1">
           Rate your ride
         </Text>
-        <Text className="text-primary/50 text-3xl font-bold leading-tight">
+        <Text className="text-title/50 text-3xl font-bold leading-tight">
           How was your{'\n'}experience?
         </Text>
       </View>
@@ -112,13 +113,13 @@ export default function Feedback() {
         <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
           <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
           <AvatarFallback>
-            <Text className="text-white text-xl font-semibold">
+            <Text className="text-black text-xl font-semibold">
               {rider.userDetails.firstName?.[0] ?? 'R'}
             </Text>
           </AvatarFallback>
         </Avatar>
         <View className="flex-1">
-          <Text className="text-primary text-lg font-semibold">
+          <Text className="text-title text-lg font-semibold">
             {`${rider.userDetails.firstName} ${rider.userDetails?.lastName}`}
           </Text>
           <Text className="text-zinc-400 text-sm mt-0.5">
@@ -162,52 +163,21 @@ export default function Feedback() {
       {/* Divider */}
       <Separator />
 
-      {/* Quick tags */}
-      {/* <View className="mb-7">
-        <Text className="text-zinc-400 text-xs font-medium tracking-widest uppercase mb-4">
-          What stood out?
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {QUICK_TAGS.map((tag) => {
-            const active = selectedTags.includes(tag);
-            return (
-              <Pressable
-                key={tag}
-                onPress={() => toggleTag(tag)}
-                className={`px-4 py-2 rounded-full border ${
-                  active
-                    ? 'bg-violet-600 border-violet-500'
-                    : 'bg-zinc-900 border-zinc-700'
-                }`}
-              >
-                <Text
-                  className={`text-sm font-medium ${
-                    active ? 'text-white' : 'text-zinc-400'
-                  }`}
-                >
-                  {active ? '✓ ' : ''}{tag}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View> */}
-
       {/* Comment */}
-      <View className="mb-8 mt-4">
-        <Text className="text-primary/50 text-xs font-medium tracking-widest uppercase mb-3">
+      <View className="mb-6 mt-4">
+        <Text className="text-title/50 text-xs font-medium tracking-widest uppercase mb-3">
           Leave a comment{' '}
-          <Text className="text-primary/80 normal-case tracking-normal">
+          <Text className="text-title/80 normal-case tracking-normal">
             (optional)
           </Text>
         </Text>
         <Textarea
-          placeholder="Tell us more about your experience with this rider..."
+          placeholder="Tell us more about your experience with this rider…"
           value={comment}
           onChangeText={setComment}
           numberOfLines={4}
           maxLength={500}
-          className="border-zinc-700 placeholder:text-primary/50 rounded-xl text-sm leading-relaxed"
+          className="border-zinc-700 placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
           textAlignVertical="top"
         />
         <Text className="text-zinc-600 text-xs text-right mt-1.5">
@@ -219,11 +189,10 @@ export default function Feedback() {
       <Button
         onPress={handleSubmit}
         disabled={isSubmitting || score === 0}
-        className={`rounded-2xl ${
-          score === 0
-            ? 'bg-zinc-800'
-            : 'bg-violet-600 active:bg-violet-700'
-        }`}
+        className={cn("rounded-2xl", {
+          'bg-zinc-800': score === 0,
+          'bg-violet-600 active:bg-violet-700' : score > 0,
+        })}
       >
         {isSubmitting ? (
           <ActivityIndicator size="small" color="#ffffff" />

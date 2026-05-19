@@ -114,7 +114,7 @@ export default function Signin() {
       </View>
 
       {/* Continue button */}
-      <Button size="lg" onPress={handleSubmit(handleContinue)} disabled={loading}>
+      <Button className='my-2' size="lg" onPress={handleSubmit(handleContinue)} disabled={loading}>
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (

@@ -5,7 +5,8 @@ import { Text } from "./ui/text";
 
 // Helpers
 
-function formatElapsed(startTimestamp: number): string {
+function formatElapsed(startTimestamp: number | undefined): string {
+  if(startTimestamp === undefined) return "--";
   const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
   const h = Math.floor(elapsed / 3600);
   const m = Math.floor((elapsed % 3600) / 60);
@@ -15,7 +16,7 @@ function formatElapsed(startTimestamp: number): string {
 };
 
 
-export default function LiveTimer({ startTimestamp }: { startTimestamp: number }) {
+export default function LiveTimer({ startTimestamp }: { startTimestamp: number | undefined }) {
   const [display, setDisplay] = useState(() => formatElapsed(startTimestamp));
   useEffect(() => {
     const id = setInterval(() => setDisplay(formatElapsed(startTimestamp)), 1000);

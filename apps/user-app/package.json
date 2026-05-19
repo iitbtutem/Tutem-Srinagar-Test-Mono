@@ -33,6 +33,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "*",
+    "date-fns": "^4.1.0",
     "expo": "~54.0.29",
     "expo-constants": "~18.0.12",
     "expo-dev-client": "~6.0.20",

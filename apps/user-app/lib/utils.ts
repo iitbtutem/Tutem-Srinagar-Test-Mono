@@ -1,28 +1,11 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
+import { differenceInYears } from 'date-fns';
+import { METERS_IN_KM } from '@/constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-export const createBottomSheetTabBarHandlers = (navigation: NavigationProp<ParamListBase>) => ({
-  onAnimate: (fromIndex: number, toIndex: number): void => {
-    if (toIndex > -1) {
-      navigation.setOptions({
-        tabBarStyle: { display: 'none' },
-        contentStyle: { height: 60, opacity: 0 },
-      });
-    }
-  },
-  onChange: (index: number): void => {
-    if (index < 0) {
-      navigation.setOptions({
-        tabBarStyle: { display: 'flex' },
-        contentStyle: { height: undefined },
-      });
-    }
-  },
-});
 
 export function formatFare(amount?: number) {
   if (!amount) return '—';
@@ -36,9 +19,91 @@ export function numberFormat(number: number) {
   }).format(number);
 };
 
-export function distanceFormat(number: number) {
+export function distanceFormat(distance: number) {
   return new Intl.NumberFormat("en-In", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
-  }).format(number) + " km";
-}
+  }).format(distance / METERS_IN_KM) + " km";
+};
+
+export function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * METERS_IN_KM; //return differnce between two locations in meters
+};
+
+export function isNearby (
+  location1: { latitude: number, longitude: number }, 
+  location2: { latitude: number, longitude: number }, 
+  differenceInMts: number
+){
+  const differnce = haversineDistance(
+    location1.latitude,
+    location1.longitude,
+    location2.latitude,
+    location2.longitude
+  );
+  return differnce < differenceInMts;
+};
+
+export const getAge = (birthDate: Date): string => {
+  if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
+    throw new Error("Invalid date provided");
+  }
+
+  const age = differenceInYears(new Date(), birthDate);
+
+  return `${age} yrs`;
+};
+
+export const getTimeBetweenFormatted = (
+  startDate: Date,
+  endDate: Date = new Date(),
+  options?: { unit?: 'auto' | 'hours' | 'minutes' | 'seconds'; decimals?: number }
+): string => {
+  const { unit = 'auto', decimals = 1 } = options || {};
+  
+  const earlier = startDate < endDate ? startDate : endDate;
+  const later = startDate < endDate ? endDate : startDate;
+  
+  const diffMs = later.getTime() - earlier.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  const diffMinutes = diffMs / (1000 * 60);
+  const diffSeconds = diffMs / 1000;
+  
+  // If unit is explicitly specified, use that
+  if (unit !== 'auto') {
+    switch (unit) {
+      case 'hours':
+        return `${diffHours.toFixed(decimals)} hrs`;
+      case 'minutes':
+        return `${Math.round(diffMinutes)} mins`;
+      case 'seconds':
+        return `${Math.round(diffSeconds)} secs`;
+    }
+  }
+  
+  // Auto mode: choose appropriate unit
+  if (diffHours >= 1) {
+    return `${diffHours.toFixed(decimals)} hrs`;
+  } else if (diffMinutes >= 1) {
+    // Round to nearest integer for minutes when less than 1 hour
+    return `${Math.round(diffMinutes)} mins`;
+  } else {
+    // Round to nearest integer for seconds when less than 1 minute
+    return `${Math.round(diffSeconds)} secs`;
+  }
+};

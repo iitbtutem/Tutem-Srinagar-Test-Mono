@@ -318,14 +318,20 @@ export const getDriver = query({
   }
 });
 
-export const getDriverExpoPushToken = internalQuery({
+export const getDriverInternal = internalQuery({
   args: {
     id: v.id("driver"),
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.id);
     if(driver === null) throw new ConvexError("Invalid Driver");
-    return driver.expoPushToken;
+
+    const vehicle = await ctx.db
+      .query("vehicle")
+      .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
+      .first();
+
+    return { ...driver, vehicle };
   }
 });
 

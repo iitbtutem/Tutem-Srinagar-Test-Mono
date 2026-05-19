@@ -182,7 +182,7 @@ export default function OtpScreen() {
         </View>
       )}
 
-      {/* OTP action buttons */}
+      {/* resend otp */}
       <View className="mt-3 gap-y-4">
         <Button
           className="self-start rounded-full"
@@ -197,19 +197,14 @@ export default function OtpScreen() {
       </View>
 
       {/* Navigation Buttons */}
-      <View
-        style={{
-          marginTop: 'auto',
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingTop: 24,
-        }}>
+      <View className='mt-auto flex-row justify-between pt-6'>
         <Button
-          className="h-12 w-12 items-center justify-center rounded-full"
+          className="h-18 self-start rounded-3xl"
           onPress={goBack}
           variant={'secondary'}
           disabled={loading}>
-          <ArrowLeft size={24} color={theme === 'light' ? '#000' : '#fff'} />
+          <ArrowLeft size={20} color={'#000'} />
+          <Text className="text-base">Back</Text>
         </Button>
         <Button
           className="h-18 self-start rounded-3xl"
@@ -222,7 +217,7 @@ export default function OtpScreen() {
           }}
           disabled={loading || inputArr.some((v) => v === '')}>
           <Text className="text-base">Verify</Text>
-          <ArrowRight size={20} color={theme === 'light' ? '#000' : '#fff'} />
+          <ArrowRight size={20} color={'#000'} />
         </Button>
       </View>
     </ScrollView>

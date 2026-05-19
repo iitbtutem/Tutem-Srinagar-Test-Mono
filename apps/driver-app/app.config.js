@@ -9,7 +9,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/splash.png",
+      image: "./assets/images/splash.jpeg",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },

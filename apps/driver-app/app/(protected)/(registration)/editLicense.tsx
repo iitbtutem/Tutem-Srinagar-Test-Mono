@@ -3,7 +3,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
@@ -16,9 +16,11 @@ import { Input } from '@/components/ui/input';
 import { TextInput } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
-import { useAction, useMutation } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { api, Id } from '@tutem/api';
 import { Button } from '@/components/ui/button';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { Stack } from 'expo-router';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -37,14 +39,15 @@ export default function EditLicense() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { showToast } = useToast();
+  
+  const { uploadFile } = useFileUpload();
 
   const { licenseNumber, driverId, requiresLicenseImg } = useLocalSearchParams<{
     licenseNumber: string;
     driverId: string;
     requiresLicenseImg: string;
   }>();
-
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  
   const updateLicense = useMutation(api.routes.driver.updateLicense);
   const requiresLicenseImage = requiresLicenseImg === 'true' ? true : false;
 
@@ -97,34 +100,6 @@ export default function EditLicense() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${driverId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (!driverId) {
@@ -150,8 +125,8 @@ export default function EditLicense() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const frontImageKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const backImageKey = await processUpload(data.licenseImageBackKey, 'back');
+      const frontImageKey = await uploadFile(data.licenseImageFrontKey, `licenses/${driverId}-front`);
+      const backImageKey = await uploadFile(data.licenseImageBackKey, `licenses/${driverId}-back`);
 
       await updateLicense({
         driverId: driverId as Id<'driver'>,
@@ -174,10 +149,11 @@ export default function EditLicense() {
       setIsSubmitting(false);
     }
   });
-  return (
-    <View className="flex-1 bg-background">
-      <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
 
+  const isIos = Platform.OS === "ios";
+  return (
+    <View className={cn("flex-1 bg-background", { "pt-10": isIos })}>
+      <Stack.Screen options={{ headerShown: isIos ? false : true }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         showsVerticalScrollIndicator={false}
@@ -185,7 +161,21 @@ export default function EditLicense() {
         className="flex-1">
         <Animated.View className="flex-1 gap-4 px-3 py-4">
           {/* Title */}
-          <Text className="mb-4 text-lg font-semibold">Edit License Details</Text>
+          <View className="mb-2 flex-row items-center px-3">
+            {isIos && <TouchableOpacity 
+              className="mr-2 flex-row items-center" 
+              onPress={() => {
+                router.back();
+            }}>
+              <MaterialIcons
+                name="keyboard-backspace"
+                size={20}
+                color="#000"
+              />
+            </TouchableOpacity>}
+
+            <Text className="text-lg font-semibold">Edit your License details</Text>
+          </View>
 
           {/* License number */}
           <View>
@@ -275,11 +265,11 @@ export default function EditLicense() {
               ))}
             </View>
           )}
-          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting}>
+          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting} className='mt-4'>
             {isSubmitting || formIsSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text>Submit</Text>
+              <Text className='text-white'>Submit</Text>
             )}
           </Button>
         </Animated.View>
@@ -301,17 +291,17 @@ export default function EditLicense() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color="#1ca0d9" />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color="#ed9d2d" />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>

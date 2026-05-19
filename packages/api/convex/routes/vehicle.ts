@@ -26,7 +26,18 @@ export const getVehicleByDriverId = query({
       )
       : undefined;
 
-    return { ...vehicle, rcImageKey };
+    const insuranceImageKey = vehicle.insuranceImageKey
+      ? await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: process.env.MINIO_BUCKET,
+          Key: vehicle.insuranceImageKey,
+        }),
+        { expiresIn: 300 },
+      )
+      : undefined;
+
+    return { ...vehicle, rcImageKey, insuranceImageKey };
   },
 });
 
@@ -41,6 +52,7 @@ export const addVehicle = mutation({
     seatingCapacity: v.number(),
     ownerId: v.id("driver"),
     rcImageKey: v.optional(v.string()),
+    insuranceImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.seatingCapacity < 2 || args.seatingCapacity > 50)
@@ -57,6 +69,8 @@ export const addVehicle = mutation({
 
     if (organization.isVehicleRCVerificationRequired && !args.rcImageKey)
       throw new ConvexError("Vehicle RC required");
+    if (organization.isVehicleInsuranceImageRequired && !args.insuranceImageKey)
+      throw new ConvexError("Vehicle Insurance is required");
 
     const existingVehicle = await ctx.db
       .query("vehicle")
@@ -99,6 +113,7 @@ export const updateVehicle = mutation({
     color: v.string(),
     seatingCapacity: v.number(),
     rcImageKey: v.optional(v.string()),
+    insuranceImageKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...input } = args;
@@ -120,6 +135,8 @@ export const updateVehicle = mutation({
 
     if (organization.isVehicleRCVerificationRequired && !input.rcImageKey)
       throw new ConvexError("Vehicle RC is required");
+    if (organization.isVehicleInsuranceImageRequired && !input.insuranceImageKey)
+      throw new ConvexError("Vehicle insurance is required");
 
     await ctx.db.patch(vehicle._id, {
       ...input,
@@ -129,7 +146,10 @@ export const updateVehicle = mutation({
           : "Verified",
       rcImageKey: organization.isVehicleRCVerificationRequired
         ? input.rcImageKey
-        : "",
+        : undefined,
+      insuranceImageKey: organization.isVehicleRCVerificationRequired
+        ? input.insuranceImageKey
+        : undefined,
     });
   },
 });

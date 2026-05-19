@@ -2288,6 +2288,18 @@
   resolved "https://registry.npmjs.org/@radix-ui/primitive/-/primitive-1.1.3.tgz"
   integrity sha512-JTF99U/6XIjCBo0wqkU5sK10glYe27MRRsfwoiq5zzOEZLHU3A3KCMa5X/azekYRCJ0HlwI0crAXS/5dEHTzDg==
 
+"@radix-ui/react-alert-dialog@^1.1.15":
+  version "1.1.15"
+  resolved "https://registry.yarnpkg.com/@radix-ui/react-alert-dialog/-/react-alert-dialog-1.1.15.tgz#fa751d0fdd9aa2a90961c9901dba18e638dd4b41"
+  integrity sha512-oTVLkEw5GpdRe29BqJ0LSDFWI3qu0vR1M0mUkOQWDIUnY/QIkLpgDMWuKxP94c2NAC2LGcgVhG1ImF3jkZ5wXw==
+  dependencies:
+    "@radix-ui/primitive" "1.1.3"
+    "@radix-ui/react-compose-refs" "1.1.2"
+    "@radix-ui/react-context" "1.1.2"
+    "@radix-ui/react-dialog" "1.1.15"
+    "@radix-ui/react-primitive" "2.1.3"
+    "@radix-ui/react-slot" "1.2.3"
+
 "@radix-ui/react-arrow@1.1.7":
   version "1.1.7"
   resolved "https://registry.yarnpkg.com/@radix-ui/react-arrow/-/react-arrow-1.1.7.tgz#e14a2657c81d961598c5e72b73dd6098acc04f09"
@@ -2329,7 +2341,7 @@
   resolved "https://registry.npmjs.org/@radix-ui/react-context/-/react-context-1.1.2.tgz"
   integrity sha512-jCi/QKUM2r1Ju5a3J64TH2A5SpKAgh0LpknyqdQ4m6DCV0xJ2HG1xARRwNGPQfi1SLdLWZ1OJz6F4OMBBNiGJA==
 
-"@radix-ui/react-dialog@^1.1.1", "@radix-ui/react-dialog@^1.1.14", "@radix-ui/react-dialog@^1.1.15":
+"@radix-ui/react-dialog@1.1.15", "@radix-ui/react-dialog@^1.1.1", "@radix-ui/react-dialog@^1.1.14", "@radix-ui/react-dialog@^1.1.15":
   version "1.1.15"
   resolved "https://registry.npmjs.org/@radix-ui/react-dialog/-/react-dialog-1.1.15.tgz"
   integrity sha512-TCglVRtzlffRNxRMEyR36DGBLJpeusFcgMVD9PZEzAKnUs1lKCgX5u9BmC2Yg+LL9MgZDugFFs1Vl+Jp4t/PGw==
@@ -2856,6 +2868,16 @@
   integrity sha512-1tJHg4KKRJuQ1/EvJxatrMef3NZXEPzwUIUZ3n1yJ2t7Q97siwRtbynRpQG9/69ebbtiZ8W3ScOZF/OmhvM4Rg==
   dependencies:
     nanoid "^3.3.11"
+
+"@rn-primitives/alert-dialog@^1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@rn-primitives/alert-dialog/-/alert-dialog-1.4.0.tgz#ad843fc8002ac931f8ef2c2bb1e8bf07874e49ad"
+  integrity sha512-TLnFbdOR1gqofJliMgLbm8A3liHAX0gTsLQyqG/aSVgSXSHNSGlO5H7WMcmaWcBe6vJgbR1UYIV3ADMHbzu+mA==
+  dependencies:
+    "@radix-ui/react-alert-dialog" "^1.1.15"
+    "@rn-primitives/hooks" "1.4.0"
+    "@rn-primitives/slot" "1.4.0"
+    "@rn-primitives/types" "1.4.0"
 
 "@rn-primitives/avatar@^1.2.0":
   version "1.2.0"
@@ -5208,6 +5230,11 @@ data-view-byte-offset@^1.0.1:
     es-errors "^1.3.0"
     is-data-view "^1.0.1"
 
+date-fns@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-4.1.0.tgz#64b3d83fff5aa80438f5b1a633c2e83b8a1c2d14"
+  integrity sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==
+
 debug@2.6.9, debug@^2.6.9:
   version "2.6.9"
   resolved "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz"
@@ -5467,11 +5494,6 @@ env-editor@^0.4.1:
   version "0.4.2"
   resolved "https://registry.npmjs.org/env-editor/-/env-editor-0.4.2.tgz"
   integrity sha512-ObFo8v4rQJAE59M69QzwloxPZtd33TpYEIjtKD1rrFDcM1Gd7IkDxEBU+HriziN6HSHQnBJi8Dmy+JWkav5HKA==
-
-err-code@^2.0.2:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/err-code/-/err-code-2.0.3.tgz#23c2f3b756ffdfc608d30e27c9a941024807e7f9"
-  integrity sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==
 
 error-stack-parser@^2.0.6:
   version "2.1.4"
@@ -5994,15 +6016,6 @@ expo-secure-store@~15.0.8:
   version "15.0.8"
   resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-15.0.8.tgz#678065599bb76061b5a85b15b9426bf7a11089ae"
   integrity sha512-lHnzvRajBu4u+P99+0GEMijQMFCOYpWRO4dWsXSuMt77+THPIGjzNvVKrGSl6mMrLsfVaKL8BpwYZLGlgA+zAw==
-
-expo-server-sdk@^6.1.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/expo-server-sdk/-/expo-server-sdk-6.1.0.tgz#0bd6b2296a7f6d7e48fff9fc0e193e3e905ceca0"
-  integrity sha512-ISuax1AQ7cpM5RAqcu8gVcoLL0ZKskJ5OLoMWmdITBe9nYjTucjdGyBq817YkIvTcj1pAUwx+9toUT7l/V7thA==
-  dependencies:
-    promise-limit "^2.7.0"
-    promise-retry "^2.0.1"
-    undici "^7.2.0"
 
 expo-server@^1.0.5:
   version "1.0.5"
@@ -8472,19 +8485,6 @@ progress@^2.0.3:
   resolved "https://registry.npmjs.org/progress/-/progress-2.0.3.tgz"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
 
-promise-limit@^2.7.0:
-  version "2.7.0"
-  resolved "https://registry.yarnpkg.com/promise-limit/-/promise-limit-2.7.0.tgz#eb5737c33342a030eaeaecea9b3d3a93cb592b26"
-  integrity sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw==
-
-promise-retry@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/promise-retry/-/promise-retry-2.0.1.tgz#ff747a13620ab57ba688f5fc67855410c370da22"
-  integrity sha512-y+WKFlBR8BGXnsNlIHFGPZmyDf3DFMoLhaflAnyZgV6rG6xu+JwesTo2Q9R6XwYmtmwAFCkAk3e35jEdoeh/3g==
-  dependencies:
-    err-code "^2.0.2"
-    retry "^0.12.0"
-
 promise@^7.1.1:
   version "7.3.1"
   resolved "https://registry.npmjs.org/promise/-/promise-7.3.1.tgz"
@@ -8993,11 +8993,6 @@ restore-cursor@^2.0.0:
   dependencies:
     onetime "^2.0.0"
     signal-exit "^3.0.2"
-
-retry@^0.12.0:
-  version "0.12.0"
-  resolved "https://registry.yarnpkg.com/retry/-/retry-0.12.0.tgz#1b42a6266a21f07421d1b0b54b7dc167b01c013b"
-  integrity sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==
 
 reusify@^1.0.4:
   version "1.1.0"
@@ -9794,11 +9789,6 @@ undici@^6.18.2:
   version "6.23.0"
   resolved "https://registry.npmjs.org/undici/-/undici-6.23.0.tgz"
   integrity sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==
-
-undici@^7.2.0:
-  version "7.25.0"
-  resolved "https://registry.yarnpkg.com/undici/-/undici-7.25.0.tgz#7d72fc429a0421769ca2966fd07cac875c85b781"
-  integrity sha512-xXnp4kTyor2Zq+J1FfPI6Eq3ew5h6Vl0F/8d9XU5zZQf1tX9s2Su1/3PiMmUANFULpmksxkClamIZcaUqryHsQ==
 
 unicode-canonical-property-names-ecmascript@^2.0.0:
   version "2.0.1"

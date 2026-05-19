@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalQuery, mutation, query } from "../_generated/server";
 import { VEHICLE_CLASS } from "../CONSTANTS";
 
 // CREATE ORGANISATION
@@ -9,6 +9,7 @@ export const createOrganization = mutation({
     address: v.string(),
     isLicenseVerficationRequired: v.boolean(),
     isVehicleRCVerificationRequired: v.boolean(),
+    isVehicleInsuranceImageRequired: v.boolean(),
     canDriverEditLicesnse: v.boolean(),
     canDriverEditVehicle: v.boolean(),
   },
@@ -20,6 +21,7 @@ export const createOrganization = mutation({
       isVehicleRCVerificationRequired: args.isVehicleRCVerificationRequired,
       canDriverEditLicesnse: args.canDriverEditLicesnse,
       canDriverEditVehicle: args.canDriverEditVehicle,
+      isVehicleInsuranceImageRequired: args.isVehicleInsuranceImageRequired,
     });
     return id;
   },
@@ -210,7 +212,22 @@ export const deleteAllOrganizationRates = mutation({
       )
       .collect();
 
-    await Promise.all(rates.map((rate) => ctx.db.delete(rate._id)));
-    return { success: true, deletedCount: rates.length };
+    return rates;
   },
 });
+
+
+export const getOrganizationRatesInternal = internalQuery({
+  args: {
+    organizationId: v.id("organization"),
+  },
+  handler: async (ctx, args) => {
+    const rates = await ctx.db
+      .query("organizationsRate")
+      .withIndex("by_organization", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+    return rates;
+  }
+})

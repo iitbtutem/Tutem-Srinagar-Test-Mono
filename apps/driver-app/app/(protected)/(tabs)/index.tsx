@@ -1,62 +1,49 @@
 import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
-import { api, Id } from '@tutem/api';
+import { api } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Linking,
-  Platform,
   Dimensions,
   ScrollView,
-  ImageBackground,
-  Image,
 } from 'react-native';
-import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
+} from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { FunctionReturnType } from 'convex/server';
-import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
-import { router } from 'expo-router';
-import { fetchRoute } from '@/lib/maps';
-import { mapStyle } from '../../../../user-app/constants/mapStyles';
+import { Link, Redirect, useSegments } from 'expo-router';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
-import { distanceFormat, formatFare, numberFormat } from '@/lib/utils';
-import { RideRequestCard as RideCard } from '@/components/RideCard';
+import { distanceFormat, formatFare } from '@/lib/utils';
+import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
-
-import PulseDot from '@/components/PulseDot';
-import LiveTimer from '@/components/LiveTimer';
 import useThemeColors from '@/hooks/useColorScheme';
+import DriverMarker from '@/components/DriverMarker';
+import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import Gender from '@/components/Gender';
+import Age from '@/components/Age';
+import { router } from 'expo-router';
 
 // Types
 
 type RideRequest = NonNullable<FunctionReturnType<typeof api.routes.rides.getRideRequests>[number]>;
+type Driver = NonNullable<FunctionReturnType<typeof api.routes.driver.getUser>>;
+type CurrentRide = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverCurrentRideByDriverId>>;
 
-type Coords = { latitude: number; longitude: number };
-type RouteCoords = Coords[];
-
-type RouteResult = {
-  polyline: RouteCoords;
-  distance: { text: string; value: number };
-  duration: string;
-} | null;
-
-type RouteState = {
-  segmentA: RouteCoords;
-  segmentB: RouteCoords;
-  remainingDistance?: string;
-  remainingDuration?: string;
-};
+type Cords = { latitude: number; longitude: number };
 
 // Constants
 
@@ -68,29 +55,17 @@ const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.42);
 // Height of the ride requests list panel
 const LIST_PANEL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.45);
 
-function openNavigation(lat: number, lng: number) {
-  const url = Platform.select({
-    ios: `maps://?daddr=${lat},${lng}`,
-    android: `google.navigation:q=${lat},${lng}`,
-  });
-  if (url) {
-    Linking.openURL(url).catch(() =>
-      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`)
-    );
-  }
-}
-
 // Route Legend
 
 function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
   return (
     <View className="gap-1.5 rounded-xl border border-slate-800 bg-slate-950/90 px-3 py-2">
       <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-teal-400" />
+        <View className="h-1 w-4 rounded-full bg-green-600" />
         <Text className="text-[10px] font-semibold text-slate-400">{labelA}</Text>
       </View>
       <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-violet-500" />
+        <View className="h-1 w-4 rounded-full bg-red-600" />
         <Text className="text-[10px] font-semibold text-slate-400">{labelB}</Text>
       </View>
     </View>
@@ -111,104 +86,35 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 }
 
 // Main Screen
-
 export default function Home() {
   const { userId, getToken } = useAuth();
-  const { showToast } = useToast();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+    const segments = useSegments();
+    console.log("home screen segments : ", segments);
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
-  const vehicle = useQuery(
-    api.routes.vehicle.getVehicleByDriverId,
-    driver && driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
-  );
-
-  const rideRequests = useQuery(
-    api.routes.rides.getRideRequests,
-    driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
-  );
 
   const currentRide = useQuery(
-    api.routes.rides.getDriverCurrentRide,
+    api.routes.rides.getDriverCurrentRideByDriverId,
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
   );
 
-  const acceptRide = useAction(api.actions.ride.acceptRideAction);
-  const rejectRide = useAction(api.actions.ride.rejectRide);
-  const completeRide = useAction(api.actions.ride.completeRide);
-
-  const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
-    try {
-      await completeRide({ driverId, rideId });
-      router.push({
-        pathname: '/payment',
-        params: {
-          rideId: rideId.toString(),
-          driverId: driverId.toString(),
-          rideDistance: currentRide?.distance ?? 0,
-          fare: currentRide?.fare ?? 0,
-          duration: currentRide?.expectedDuration ?? '-',
-        }
-      });
-      showToast({
-        type: 'success',
-        title: 'Ride completed',
-        description: 'Ride completed successfully.',
-      });
-
-      // activeSheetRef.current?.close();
-    } catch (e: any) {
-      console.log('Error', e);
-      showToast({
-        type: 'error',
-        title: 'Failed',
-        description: e.data ?? 'Failed to complete ride.',
-      });
-    }
-  };
-
-  // Map & location
-  const mapRef = useRef<MapView>(null);
-  const [driverLocation, setDriverLocation] = useState<Coords | null>(null);
-  const [routeState, setRouteState] = useState<RouteState | null>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
-
-  // UI state
-  const [selectedRide, setSelectedRide] = useState<RideRequest | null>(null);
-  const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
-
-  // Bottom sheet refs
-  const requestSheetRef = useRef<BottomSheet>(null);
-  const activeSheetRef = useRef<BottomSheet>(null);
-
-  const { colorScheme: currentTheme } = useColorScheme();
-  const isDark = currentTheme === 'dark';
-
-  // Derived state
-  const isLoading = driver === undefined || (driver?.driverDetails && rideRequests === undefined);
-  const hasError = driver === null;
-  const rides = (rideRequests ?? []) as RideRequest[];
-  const hasRides = rides.length > 0;
-
-  // Whether the active ride hasn't been started yet
-  const isRideOpen = currentRide?.status === 'Open';
-  const isActive = currentRide?.status === 'Active';
   const driverDetails = driver?.driverDetails;
 
   // Start / stop background location foreground service whenever the
   // driver toggles online / offline via the Convex isAvailableForRide flag.
   useEffect(() => {
-    if (!driverDetails?._id) return;
+    stopLocationTracking();
+    if (!driverDetails) return;
 
-    if (driverDetails.isAvailableForRide || currentRide) {
+    if ((driverDetails.isAvailableForRide && driverDetails.isOnline) || currentRide) {
       // Fetch a fresh Clerk token and pass real credentials so the headless
       // background task publishes to the correct driver Ably channel.
       getToken().then((authToken) => {
-        startLocationTracking(
-          authToken ? { driverId: driverDetails._id, authToken } : undefined
-        );
+        console.log('started location tracking..');
+        startLocationTracking(authToken ? { driverId: driverDetails._id, authToken } : undefined);
       });
     } else {
+      console.log('stopped location tracking');
       stopLocationTracking();
     }
   }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
@@ -229,10 +135,12 @@ export default function Home() {
           latitude: initialLoc.coords.latitude,
           longitude: initialLoc.coords.longitude,
         };
-        setDriverLocation(coords);
 
         // Publish initial location if online
-        if (driverDetails?._id && (driverDetails.isAvailableForRide || currentRide)) {
+        if (
+          (driverDetails?._id && driverDetails.isAvailableForRide && driverDetails.isOnline) ||
+          (currentRide && driverDetails)
+        ) {
           const channel = getDriverChannel(driverDetails._id);
           if (channel) {
             channel
@@ -253,15 +161,19 @@ export default function Home() {
       const globalChannel = getGlobalChannel();
 
       const updatePresence = async (lat: number, lng: number) => {
-        if (driverDetails?._id && driverDetails.isAvailableForRide && !currentRide) {
+        if (
+          driverDetails &&
+          driverDetails.isAvailableForRide &&
+          driverDetails.isOnline &&
+          !currentRide
+        ) {
+          // console.log('updating presence to global Channel');
           try {
             await globalChannel?.presence.update({
               driverId: driverDetails._id,
               latitude: lat,
               longitude: lng,
-              vehicleClass: driver?.driverDetails?.organization?.isVehicleRCVerificationRequired
-                ? 'verified'
-                : 'standard', // Example metadata
+              vehicleClass: driver?.driverDetails?.isLicenseVerified ? 'verified' : 'Not Verified', // Example metadata
               lastUpdated: Date.now(),
             });
           } catch (e) {
@@ -270,18 +182,18 @@ export default function Home() {
         } else if (globalChannel) {
           // If not available or on a ride, leave the global discovery channel
           globalChannel.presence.leave().catch(() => {});
+          // console.log('leaving ...');
         }
       };
 
       sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, distanceInterval: 15 },
+        { accuracy: Location.Accuracy.High, distanceInterval: 0 },
         (loc) => {
           const coords = {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
           };
-
-          setDriverLocation(coords);
+          
           updatePresence(coords.latitude, coords.longitude);
 
           // Publish to Ably if online or on a ride
@@ -319,7 +231,7 @@ export default function Home() {
 
             const channel = getDriverChannel(driverDetails._id);
             if (channel) {
-              console.log('Publishing regular 10s location heartbeat...');
+              // console.log('Publishing regular 10s location heartbeat...');
               channel
                 .publish('location', {
                   ...coords,
@@ -333,7 +245,7 @@ export default function Home() {
             console.error('Failed to get location for heartbeat:', e);
           }
         }
-      }, 10000); // 10 seconds
+      }, 10 * 1000); // 10 seconds
 
       // Initial presence entry
       if (driverDetails?._id && driverDetails.isAvailableForRide && !currentRide) {
@@ -354,67 +266,63 @@ export default function Home() {
   }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
 
   useEffect(() => {
-    if (driverLocation) {
-      mapRef.current?.animateToRegion(
-        {
-          ...driverLocation,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        },
-        1000
-      );
-    }
-  }, [driverLocation]);
+    if(currentRide && !router.canGoBack())
+      router.push({pathname: "/ride/current", params: { id: currentRide._id, driverId: currentRide.driverId }});
+  }, [currentRide]);
 
-  useEffect(() => {
-    if (!currentRide || !driverLocation) return;
+  if (driver === undefined || currentRide === undefined)
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color="#7C3AED" />
+        <Text className="mt-3 text-sm font-medium text-slate-400">Loading…</Text>
+      </View>
+    );
+  if (driver === null) return <Redirect href={'/register'} />;
+  if (driver.driverDetails === null) return <Redirect href={'/registerAsDriver'} />;
 
-    let cancelled = false;
+  return <RideRequests driver={driver} currentRide={currentRide} />;
+}
 
-    // wait 2 minutes before firing request
-    const timer = setTimeout(
-      async () => {
-        const pickupCords = {
-          latitude: currentRide.pickup.latitude,
-          longitude: currentRide.pickup.longitude,
-        };
+export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, currentRide: CurrentRide | null }) => {
+  const { showToast } = useToast();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
+  const driverLocation = useDriverLiveLocation();
 
-        const destCords = {
-          latitude: currentRide.destination.latitude,
-          longitude: currentRide.destination.longitude,
-        };
+  const vehicle = useQuery(
+    api.routes.vehicle.getVehicleByDriverId,
+    driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
+  );
 
-        try {
-          const [driven, remaining]: [RouteResult, RouteResult] = await Promise.all([
-            fetchRoute(pickupCords, driverLocation),
-            fetchRoute(driverLocation, destCords),
-          ]);
+  const rideRequests = useQuery(
+    api.routes.rides.getRideRequests,
+    driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
+  );
+  const acceptRide = useAction(api.actions.ride.acceptRideAction);
+  const rejectRide = useAction(api.actions.ride.rejectRide);
 
-          if (cancelled) return;
+  // Map & location
+  const mapRef = useRef<MapView>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
-          setRouteState({
-            segmentA: driven?.polyline ?? [],
-            segmentB: remaining?.polyline ?? [],
-            remainingDistance: remaining?.distance.text,
-            remainingDuration: remaining?.duration,
-          });
-        } catch (error) {
-          console.log(error);
-        }
-      },
-      2 * 60 * 1000
-    ); // 2 min
+  // UI state
+  const [selectedRide, setSelectedRide] = useState<RideRequest | null>(null);
+  const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [driverLocation, currentRide]);
+  // Bottom sheet refs
+  const requestSheetRef = useRef<BottomSheet>(null);
+
+  const { colorScheme: currentTheme } = useColorScheme();
+  const isDark = currentTheme === 'dark';
+
+  // Derived state
+  const isLoading = rideRequests === undefined;
+  const rides = (rideRequests ?? []) as RideRequest[];
+  const hasRides = rides.length > 0;
 
   // Fit map to relevant points
   const fitMap = useCallback(
-    (extra?: Coords[]) => {
-      const coords: Coords[] = [];
+    (extra?: Cords[]) => {
+      const coords: Cords[] = [];
       if (driverLocation) coords.push(driverLocation);
       if (extra) coords.push(...extra);
       if (coords.length === 0) return;
@@ -426,14 +334,18 @@ export default function Home() {
     [driverLocation]
   );
 
-  // Refit when active ride route updates
   useEffect(() => {
-    if (!currentRide || !driverLocation) return;
-    fitMap([
-      { latitude: currentRide.pickup.latitude, longitude: currentRide.pickup.longitude },
-      { latitude: currentRide.destination.latitude, longitude: currentRide.destination.longitude },
-    ]);
-  }, [routeState, currentRide]);
+    if (driverLocation) {
+      mapRef.current?.animateToRegion(
+        {
+          ...driverLocation,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
+        },
+        1000
+      );
+    }
+  }, [driverLocation]);
 
   // Select a ride request → fetch preview route
   const handleSelectRide = useCallback(
@@ -448,24 +360,7 @@ export default function Home() {
         latitude: ride.destination.latitude,
         longitude: ride.destination.longitude,
       };
-
-      setRouteLoading(true);
-      try {
-        const [toPickup, toDestination]: [RouteResult, RouteResult] = await Promise.all([
-          fetchRoute(driverLocation, pickupCords),
-          fetchRoute(pickupCords, destCords),
-        ]);
-        setRouteState({
-          segmentA: toPickup?.polyline ?? [],
-          segmentB: toDestination?.polyline ?? [],
-        });
-
-        fitMap([pickupCords, destCords]);
-      } catch (e) {
-        console.error('Route fetch error', e);
-      } finally {
-        setRouteLoading(false);
-      }
+      fitMap([pickupCords, destCords]);
     },
     [driverLocation, fitMap]
   );
@@ -473,7 +368,6 @@ export default function Home() {
   // Deselect ride → clear preview route
   const handleDeselectRide = useCallback(() => {
     setSelectedRide(null);
-    setRouteState(null);
     requestSheetRef.current?.close();
     if (driverLocation) {
       mapRef.current?.animateToRegion(
@@ -490,12 +384,11 @@ export default function Home() {
   // Accept / Reject
   const canAcceptRide = useCallback(
     (_ride: RideRequest): { ok: boolean; reason?: string } => {
-      if (currentRide) return { ok: false, reason: 'Complete your current ride first' };
-      if (!driver?.driverDetails?.isAvailableForRide)
+      if (!driver?.driverDetails?.isAvailableForRide || !driver.driverDetails.isOnline)
         return { ok: false, reason: 'You must be online to accept rides' };
       return { ok: true };
     },
-    [driver, currentRide]
+    [driver]
   );
 
   const handleAccept = async () => {
@@ -539,14 +432,6 @@ export default function Home() {
 
   const acceptCheck = selectedRide ? canAcceptRide(selectedRide) : { ok: false, reason: undefined };
 
-  // Active ride coords
-  const activePickup = currentRide
-    ? { latitude: currentRide.pickup.latitude, longitude: currentRide.pickup.longitude }
-    : null;
-  const activeDest = currentRide
-    ? { latitude: currentRide.destination.latitude, longitude: currentRide.destination.longitude }
-    : null;
-
   // Selected ride coords
   const selectedPickup = selectedRide
     ? { latitude: selectedRide.pickup.latitude, longitude: selectedRide.pickup.longitude }
@@ -555,350 +440,26 @@ export default function Home() {
     ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
     : null;
 
-  useEffect(() => {
-    if (!currentRide) {
-      activeSheetRef.current?.close();
-      requestSheetRef.current?.close();
-    }
-  }, [currentRide]);
-
-  if (currentRide) {
-    // ACTIVE RIDE LAYOUT — full-screen map + non-closable bottom sheet
-
-    return (
-      <View className="flex-1 bg-background">
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-
-        {/* Full-screen map */}
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          customMapStyle={isDark ? mapStyle.dark : []}
-          showsUserLocation={false}
-          showsMyLocationButton={false}
-          showsCompass={false}
-          toolbarEnabled={false}
-          initialRegion={
-            driverLocation
-              ? { ...driverLocation, latitudeDelta: 0.04, longitudeDelta: 0.04 }
-              : { latitude: 28.6139, longitude: 77.209, latitudeDelta: 0.08, longitudeDelta: 0.08 }
-          }>
-          {driverLocation && (
-            <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-              <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-400 bg-slate-800">
-                <Text className="text-lg">🚗</Text>
-              </View>
-            </Marker>
-          )}
-
-          {activePickup && activeDest && (
-            <>
-              {routeState?.segmentA && routeState.segmentA.length > 1 ? (
-                <Polyline coordinates={routeState.segmentA} strokeColor="#19780e" strokeWidth={4} />
-              ) : (
-                <Polyline
-                  coordinates={[activePickup, driverLocation ?? activePickup]}
-                  strokeColor="#2DD4BF"
-                  strokeWidth={3}
-                  lineDashPattern={[6, 5]}
-                />
-              )}
-              {routeState?.segmentB && routeState.segmentB.length > 1 ? (
-                <Polyline coordinates={routeState.segmentB} strokeColor="#7C3AED" strokeWidth={4} />
-              ) : (
-                <Polyline
-                  coordinates={[driverLocation ?? activePickup, activeDest]}
-                  strokeColor="#7C3AED"
-                  strokeWidth={3}
-                  lineDashPattern={[6, 5]}
-                />
-              )}
-              <Marker coordinate={activePickup} anchor={{ x: 0.5, y: 0.5 }}>
-                <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-green-800">
-                  <Text className="text-xs font-bold text-white">P</Text>
-                </View>
-              </Marker>
-              <Marker coordinate={activeDest} anchor={{ x: 0.5, y: 0.5 }}>
-                <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-violet-600">
-                  <Text className="text-xs font-bold text-white">D</Text>
-                </View>
-              </Marker>
-            </>
-          )}
-        </MapView>
-
-        {/* Map controls */}
-        <View
-          style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
-          className="flex-row items-start justify-between"
-          pointerEvents="box-none">
-          <View pointerEvents="none">
-            <Animated.View entering={FadeInUp.springify()}>
-              <RouteLegend labelA="Driven" labelB="Remaining" />
-            </Animated.View>
-          </View>
-          <TouchableOpacity
-            onPress={() => fitMap([activePickup, activeDest].filter(Boolean) as Coords[])}
-            activeOpacity={0.8}
-            style={{ elevation: 5 }}
-            className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
-            <MaterialCommunityIcons
-              name="crosshairs-gps"
-              size={24}
-              color={isDark ? '#60a5fa' : '#1a73e8'}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Active Ride Detail Sheet — starts at index 1 (expanded) */}
-        <BottomSheet
-          ref={activeSheetRef}
-          index={1}
-          snapPoints={['40%', '80%']}
-          enablePanDownToClose={false}
-          backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
-          handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
-          <BottomSheetScrollView
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 }}>
-            <Animated.View entering={FadeInUp.duration(250)}>
-              {/* Status banner  */}
-              <View
-                className={`mb-4 flex-row items-center gap-3 rounded-2xl border px-4 py-3 ${
-                  currentRide.status === 'Open'
-                    ? 'border-amber-500/30 bg-amber-500/10'
-                    : 'border-emerald-500/30 bg-emerald-500/10'
-                }`}>
-                <PulseDot
-                  color={currentRide.status === 'Open' ? 'bg-orange-400' : 'bg-green-400'}
-                />
-                <View className="flex-1">
-                  <Text
-                    className={`text-sm font-extrabold ${currentRide.status === 'Open' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {currentRide.status === 'Open' ? 'Accepted' : 'Ride in Progress'}
-                  </Text>
-                  <Text className="mt-0.5 text-[11px] font-medium text-slate-500">
-                    {currentRide.status === 'Open'
-                      ? 'Waiting to pick up rider'
-                      : 'Rider is in the vehicle'}
-                  </Text>
-                </View>
-                <Text
-                  className={`text-base font-extrabold tabular-nums ${currentRide.status === 'Open' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  <LiveTimer
-                    startTimestamp={
-                      currentRide.status === 'Open'
-                        ? currentRide.updatedAt
-                        : (currentRide.startedAt ?? currentRide.updatedAt)
-                    }
-                  />
-                </Text>
-              </View>
-
-              {/* Rider + fare */}
-              <View className="mb-4 flex-row items-center justify-between border-b border-slate-800/60 pb-4">
-                <View className="flex-1 flex-row items-center gap-3">
-                  <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
-                    <Avatar alt="Profile pic" className="h-12 w-12">
-                      <AvatarImage
-                        source={
-                          currentRide.riderProfile.profilePictureKey
-                            ? { uri: currentRide.riderProfile.profilePictureKey }
-                            : require('@/assets/images/avatar.jpg')
-                        }
-                      />
-                      <AvatarFallback className="bg-white/20">
-                        <Text className="text-2xl font-bold text-primary">
-                          {currentRide.riderProfile?.firstName?.[0]?.toUpperCase() ?? 'R'}
-                        </Text>
-                      </AvatarFallback>
-                    </Avatar>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-bold text-primary" numberOfLines={1}>
-                      {`${currentRide.riderProfile?.firstName ?? ''} ${currentRide.riderProfile?.lastName ?? ''}`.trim() ||
-                        'Rider'}
-                    </Text>
-                    <View className="flex-row items-center gap-1.5 self-start rounded-full bg-green-500/25 px-3 py-1">
-                      <MaterialIcons
-                        name={
-                          currentRide.riderProfile.gender === 'Male'
-                            ? 'male'
-                            : currentRide.riderProfile?.gender === 'Female'
-                              ? 'female'
-                              : 'transgender'
-                        }
-                        size={13}
-                        color="black"
-                      />
-                      <Text className="text-xs font-medium text-primary">
-                        {currentRide.riderProfile.gender}
-                      </Text>
-                    </View>
-                    {currentRide.riderRating?.average != null && (
-                      <View className="mt-0.5 flex-row items-center gap-1">
-                        <Text className="text-xs text-amber-400">★</Text>
-                        <Text className="text-xs font-semibold text-slate-400">
-                          {currentRide.riderRating.average.toFixed(1)}
-                        </Text>
-                        <Text className="text-xs text-slate-600">
-                          ({currentRide.riderRating.totalRatings})
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <View className="ml-3 items-end">
-                  <Text className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                    Fare
-                  </Text>
-                  <Text className="text-2xl font-extrabold tracking-tight text-emerald-600">
-                    {formatFare(currentRide.fare)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* START RIDE BUTTON (only when status is "Open") */}
-              {isRideOpen && driverDetails && (
-                <Animated.View entering={FadeInDown.springify()} className="mb-4">
-                  <Button
-                    className="w-full items-center justify-center rounded-2xl border-2 border-emerald-400 bg-emerald-500"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/startRide',
-                        params: {
-                          driverId: driverDetails._id,
-                          rideId: currentRide._id,
-                        },
-                      })
-                    }>
-                    <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                      ▶ Start Ride
-                    </Text>
-                  </Button>
-                </Animated.View>
-              )}
-
-              {isActive && driverDetails && (
-                <Animated.View entering={FadeInDown.springify()} className="mb-4">
-                  <Button
-                    className="w-full items-center justify-center rounded-2xl border-2 border-emerald-400 bg-emerald-500"
-                    onPress={() => {
-                      handleCompleteRide(driverDetails._id, currentRide._id);
-                    }}>
-                    <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                      ✓ Complete Ride
-                    </Text>
-                  </Button>
-                </Animated.View>
-              )}
-
-              {/* Live stats */}
-              <View className="mb-4 flex-row gap-2.5">
-                <View className="bg-primary-background flex-1 items-center rounded-xl border border-slate-800 p-3">
-                  <Text
-                    className="mb-0.5 text-sm font-extrabold text-primary"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit>
-                    {routeState?.remainingDistance ?? `${distanceFormat(currentRide.distance)}`}
-                  </Text>
-                  <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    Remaining
-                  </Text>
-                </View>
-                <View className="bg-primary-background flex-1 items-center rounded-xl border border-slate-800 p-3">
-                  <Text
-                    className="mb-0.5 text-sm font-extrabold text-primary"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit>
-                    {routeState?.remainingDuration ?? currentRide.expectedDuration ?? '—'}
-                  </Text>
-                  <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    ETA
-                  </Text>
-                </View>
-                <View className="bg-primary-background flex-1 items-center rounded-xl border border-slate-800 p-3">
-                  <Text className="mb-0.5 text-sm font-extrabold text-primary">
-                    {new Date(currentRide.updatedAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    {isRideOpen ? 'Accepted' : 'Started'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Route address card */}
-              <View className="bg-primary-background mb-4 rounded-2xl border border-slate-800 p-4">
-                <View className="mb-4 flex-row items-start gap-3">
-                  <View className="mt-1 items-center">
-                    <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-                    <View className="mt-1 h-6 w-px bg-slate-700" />
-                  </View>
-                  <View className="flex-1">
-                    <TouchableOpacity
-                      onPress={() =>
-                        activePickup &&
-                        openNavigation(activePickup.latitude, activePickup.longitude)
-                      }
-                      activeOpacity={0.75}
-                      className="flex-1">
-                      <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
-                        Pickup
-                      </Text>
-                      <Text className="text-[14px] font-semibold leading-5 text-primary">
-                        {currentRide.pickup?.address ?? 'Pickup not set'}
-                      </Text>
-                      <Text className="text-xs font-bold text-teal-400">Navigate →</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View className="flex-row items-start gap-3">
-                  <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-                  <View className="flex-1">
-                    <TouchableOpacity
-                      onPress={() =>
-                        activeDest && openNavigation(activeDest.latitude, activeDest.longitude)
-                      }
-                      activeOpacity={0.75}
-                      className="flex-1">
-                      <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
-                        Destination
-                      </Text>
-                      <Text className="text-[14px] font-semibold leading-5 text-primary">
-                        {currentRide.destination?.address ?? 'Destination not set'}
-                      </Text>
-                      <Text className="text-xs font-bold text-violet-400">Navigate →</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-          </BottomSheetScrollView>
-        </BottomSheet>
-      </View>
-    );
+  const handleClick = () => {
+    if(currentRide)
+      router.push({pathname: "/ride/current", params: { id: currentRide._id, driverId: currentRide.driverId }});
   }
 
-  // RIDE REQUESTS LAYOUT — scrollable (map + list scroll together as one page)
   return (
     <View className="flex-1 bg-background">
-      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         bounces={false}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* MAP BLOCK (fixed height, scrolls with the page) */}
-        <View style={{ height: MAP_HEIGHT }} className="relative">
+        contentContainerStyle={{ flexGrow: 1 }}>
+        {/* MAP BLOCK - fixed height when rides exist, taller when no rides */}
+        <View style={{ height: currentRide ? SCREEN_HEIGHT * 0.5 : hasRides ? MAP_HEIGHT : SCREEN_HEIGHT * 0.6 }} className="relative">
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={{ flex: 1 }}
-            customMapStyle={isDark ? mapStyle.dark : []}
+            customMapStyle={[]}
             showsUserLocation={false}
             showsMyLocationButton={false}
             showsCompass={false}
@@ -909,81 +470,19 @@ export default function Home() {
                 : {
                     latitude: 28.6139,
                     longitude: 77.209,
-                    latitudeDelta: 0.08,
-                    longitudeDelta: 0.08,
+                    latitudeDelta: 0.04,
+                    longitudeDelta: 0.04,
                   }
             }>
             {/* Driver marker */}
-            {driverLocation && (
-              <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                <View className="h-8 w-8 items-center justify-center rounded-full">
-                  {vehicle?.class === 'Cab' && (
-                    <Image
-                      source={require('@/assets/images/cab_icon.png')}
-                      style={{ width: 32, height: 32 }}
-                      resizeMode="contain"
-                    />
-                  )}
-                  {vehicle?.class === 'Bike' && (
-                    <Image
-                      source={require('@/assets/images/bike_icon.png')}
-                      style={{ width: 32, height: 32 }}
-                      resizeMode="contain"
-                    />
-                  )}
-                  {vehicle?.class === 'Auto' && (
-                    <Image
-                      source={require('@/assets/images/rickshaw_icon.png')}
-                      style={{ width: 32, height: 32 }}
-                      resizeMode="contain"
-                    />
-                  )}
-                </View>
-              </Marker>
+            {driverLocation && vehicle && (
+              <DriverMarker location={driverLocation} vehicleClass={vehicle?.class} />
             )}
-
-            {/* Request preview route */}
-            {selectedRide && selectedPickup && selectedDest && (
-              <>
-                {routeState?.segmentA && routeState.segmentA.length > 1 ? (
-                  <Polyline
-                    coordinates={routeState.segmentA}
-                    strokeColor="#2DD4BF"
-                    strokeWidth={4}
-                  />
-                ) : (
-                  <Polyline
-                    coordinates={[driverLocation ?? selectedPickup, selectedPickup]}
-                    strokeColor="#2DD4BF"
-                    strokeWidth={3}
-                    lineDashPattern={[6, 5]}
-                  />
-                )}
-                {routeState?.segmentB && routeState.segmentB.length > 1 ? (
-                  <Polyline
-                    coordinates={routeState.segmentB}
-                    strokeColor="#7C3AED"
-                    strokeWidth={4}
-                  />
-                ) : (
-                  <Polyline
-                    coordinates={[selectedPickup, selectedDest]}
-                    strokeColor="#7C3AED"
-                    strokeWidth={3}
-                    lineDashPattern={[6, 5]}
-                  />
-                )}
-                <Marker coordinate={selectedPickup} anchor={{ x: 0.5, y: 0.5 }}>
-                  <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-teal-500">
-                    <Text className="text-xs font-bold text-white">P</Text>
-                  </View>
-                </Marker>
-                <Marker coordinate={selectedDest} anchor={{ x: 0.5, y: 0.5 }}>
-                  <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-violet-600">
-                    <Text className="text-xs font-bold text-white">D</Text>
-                  </View>
-                </Marker>
-              </>
+            {selectedPickup && (
+              <Marker coordinate={selectedPickup} anchor={{ x: 0, y: 0.9 }} pinColor="green" />
+            )}
+            {selectedDest && (
+              <Marker coordinate={selectedDest} anchor={{ x: 0, y: 0.9 }} pinColor="red" />
             )}
           </MapView>
 
@@ -994,14 +493,11 @@ export default function Home() {
             pointerEvents="box-none">
             <View pointerEvents="none">
               <Animated.View entering={FadeInUp.springify()}>
-                <RouteLegend
-                  labelA={selectedRide ? 'To Pickup' : 'Driver'}
-                  labelB={selectedRide ? 'To Destination' : 'Route'}
-                />
+                <RouteLegend labelA={'Pickup'} labelB={'Destination'} />
               </Animated.View>
             </View>
             <TouchableOpacity
-              onPress={() => fitMap([selectedPickup, selectedDest].filter(Boolean) as Coords[])}
+              onPress={() => fitMap([selectedPickup, selectedDest].filter(Boolean) as Cords[])}
               activeOpacity={0.8}
               style={{ elevation: 5 }}
               className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
@@ -1014,48 +510,85 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Ride requests list */}
-        <View className="flex-1 px-4 pt-4">
-          {/* Section header */}
-          <View className="mb-3 flex-row items-center justify-between">
-            <View>
-              <Text className="text-lg font-extrabold tracking-tight text-primary">
-                Ride Requests
-              </Text>
-              <Text className="mt-0.5 text-xs font-medium text-slate-500">
-                Tap a request to preview route & accept
-              </Text>
+        {currentRide ? (
+          <View className='flex-1 mx-4 items-center justify-center bg-background'>
+            <CurrentRideCard
+              key={currentRide._id}
+              ride={currentRide}
+              onPress={handleClick}
+            />
+          </View>
+        ) : (
+          <>
+
+        {/* Ride requests list - takes remaining space when rides exist */}
+        {!vehicle ? (
+          <View className="flex-1 items-center justify-center gap-2 rounded-t-2xl border-2 border-red-600 px-6">
+            <Text className="font-bold text-destructive">
+              {' '}
+              You haven't registered your vehicle yet.
+            </Text>
+            <Link href={'/createVehicle'} asChild>
+              <Button className="w-full">
+                <Text>Register Now</Text>
+              </Button>
+            </Link>
+          </View>
+        ) : (
+          <View className={`flex-1 px-4 ${hasRides ? 'pt-4' : 'pt-0'}`}>
+            {/* Section header */}
+            <View className={`${hasRides ? 'mb-3' : 'mb-2'} flex-row items-center justify-between`}>
+              <View>
+                <Text className="text-title text-lg font-extrabold tracking-tight">
+                  Ride Requests
+                </Text>
+                {!hasRides && (
+                  <Text className="mt-0.5 text-xs font-medium text-slate-500">
+                    No active requests at the moment
+                  </Text>
+                )}
+                {hasRides && (
+                  <Text className="mt-0.5 text-xs font-medium text-slate-500">
+                    Tap a request to preview route & accept
+                  </Text>
+                )}
+              </View>
+              {hasRides && (
+                <View className="h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/20">
+                  <Text className="text-sm font-extrabold text-primary">{rides.length}</Text>
+                </View>
+              )}
             </View>
+
+            {/* Empty state - takes minimal space when no rides */}
+            {!hasRides && !isLoading && (
+              <Animated.View
+                entering={ZoomIn.springify()}
+                className="items-center justify-center gap-2 py-2">
+                <Text className="text-2xl">🛣️</Text>
+                <Text className="text-sm font-semibold">No ride requests</Text>
+                <Text className="text-center text-xs leading-4 text-slate-400">
+                  New requests will appear here as riders book nearby
+                </Text>
+              </Animated.View>
+            )}
+
+            {/* Ride cards - will fill available space when rides exist */}
             {hasRides && (
-              <View className="h-9 w-9 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20">
-                <Text className="text-sm font-extrabold text-violet-400">{rides.length}</Text>
+              <View className="flex-1">
+                {rides.map((ride, i) => (
+                  <RideCard
+                    key={ride._id}
+                    ride={ride}
+                    isSelected={selectedRide?._id === ride._id}
+                    onPress={handleSelectRide}
+                  />
+                ))}
               </View>
             )}
           </View>
-
-          {/* Empty state */}
-          {!hasRides && !isLoading && (
-            <Animated.View
-              entering={ZoomIn.springify()}
-              className="items-center justify-center gap-3 py-12">
-              <Text className="text-3xl">🛣️</Text>
-              <Text className="text-sm font-bold">Waiting for ride requests</Text>
-              <Text className="text-center text-xs leading-4 text-slate-400">
-                New requests will appear here as riders book nearby
-              </Text>
-            </Animated.View>
-          )}
-
-          {/* Ride cards */}
-          {rides.map((ride, i) => (
-            <RideCard
-              key={ride._id}
-              ride={ride}
-              isSelected={selectedRide?._id === ride._id}
-              onPress={handleSelectRide}
-            />
-          ))}
-        </View>
+        )}
+        </>)}
       </ScrollView>
 
       {/* Loading overlay */}
@@ -1066,8 +599,7 @@ export default function Home() {
         </View>
       )}
 
-      {/* RIDE REQUEST DETAIL SHEET
-      Opens on top; map is still visible and draggable behind it. */}
+      {/* RIDE REQUEST DETAIL SHEET */}
       <BottomSheet
         ref={requestSheetRef}
         index={-1}
@@ -1090,33 +622,52 @@ export default function Home() {
             <Animated.View entering={FadeInUp.duration(220)}>
               {/* Header */}
               <View className="mb-5 flex-row items-start justify-between border-b border-slate-800 py-4">
-                <View className="flex-row items-center gap-x-1 pr-4">
-                  {/* Avatar */}
+                <View className="flex-1 flex-row items-center gap-x-1 pr-4">
                   <Avatar alt="Profile pic" className="h-12 w-12">
                     <AvatarImage
                       source={
-                        selectedRide.riderProfile?.profilePictureKey?.trim()
-                          ? { uri: selectedRide.riderProfile.profilePictureKey }
+                        selectedRide.rider.details.profilePictureKey?.trim()
+                          ? { uri: selectedRide.rider.details.profilePictureKey }
                           : require('@/assets/images/avatar.jpg')
                       }
                     />
                     <AvatarFallback className="bg-white/20">
                       <Text className="text-sm font-bold text-primary">
-                        {selectedRide.riderProfile?.firstName?.[0]}
-                        {selectedRide.riderProfile?.lastName?.[0]}
+                        {selectedRide.rider.details.firstName?.[0]}
+                        {selectedRide.rider.details.lastName?.[0]}
                       </Text>
                     </AvatarFallback>
                   </Avatar>
-                  <Text className="mb-1.5 text-[22px] font-extrabold tracking-tight text-primary">
-                    {`${selectedRide.riderProfile?.firstName ?? ''} ${selectedRide.riderProfile?.lastName ?? ''}`.trim() ||
-                      'Passenger'}
-                  </Text>
-                  <StarRating rating={selectedRide.riderRating} />
+                  
+                  <View className="flex-1">
+                    <View className="flex-row gap-2">
+                      <Text
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                        className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight"
+                      >
+                        {`${selectedRide.rider.details?.firstName ?? ''} ${
+                          selectedRide.rider.details?.lastName ?? ''
+                        }`.trim() || 'Passenger'}
+                      </Text>
+                    </View>
+
+                    {selectedRide.rider.details && (
+                      <View className="flex-row gap-1">
+                        <Gender gender={selectedRide.rider.details.gender} />
+                        <Age dob={selectedRide.rider.details.dob} />
+                        <StarRating rating={selectedRide.rider.ratings} />
+                      </View>
+                    )}
+
+                  </View>
                 </View>
-                <View className="items-end">
+                
+                <View className="ml-2 items-end">
                   <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                     Est. Fare
                   </Text>
+
                   <Text className="text-3xl font-extrabold tracking-tight text-emerald-400">
                     {formatFare(selectedRide.fare)}
                   </Text>
@@ -1135,7 +686,7 @@ export default function Home() {
                     <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
                       Pickup
                     </Text>
-                    <Text className="text-[15px] font-semibold leading-5 text-primary">
+                    <Text className="text-title text-[15px] font-semibold leading-5">
                       {selectedRide.pickup?.address ?? 'Not set'}
                     </Text>
                   </View>
@@ -1143,7 +694,7 @@ export default function Home() {
                     <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
                       Destination
                     </Text>
-                    <Text className="text-[15px] font-semibold leading-5 text-primary">
+                    <Text className="text-title text-[15px] font-semibold leading-5">
                       {selectedRide.destination?.address ?? 'Not set'}
                     </Text>
                   </View>
@@ -1177,14 +728,6 @@ export default function Home() {
                       Duration
                     </Text>
                   </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      Now
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Scheduled
-                    </Text>
-                  </View>
                 </View>
               </SheetSection>
 
@@ -1201,32 +744,64 @@ export default function Home() {
               )}
 
               {/* Action buttons */}
-              <View className="mt-2 flex-row gap-3">
+              {selectedRide.status === "Canceled" ? (
+                <View className="gap-5">
+                {/* Icon + Header */}
+                <View className="items-center gap-3 py-4">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+                    <Text className="text-3xl">🚫</Text>
+                  </View>
+                  <View className="items-center gap-1">
+                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                      Ride Canceled
+                    </Text>
+                    <Text className="text-[20px] font-extrabold tracking-tight text-title text-center">
+                      Rider has cancelled this ride
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
+                  <View className="mb-1 flex-row items-center gap-2">
+                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <Text className="text-xs font-medium text-slate-400">Unknown Reason</Text>
+                  </View>
+                </View>
                 <Button
-                  className="min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10 py-4"
-                  onPress={handleReject}
-                  disabled={actionLoading !== null}>
-                  {actionLoading === 'reject' ? (
-                    <ActivityIndicator size="small" color="#EF4444" />
-                  ) : (
-                    <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
-                  )}
-                </Button>
-                <Button
-                  className={`min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 py-4 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
-                  onPress={handleAccept}
-                  disabled={!acceptCheck.ok || actionLoading !== null}>
-                  {actionLoading === 'accept' ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
-                  )}
+                  onPress={() => requestSheetRef.current?.close()}
+                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Close</Text>
                 </Button>
               </View>
+              ) : (
+                <View className="mt-2 flex-row gap-3">
+                  <Button
+                    className="min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10 py-4"
+                    onPress={handleReject}
+                    disabled={actionLoading !== null}>
+                    {actionLoading === 'reject' ? (
+                      <ActivityIndicator size="small" color="#EF4444" />
+                    ) : (
+                      <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
+                    )}
+                  </Button>
+                  <Button
+                    className={`min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 py-4 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
+                    onPress={handleAccept}
+                    disabled={!acceptCheck.ok || actionLoading !== null}>
+                    {actionLoading === 'accept' ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
+                    )}
+                  </Button>
+                </View>
+              )}
             </Animated.View>
           )}
         </BottomSheetScrollView>
       </BottomSheet>
     </View>
   );
-}
+});

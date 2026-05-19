@@ -19,8 +19,8 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMutation, useQuery } from 'convex/react';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import ErrorScreen from '@/components/ErrorScreen';
@@ -31,6 +31,9 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const formSchema = z.object({
   firstName: z
@@ -55,8 +58,10 @@ export default function EditProfile() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
   const router = useRouter();
-  const { showToast } = useToast();
-  const isDark = colorScheme.get() === 'dark';
+  const { showToast } = useToast();  
+  const { uploadFile } = useFileUpload();
+
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
 
   const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } =
     useLocalSearchParams<{
@@ -78,7 +83,6 @@ export default function EditProfile() {
 
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const updateDriver = useMutation(api.routes.driver.updateDriver);
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
 
   const {
     handleSubmit,
@@ -139,34 +143,6 @@ export default function EditProfile() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${clerkId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
@@ -186,8 +162,8 @@ export default function EditProfile() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
+      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${clerkId}-front`);
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${clerkId}-back`);
       const { dob, gender, ...rest } = data;
       await updateDriver({
         ...rest,
@@ -205,26 +181,28 @@ export default function EditProfile() {
     }
   });
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background">
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, padding: 12, paddingTop: 0 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           {/* NEW wrapper */}
           <View className="my-4 mb-2 flex-row items-center px-3">
             <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => router.back()}>
               <MaterialIcons
                 name="keyboard-backspace"
-                size={20}
-                color={isDark ? 'white' : 'black'}
+                size={24}
+                color={'black'}
               />
             </TouchableOpacity>
 
@@ -535,7 +513,7 @@ export default function EditProfile() {
               </View>
             )}
 
-            <Button onPress={onSubmit}>
+            <Button onPress={onSubmit} className='my-4'>
               <Text>Submit</Text>
             </Button>
           </View>
@@ -548,8 +526,8 @@ export default function EditProfile() {
         index={-1}
         snapPoints={['35%']}
         enablePanDownToClose={true}
-        backgroundStyle={{ backgroundColor: isDark ? '#18181b' : '#FFFFFF' }}
-        handleIndicatorStyle={{ backgroundColor: isDark ? '#3f3f46' : '#E5E7EB' }}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
         )}>
@@ -558,21 +536,21 @@ export default function EditProfile() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color="#1ca0d9" />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color="#ed9d2d" />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>
       </BottomSheet>
-    </View>
+    </SafeAreaView>
   );
 }

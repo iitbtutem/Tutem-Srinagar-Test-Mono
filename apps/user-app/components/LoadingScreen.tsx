@@ -17,7 +17,7 @@ import { Text } from './ui/text';
  * A premium loading screen with smooth animations and themed aesthetics.
  * Uses pulsing rings and a rotating icon to provide a modern, high-end feel.
  */
-export default function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+export default function LoadingScreen({ message = "Loading…" }: { message?: string }) {
   const rotation = useSharedValue(0);
   const pulse = useSharedValue(1);
 

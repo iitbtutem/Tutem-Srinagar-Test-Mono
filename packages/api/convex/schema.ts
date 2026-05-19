@@ -47,6 +47,7 @@ export default defineSchema({
     address: v.string(),
     isLicenseVerficationRequired: v.boolean(),
     isVehicleRCVerificationRequired: v.boolean(),
+    isVehicleInsuranceImageRequired: v.boolean(),
     canDriverEditLicesnse: v.boolean(),
     canDriverEditVehicle: v.boolean(),
   }),
@@ -66,6 +67,7 @@ export default defineSchema({
     isVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
     registrationNumber: v.string(),
     rcImageKey: v.optional(v.string()),
+    insuranceImageKey: v.optional(v.string()),
     model: v.string(),
     type: v.union(...VEHICLE_TYPE.map((type) => v.literal(type))),
     fuelType: v.union(...FUEL_TYPE.map((type) => v.literal(type))),
@@ -87,7 +89,8 @@ export default defineSchema({
     riderId: v.id("rider"),
     driverId: v.id("driver"),
     fare: v.number(),
-    status: v.union(v.literal("Open"), v.literal("Active"), v.literal("Completed"), v.literal("Canceled")),
+    hasReachedDestionation: v.boolean(),
+    status: v.union(v.literal("Open"), v.literal("Active"), v.literal("Driver Arrived"), v.literal("Abort"), v.literal("Completed"), v.literal("Canceled")),
     requestStatus: v.union(v.literal("Pending"), v.literal("Accepted"), v.literal("Rejected"), v.literal("No Response")),
     pickup: v.object({
       address: v.string(),
@@ -99,16 +102,29 @@ export default defineSchema({
       latitude: v.number(),
       longitude: v.number(),
     }),
+    dropOff: v.optional(v.object({
+      address: v.string(),
+      latitude: v.number(),
+      longitude: v.number(),
+    })),
     distance: v.number(),
     expectedDuration: v.optional(v.string()),
+    otp: v.optional(v.number()),
     updatedAt: v.number(),
     requestedAt: v.number(),
     acceptedAt: v.optional(v.number()),
+    arrivedAt: v.optional(v.number()),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
   })
   .index("by_rider", ["riderId"])
   .index("by_driver", ["driverId"]),
+
+  rideReasons: defineTable({
+    rideId: v.id("ride"),
+    driverId: v.optional(v.id("driver")),
+    reason: v.string(),
+  }).index("by_ride", ["rideId"]),
 
   ratings: defineTable({
     rideId: v.id("ride"),
@@ -121,5 +137,11 @@ export default defineSchema({
   .index("by_ride", ["rideId"])
   .index("by_rider", ["riderId"])
   .index("by_driver", ["driverId"]),
+
+  rideSettings: defineTable({
+    nearbyRadius: v.number(),
+    arrivedDistance: v.number(),
+    driverResponseTime: v.number(),
+  })
 
 });

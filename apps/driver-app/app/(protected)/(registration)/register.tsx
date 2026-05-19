@@ -21,7 +21,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { useMutation, useQuery, useAction } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
@@ -34,6 +34,7 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 const formSchema = z.object({
   firstName: z
@@ -63,6 +64,7 @@ export default function Register() {
   const { userId } = useAuth();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
+  const { uploadFile } = useFileUpload();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -73,7 +75,6 @@ export default function Register() {
   const organizations = useQuery(api.routes.organizations.getAllOrganizations);
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
 
   const {
@@ -138,34 +139,6 @@ export default function Register() {
     setCurrentFieldToUpdate(null);
   };
 
-  const processUpload = async (fileUri: string | undefined, prefix: string) => {
-    if (!fileUri || !fileUri.startsWith('file://')) return;
-
-    try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-      const extension = fileUri.split('.').pop() || 'jpg';
-      const fileKey = `licenses/${userId}-${prefix}-${Date.now()}.${extension}`;
-
-      const { url: presignedUrl, key } = await getPresignedUrl({
-        key: fileKey,
-        contentType: blob.type,
-      });
-
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: { 'Content-Type': blob.type },
-      });
-      if (uploadResponse.status < 200 || uploadResponse.status >= 300 || !uploadResponse.ok) {
-        throw new Error("Couldn't upload license images");
-      }
-      return key;
-    } catch (error) {
-      throw new Error('Failed to upload license images');
-    }
-  };
-
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       if (!userId) {
@@ -191,8 +164,8 @@ export default function Register() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const uploadedFrontKey = await processUpload(data.licenseImageFrontKey, 'front');
-      const uploadedBackKey = await processUpload(data.licenseImageBackKey, 'back');
+      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${userId}-front`);
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
       await addDriver({
@@ -229,11 +202,11 @@ export default function Register() {
     login({ driverId: driver.driverDetails._id, expoPushToken })
   }, [])
 
-  if (driver === undefined) return <LoadingScreen message="Loading registration..." />;
+  if (driver === undefined) return <LoadingScreen message="Loading registration…" />;
 
   if (driver && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
@@ -242,7 +215,7 @@ export default function Register() {
   return (
     <View className="flex-1 bg-background">
       <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
-      <Stack.Screen options={{ headerShown: true }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
@@ -498,7 +471,7 @@ export default function Register() {
                               <TouchableOpacity
                                 disabled={isSubmitting}
                                 className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 shadow-md"
-                                onPress={() => onChange({ fileUri: undefined, uploadedKey: '' })}>
+                                onPress={() => onChange(undefined)}>
                                 <MaterialIcons name="delete-outline" size={20} color="red" />
                               </TouchableOpacity>
                             </View>
@@ -530,7 +503,7 @@ export default function Register() {
               </View>
             )}
 
-            <Button onPress={onSubmit} disabled={isSubmitting}>
+            <Button onPress={onSubmit} disabled={isSubmitting} className='my-4'>
               {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
             </Button>
           </View>
@@ -553,17 +526,17 @@ export default function Register() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={iconColor} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color={"#1ca0d9"} />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={iconColor} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color={"#eda51f"} />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>
