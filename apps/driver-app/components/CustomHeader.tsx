@@ -33,6 +33,7 @@ import { useColorScheme } from 'nativewind';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useToast } from './CustomToast';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
+import { QrCode } from 'lucide-react-native';
 
 type User = FunctionReturnType<typeof api.routes.driver.getUser>;
 type Props = {
@@ -188,19 +189,19 @@ function ProfileDropdown({
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl">
+      <DropdownMenuContent className="native:w-64 elevation-lg shadow-lg/20 w-60 rounded-2xl bg-white/95 shadow-black backdrop-blur-xl">
         <Animated.View entering={FadeIn.duration(200)}>
-          <View className="bg-primary/5 px-4 py-2">
+          <View className="bg-primary/5 px-4 py-1">
             <Text className="text-lg font-bold text-primary">Menu</Text>
           </View>
 
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem asChild closeOnPress>
+            <DropdownMenuItem asChild closeOnPress className='py-1'>
               <Link href={'/profile'}>
                 <View className="flex-row items-center gap-3 px-2">
                   <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <FontAwesome5 name="user" size={18} color="#000" />
+                    <FontAwesome5 name="user" size={18} color="rgb(0, 80, 200)" />
                   </View>
                   <Text className="text-base font-medium text-primary">Profile</Text>
                 </View>
@@ -208,7 +209,7 @@ function ProfileDropdown({
             </DropdownMenuItem>
 
             {/* Gender matching switch */}
-            <View className="px-2 py-2">
+            <DropdownMenuItem className='py-1'>
               <View className="flex-row items-center gap-3 px-2">
                 <View className="h-8 w-8 items-center justify-center">
                   {/* <Checkbox checked={genderMatching} onCheckedChange={setGenderMatching}/> */}
@@ -220,7 +221,21 @@ function ProfileDropdown({
                   Gender Matching
                 </Text>
               </View>
-            </View>
+            </DropdownMenuItem>
+
+            {user.driverDetails && <DropdownMenuItem asChild closeOnPress className='py-1'>
+              <Link href={{
+                pathname: '/paymentQrCode',
+                params: { driverId: (user.driverDetails._id).toString() }
+              }}>
+                <View className="flex-row items-center gap-3 px-2">
+                  <View className="h-8 w-8 items-center justify-center rounded-full bg-orange-500/10">
+                    <QrCode size={18} color="#f59e0b" strokeWidth={2} />
+                  </View>
+                  <Text className="text-base font-medium text-primary">Payment QR Code</Text>
+                </View>
+              </Link>
+            </DropdownMenuItem>}
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />

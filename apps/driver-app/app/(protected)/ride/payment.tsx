@@ -5,65 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Upload, Pencil, QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
-import { useMutation } from 'convex/react';
+import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
 import { Separator } from '@/components/ui/seperator';
-import { useFileUpload } from '@/hooks/useFileUpload';
 import { useRouter } from 'expo-router';
 
 export default function Payment() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
-  const [uploading, setUploading] = useState(false);
-  const { uploadFile } = useFileUpload();
   const router = useRouter();
 
   const ride = useQuery(api.routes.rides.getRide, { id: rideId });
-
-  const updatePaymentQrCode = useMutation(api.routes.driver.updatePaymentQrCode);
-
-  const handlePickImage = useCallback(async () => {
-    if(!ride) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to upload a QR code.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsMultipleSelection: false,
-      mediaTypes: "images",
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      try {
-        setUploading(true);
-        
-        const paymentQrCodeKey = await uploadFile(result.assets[0].uri, `payementQrCodes/${ride.driverId}`);
-        await updatePaymentQrCode({
-          driverId: ride.driverId,
-          paymentQrCodeKey: paymentQrCodeKey,
-        });
-      } catch (e) {
-        Alert.alert('Upload Failed', 'Could not upload QR code. Please try again.');
-      } finally {
-        setUploading(false);
-      }
-    }
-    return;
-  }, [ride?.driverId]);
 
   if (ride === undefined) {
     return (
@@ -75,10 +32,6 @@ export default function Payment() {
   }
 
   if (ride === null) return <ErrorScreen message="Ride Not Found" code="404" />;
-
-  const hasQrCode = ride.driver.paymentQrCodeKey !== undefined;
-
-  if(hasQrCode) console.log("QR Code URL:", ride.driver.paymentQrCodeKey);
 
   return (
     <ScrollView
@@ -136,87 +89,43 @@ export default function Payment() {
       </Card>
 
       {/* QR Code Card */}
-      <Card className="border border-primary rounded-2xl overflow-hidden">
-        <CardHeader className="px-5 pt-5 pb-3">
-          <View className="flex-row items-center gap-2">
-            <QrCode size={18} color="#f59e0b" strokeWidth={2} />
-            <CardTitle>
-              <Text className="text-primary text-base font-semibold">
-                Payment QR Code
-              </Text>
-            </CardTitle>
-          </View>
-          <Text className="text-zinc-500 text-xs mt-0.5">
-            {hasQrCode
-              ? 'Show this to your passenger for UPI payment'
-              : 'Add your UPI QR code so passengers can pay digitally'}
-          </Text>
-        </CardHeader>
-
-        <Separator className="bg-zinc-800 mx-4 w-fit" />
-
-        <CardContent className="px-5 pb-5 pt-4">
-          {/* QR Code Display - always mounted, hidden when no QR */}
-          <View style={{ display: hasQrCode ? 'flex' : 'none' }} className="items-center">
-            <View className="bg-white p-3 rounded-2xl mb-4 shadow-lg shadow-black/30">
-              <Image
-                source={{ uri: ride.driver.paymentQrCodeKey ?? '' }}
-                className="w-52 h-52 rounded-xl"
-                resizeMode="contain"
-              />
+      { ride.driver.paymentQrCodeKey && (
+        <Card className="overflow-hidden rounded-2xl border border-primary">
+          <CardHeader className="px-5 pb-3 pt-5">
+            <View className="flex-row items-center gap-2">
+              <QrCode size={18} color="#f59e0b" strokeWidth={2} />
+              <CardTitle>
+                <Text className="text-base font-semibold text-primary">Payment QR Code</Text>
+              </CardTitle>
             </View>
-            <Text className="text-zinc-400 text-xs mb-4 text-center">
-              Scan with any UPI app · PhonePe · GPay · Paytm
-            </Text>
-            <Button
-              onPress={handlePickImage}
-              disabled={uploading}
-              variant={"outline"}
-              className="flex-row items-center justify-center gap-2 border rounded-xl w-full"
-            >
-              {uploading ? (
-                <ActivityIndicator size="small" color="#f59e0b" />
-              ) : (
-                <Pencil size={15} color="#a1a1aa" strokeWidth={2} />
-              )}
-              <Text className="text-zinc-300 font-medium text-sm">
-                {uploading ? 'Uploading…' : 'Change QR Code'}
-              </Text>
-            </Button>
-          </View>
+            <Text className="mt-0.5 text-xs text-zinc-500"> Show this to your passenger for UPI payment </Text>
+          </CardHeader>
 
-          {/* Upload Prompt - always mounted, hidden when QR exists */}
-          <View style={{ display: hasQrCode ? 'none' : 'flex' }} className="items-center py-4">
-            <View className="w-24 h-24 rounded-2xl bg-muted border-2 border-dashed border-primary/25 items-center justify-center mb-4">
-              <QrCode size={36} color="#52525b" strokeWidth={1.5} />
+          <Separator className="mx-4 w-fit bg-zinc-800" />
+
+          <CardContent className="px-5 pt-4 pb-2">
+            {/* QR Code Display - always mounted, hidden when no QR */}
+            <View className="items-center">
+              <View className="mb-4 rounded-2xl bg-white p-3 shadow-lg shadow-black/30">
+                <Image
+                  source={{ uri: ride.driver.paymentQrCodeKey }}
+                  className="h-72 w-72 rounded-xl"
+                  resizeMode="contain"
+                />
+              </View>
+              <Text className="mb-4 text-center text-xs text-zinc-400">
+                Scan with any UPI app · PhonePe · GPay · Paytm
+              </Text>
             </View>
-            <Text className="text-zinc-300 font-semibold text-base mb-1">
-              No QR Code Added
-            </Text>
-            <Text className="text-zinc-500 text-sm text-center mb-6 leading-5">
-              Upload your UPI payment QR code to receive digital payments from passengers
-            </Text>
-            <Button
-              onPress={handlePickImage}
-              disabled={uploading}
-              className="w-full bg-amber-500 active:bg-amber-400 rounded-xl h-12 flex-row items-center justify-center gap-2"
-            >
-              {uploading ? (
-                <ActivityIndicator size="small" color="#1c1917" />
-              ) : (
-                <Upload size={16} color="#1c1917" strokeWidth={2.5} />
-              )}
-              <Text className="text-amber-950 font-bold text-sm">
-                {uploading ? 'Uploading…' : 'Upload from Gallery'}
-              </Text>
-            </Button>
-          </View>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Text className="text-zinc-600 text-xs text-center mt-5 leading-5 mb-4 hidden">
-        Cash payments are always accepted.{'\n'}QR code enables contactless UPI collection.
-      </Text>
+      { !ride.driver.paymentQrCodeKey && ( 
+        <Text className="text-zinc-600 text-xs text-center mt-5 leading-5 mb-4">
+          Cash payments are always accepted.{'\n'}QR code enables contactless UPI collection. Add QR code in your profile to offer digital payment option to passengers.
+        </Text> 
+      )}
 
       <Button
         className='mt-4 '
