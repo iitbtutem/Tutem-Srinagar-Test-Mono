@@ -19,11 +19,11 @@ export function numberFormat(number: number) {
   }).format(number);
 };
 
-export function distanceFormat(number: number) {
+export function distanceFormat(distance: number) {
   return new Intl.NumberFormat("en-In", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
-  }).format(number) + " km";
+  }).format(distance / METERS_IN_KM) + " km";
 };
 
 export function haversineDistance(

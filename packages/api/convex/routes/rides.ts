@@ -97,8 +97,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
           if (organizationRate === null) return null;
 
-          const chargableDistanceInKms = args.distance / METERS_IN_KM - organizationRate.baseDistance;
-          const fare = chargableDistanceInKms > 0 ? (organizationRate.baseDistanceRate + chargableDistanceInKms * organizationRate.ratePerKm): organizationRate.baseDistanceRate;
+          const chargableDistanceInKms = (args.distance - organizationRate.baseDistance) / METERS_IN_KM;
+          const fare = chargableDistanceInKms > 0 ? (organizationRate.baseDistanceRate + (chargableDistanceInKms * organizationRate.ratePerKm)): organizationRate.baseDistanceRate;
 
           return {
             driver: {
@@ -188,7 +188,7 @@ export const bookRideInternal = internalMutation({
     });
 
     const settings = await ctx.db.query("rideSettings").first();
-    const responseTime = settings?.driverResponseTime ?? 120;
+    const responseTime = settings?.driverResponseTime ?? 1000;
 
     await ctx.scheduler.runAfter(responseTime * 1000, internal.routes.rides.markNoResponseInternal, { rideId })
 
@@ -291,8 +291,8 @@ export const driverCancelRideInternal = internalMutation({
     rideId: v.id("ride"),
     driverId: v.id("driver"),
     reason: v.string(),
-    distance: v.number(),
-    calculatedFare: v.number(),
+    distance: v.optional(v.number()),
+    calculatedFare: v.optional(v.number()),
     dropOff: v.optional(v.object({
       address: v.string(),
       latitude: v.number(),
@@ -318,13 +318,10 @@ export const driverCancelRideInternal = internalMutation({
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
     
-    if(ride.status === "Open" || ride.status === "Driver Arrived"){
-      await ctx.db.patch(ride._id, {
-        status: "Open",
-        requestStatus: "Rejected",
-        updatedAt: Date.now(),
-      })
-    } else{
+    if(ride.status === "Active"){
+      if(args.calculatedFare === undefined || args.distance === undefined){
+        throw new ConvexError("Failed to cancel ride. Try again.")
+      }
       await ctx.db.patch(ride._id, {
         status: "Abort",
         dropOff: args.dropOff,
@@ -332,6 +329,12 @@ export const driverCancelRideInternal = internalMutation({
         fare: args.calculatedFare,
         updatedAt: Date.now(),
       });
+    } else {
+      await ctx.db.patch(ride._id, {
+        status: "Open",
+        requestStatus: "Rejected",
+        updatedAt: Date.now(),
+      })
     }
     
     await ctx.db.insert("rideReasons", {
@@ -537,11 +540,8 @@ export const getRiderCurrentRideById = query({
           { expiresIn: 300 },
         )
       : undefined;
-
-    const distance = ride.distance / METERS_IN_KM; //converting to KM
     return {
       ...ride,
-      distance,
       otp: ride.status === "Driver Arrived" ? ride.otp : null,
       rider: {
         ...rider,
@@ -621,11 +621,9 @@ export const getRiderCurrentRideByRiderId = query({
           { expiresIn: 300 },
         )
       : undefined;
-
-    const distance = ride.distance / METERS_IN_KM; //converting to KM
+      
     return {
       ...ride,
-      distance,
       otp: ride.status === "Driver Arrived" ? ride.otp : null,
       rider: {
         ...rider,
@@ -708,7 +706,6 @@ export const getRiderHistory = query({
 
         return {
           ...ride,
-          distance: ride.distance / METERS_IN_KM,
           driver: {
             ...driver,
             userDetails: {
@@ -819,7 +816,6 @@ export const getRide = query({
 
     const isDriver = await ctx.db.query("driver").withIndex("by_user", q => q.eq("userId", convexUser._id)).first();
 
-    console.log("is driver")
     const ride = await ctx.db.get(args.id);
     if (ride === null || ((ride.requestStatus === "Rejected" || ride.requestStatus === "No Response") && isDriver)) return null;
 
@@ -881,6 +877,16 @@ export const getRide = query({
         )
       : undefined;
 
+      const paymentQrCodeKey = driver.paymentQrCodeKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.paymentQrCodeKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
       
 
     const rideRatings = await ctx.db.query("ratings").withIndex("by_ride", q => q.eq("rideId", ride._id)).collect();
@@ -898,11 +904,11 @@ export const getRide = query({
     
     return {
       ...rideDetails,
-      distance: ride.distance / METERS_IN_KM,
       ratings: rideRatings,
       rideReasons,
       driver: {
         ...driver,
+        paymentQrCodeKey,
         details: {
           ...driverUser,
           profilePictureKey: driverProfilePictureUri,
@@ -990,7 +996,6 @@ export const getRideRequests = query({
 
         return {
           ...ride,
-          distance: ride.distance / METERS_IN_KM,
           rider:  {
             _id: rider._id,
             isVerified: rider.isVerified,
@@ -1068,7 +1073,6 @@ export const getDriverHistory = query({
 
         return {
           ...ride,
-          distance: ride.distance / METERS_IN_KM,
           rider: {
             ...rider,
             userDetails: {
@@ -1243,7 +1247,7 @@ export const completeRideInternal = internalMutation({
 
     await ctx.db.patch(ride._id, {
       status: "Completed",
-      ...args.dropOff ? [{ dropOff: args.dropOff }] : [],
+      dropOff: args.dropOff,
       distance: args.distance,
       fare: args.calculatedFare,
       completedAt: Date.now(),

@@ -1,8 +1,8 @@
 import { METERS_IN_KM } from '@/constants';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { differenceInYears } from 'date-fns';
 
-import { differenceInYears, formatDistance, formatDistanceStrict } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,7 +26,7 @@ export function distanceFormat(distance: number) {
   return new Intl.NumberFormat("en-In", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
-  }).format(distance) + " km";
+  }).format(distance / METERS_IN_KM) + " km";
 };
 
 export function haversineDistance(

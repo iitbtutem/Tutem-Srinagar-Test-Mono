@@ -67,8 +67,7 @@ export default function startRide() {
       console.log(otp, " OTP")
       await startRide({ driverId, rideId, otp: Number(otp) });
       showToast({ title: 'Ride Started', description: 'Have a safe trip!', type: 'success' });
-      router.dismissAll();
-      router.replace('/(protected)/(tabs)');
+      router.back();
     } catch (e: any) {
       console.error(e);
       showToast({ title: 'Failed', description: e.data ?? 'Failed to start ride', type: 'error' });

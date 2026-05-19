@@ -35,7 +35,7 @@ export async function fetchRoute(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },
 ) {
-  console.log("Fetch route called ...");
+  console.log("Fetch route called …");
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
     throw new Error("Google maps apikey not configured in Convex environment");

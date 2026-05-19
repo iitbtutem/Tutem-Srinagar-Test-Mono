@@ -202,11 +202,11 @@ export default function Register() {
     login({ driverId: driver.driverDetails._id, expoPushToken })
   }, [])
 
-  if (driver === undefined) return <LoadingScreen message="Loading registration..." />;
+  if (driver === undefined) return <LoadingScreen message="Loading registration…" />;
 
   if (driver && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
@@ -471,7 +471,7 @@ export default function Register() {
                               <TouchableOpacity
                                 disabled={isSubmitting}
                                 className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 shadow-md"
-                                onPress={() => onChange({ fileUri: undefined, uploadedKey: '' })}>
+                                onPress={() => onChange(undefined)}>
                                 <MaterialIcons name="delete-outline" size={20} color="red" />
                               </TouchableOpacity>
                             </View>
@@ -503,7 +503,7 @@ export default function Register() {
               </View>
             )}
 
-            <Button onPress={onSubmit} disabled={isSubmitting}>
+            <Button onPress={onSubmit} disabled={isSubmitting} className='my-4'>
               {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
             </Button>
           </View>
@@ -526,17 +526,17 @@ export default function Register() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={iconColor} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color={"#1ca0d9"} />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={iconColor} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color={"#eda51f"} />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>

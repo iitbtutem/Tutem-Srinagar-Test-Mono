@@ -113,7 +113,7 @@ export default function Feedback() {
         <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
           <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
           <AvatarFallback>
-            <Text className="text-white text-xl font-semibold">
+            <Text className="text-black text-xl font-semibold">
               {rider.userDetails.firstName?.[0] ?? 'R'}
             </Text>
           </AvatarFallback>
@@ -172,7 +172,7 @@ export default function Feedback() {
           </Text>
         </Text>
         <Textarea
-          placeholder="Tell us more about your experience with this rider..."
+          placeholder="Tell us more about your experience with this rider…"
           value={comment}
           onChangeText={setComment}
           numberOfLines={4}

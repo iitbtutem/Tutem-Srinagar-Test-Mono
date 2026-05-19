@@ -152,7 +152,7 @@ export default function EditLicense() {
 
   const isIos = Platform.OS === "ios";
   return (
-    <View className={cn("flex-1 bg-background", { "pt-6": isIos })}>
+    <View className={cn("flex-1 bg-background", { "pt-10": isIos })}>
       <Stack.Screen options={{ headerShown: isIos ? false : true }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
@@ -170,7 +170,7 @@ export default function EditLicense() {
               <MaterialIcons
                 name="keyboard-backspace"
                 size={20}
-                color={isDark ? 'white' : 'black'}
+                color="#000"
               />
             </TouchableOpacity>}
 
@@ -291,17 +291,17 @@ export default function EditLicense() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color="#1ca0d9" />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color="#ed9d2d" />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>

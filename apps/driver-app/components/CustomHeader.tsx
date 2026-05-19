@@ -180,7 +180,7 @@ function ProfileDropdown({
           <Avatar alt="Profile pic" className="h-9 w-9">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
             <AvatarFallback className="bg-white/20">
-              <Text className="text-2xl font-bold text-primary">
+              <Text className="text-2xl font-bold text-white">
                 {!user.profilePictureKey ? user.firstName[0]?.toUpperCase() : 'D'}
               </Text>
             </AvatarFallback>
@@ -188,7 +188,7 @@ function ProfileDropdown({
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className={cn("native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl", {"bg-black": isDark})}>
+      <DropdownMenuContent className="native:w-72 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl">
         <Animated.View entering={FadeIn.duration(200)}>
           <View className="bg-primary/5 px-4 py-2">
             <Text className="text-lg font-bold text-primary">Menu</Text>
@@ -200,7 +200,7 @@ function ProfileDropdown({
               <Link href={'/profile'}>
                 <View className="flex-row items-center gap-3 px-2">
                   <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <FontAwesome5 name="user" size={18} color={iconColor} />
+                    <FontAwesome5 name="user" size={18} color="#000" />
                   </View>
                   <Text className="text-base font-medium text-primary">Profile</Text>
                 </View>

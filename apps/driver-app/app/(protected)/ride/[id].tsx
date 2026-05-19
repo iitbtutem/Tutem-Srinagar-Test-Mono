@@ -288,14 +288,11 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
                 </View>
               </View>
             ) : (
-              <Pressable
-                className="mb-1 flex-row items-center justify-between"
-                onPress={() => router.push(`/ride/feedback/${rating.rideId}`)}>
+              <View className="mb-1 flex-row items-center justify-between">
                 <View className="flex-row items-center gap-1.5">
                   <View className="rounded-full bg-indigo-100 px-2 py-0.5">
                     <Text className="text-xs font-semibold text-indigo-700">You</Text>
                   </View>
-                  <Feather name="edit-3" color="indigo" />
                 </View>
                 <View className="flex-row items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -308,7 +305,7 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
                   ))}
                   <Text className="ml-1 text-xs font-bold text-slate-600">{rating.score}/5</Text>
                 </View>
-              </Pressable>
+              </View>
             )}
             {rating.comment && (
               <Text className="mt-1 text-sm leading-snug text-slate-600">{rating.comment}</Text>

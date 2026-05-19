@@ -82,7 +82,7 @@ export default function Payment() {
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      className="flex-1 bg-white/50"
       contentContainerClassName="px-4 pb-12"
       showsVerticalScrollIndicator={false}
     >
@@ -112,7 +112,7 @@ export default function Payment() {
                 {distanceFormat(Number(ride.distance))}
               </Text>
             </View>
-            <View className='hidden'>
+            <View>
               <Text className="text-amber-800 text-xs font-medium">Duration</Text>
               <Text className="text-amber-950 font-semibold text-sm">
                 {
@@ -214,17 +214,20 @@ export default function Payment() {
         </CardContent>
       </Card>
 
-      <Text className="text-zinc-600 text-xs text-center mt-5 leading-5 mb-4">
+      <Text className="text-zinc-600 text-xs text-center mt-5 leading-5 mb-4 hidden">
         Cash payments are always accepted.{'\n'}QR code enables contactless UPI collection.
       </Text>
 
-      <Button onPress={() => {
-        router.push(`/ride/feedback/${rideId}`)
-      }}>
-        <Text className=''>
-          Give Feedback
-        </Text>
+      <Button
+        className='mt-4 '
+        onPress={() => {
+          router.push(`/ride/feedback/${rideId}`)
+        }}>
+        <Text>Payment Received</Text>
       </Button>
+      <Text className="text-zinc-600 text-xs text-center mt-1 leading-5 mb-4">
+        Tap "Payment Received" after collecting fare to proceed to ride feedback and complete the ride process.
+      </Text>
     </ScrollView>
   );
 }

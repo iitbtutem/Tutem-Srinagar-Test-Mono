@@ -170,7 +170,7 @@ export default function Ride() {
   const activeSheetRef = useRef<BottomSheet>(null);
 
   const ride = useQuery(api.routes.rides.getRide, id ? { id } : 'skip');
-  const settings = useQuery(api.routes.settings.rideSettings)
+  const settings = useQuery(api.routes.settings.rideSettings);
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);
   const cancelRide = useAction(api.actions.ride.driverCancelRide);
@@ -190,21 +190,15 @@ export default function Ride() {
     };
     const cords: Cords = ride.status === 'Open' ? pickupCords : destCords;
     const isDriverNearby = isNearby(driverLocation, cords, arrivedRadiusInMts);
-    if (isDriverNearby && routeState === null) configRoute(cords);
-  }, [driverLocation, ride]);
+    if (isDriverNearby && routeState === null && !ride.hasReachedDestionation) configRoute(cords);
+  }, [driverLocation, ride?._id, ride?.status, ride?.hasReachedDestionation]);
 
   async function configRoute(cords: Cords) {
     if (!driverLocation || !ride) return;
     try {
-      const route = await fetchRoute(driverLocation, cords);
-      setRouteState({
-        polyline: route?.polyline ?? [],
-        remainingDistance: route?.distance,
-        remainingDuration: route?.duration,
-      });
-      if (route?.distance.value < arrivedRadiusInMts) {
+      if(ride.status === "Active"){
         if(cancelStep !== null) setCancelStep(null);
-        if(ride.status === "Active" && ride.hasReachedDestionation === false){
+        if(ride.hasReachedDestionation === false){
           try {
             await hasReachedDestination({ driverId: driverId, rideId: ride._id })
           } catch (error: any) {
@@ -216,6 +210,13 @@ export default function Ride() {
             })
           }
         }
+      } else {
+        const route = await fetchRoute(driverLocation, cords);
+        setRouteState({
+          polyline: route?.polyline ?? [],
+          remainingDistance: route?.distance,
+          remainingDuration: route?.duration,
+        });
       }
     } catch (e) {
       console.log(e);
@@ -264,43 +265,36 @@ export default function Ride() {
     }
   };
 
-  const handleCompleteRide = async (driverId: Id<'driver'>, rideId: Id<'ride'>) => {
+  const handleCompleteRide = async () => {
     if(!ride) return;
+    setLoading("completing")
     try {
       if(driverLocation === null) throw new Error("Failed to access your location")
-      await completeRide({ driverId, rideId, driverLocation });
-      router.push({
-        pathname: '/ride/payment',
-        params: {
-          rideId: rideId.toString(),
-        },
-      });
+      await completeRide({ driverId, rideId: ride._id, driverLocation });
+      pushToPayments();
       showToast({
         type: 'success',
         title: 'Ride completed',
         description: 'Ride completed successfully.',
       });
-      activeSheetRef.current?.close();
     } catch (e: any) {
       showToast({
         type: 'error',
         title: 'Failed',
         description: e.data ?? 'Failed to complete ride.',
       });
+    } finally {
+      setLoading(null)
     }
   };
 
   const pushToPayments = () => {
-    if(canceledRideCharges === null || canceledRideCharges.calculatedFare <= 0){
-      router.replace("/")
-    } else {
-      router.replace({
-        pathname: "/ride/payment",
-        params: {
-          rideId: id.toString(),
-        }
-      })
-    }
+    router.push({
+      pathname: "/ride/payment",
+      params: {
+        rideId: id.toString(),
+      }
+    })
   }
 
   const handleConfirmCancel = async () => {
@@ -322,7 +316,12 @@ export default function Ride() {
         description: 'The ride has been cancelled.',
       });
 
-      pushToPayments();
+      if(canceledRideCharges === null || canceledRideCharges.calculatedFare <= 0){
+        router.replace("/")
+        if(router.canDismiss()) router.dismissAll();
+      } else {
+        pushToPayments();
+      }
     } catch (e: any) {
       showToast({
         type: 'error',
@@ -353,7 +352,7 @@ export default function Ride() {
     calculateCancelRide();
   }, [ride?.status])
 
-  console.log("RRRRRRRRR ::::: ", ride)
+  console.log("Ride ::::::::::: ", ride)
   // Guards
   if (ride === undefined || vehicle === undefined || settings === undefined)
     return (
@@ -379,8 +378,11 @@ export default function Ride() {
 
   const driverChanged = ride.driverId !== driverId;
 
-  const rideCanceled = ride.status === "Canceled"
-  const cancelReason = ride.rideReasons.find(reason => reason.driverId === undefined);
+  const rideCanceled = ride.status === "Canceled";
+  const rideAborted = ride.status === "Abort";
+  const rideCompleted = ride.status === "Completed";
+  const riderCancelReason = ride.rideReasons.find(reason => reason.driverId === undefined);
+  const driverCancelReason = ride.rideReasons.find(reason => reason.driverId === driverId);
 
   return (
     <View className="flex-1">
@@ -394,7 +396,7 @@ export default function Ride() {
           headerTitleStyle: { fontWeight: '700', color: '#0f172a' },
         }}
       />
-      <View style={{ height: MAP_HEIGHT }} pointerEvents={driverChanged ? 'none' : 'auto'}>
+      <View style={{ height: MAP_HEIGHT }} pointerEvents={(driverChanged || rideCanceled) ? 'none' : 'auto'}>
         {/* Full-screen map */}
         <MapView
           ref={mapRef}
@@ -428,210 +430,223 @@ export default function Ride() {
         </MapView>
       </View>
 
-        {/* Map controls */}
-        <View
-          style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
-          className="flex-row items-start justify-between"
-          pointerEvents="box-none">
-          <View pointerEvents="none">
-            <Animated.View entering={FadeInUp.springify()}>
-              <RouteLegend labelA="Pickup" labelB="Destination" />
-            </Animated.View>
-          </View>
-          <TouchableOpacity
-            onPress={() => handleLocateDriver()}
-            activeOpacity={0.8}
-            style={{ elevation: 5 }}
-            className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
-            <MaterialCommunityIcons
-              name="crosshairs-gps"
-              size={24}
-              color={isDark ? '#60a5fa' : '#1a73e8'}
-            />
-          </TouchableOpacity>
+      {/* Map controls */}
+      <View
+        style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
+        className="flex-row items-start justify-between"
+        pointerEvents="box-none">
+        <View pointerEvents="none">
+          <Animated.View entering={FadeInUp.springify()}>
+            <RouteLegend labelA="Pickup" labelB="Destination" />
+          </Animated.View>
         </View>
+        <TouchableOpacity
+          onPress={() => handleLocateDriver()}
+          activeOpacity={0.8}
+          style={{ elevation: 5 }}
+          className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
+          <MaterialCommunityIcons
+            name="crosshairs-gps"
+            size={24}
+            color={isDark ? '#60a5fa' : '#1a73e8'}
+          />
+        </TouchableOpacity>
+      </View>
 
-        {/* Bottom Sheet */}
-        <BottomSheet
-          ref={activeSheetRef}
-          index={1}
-          snapPoints={['40%', '85%']}
-          enablePanDownToClose={false}
-          backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
-          handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
-          <BottomSheetScrollView
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 }}>
-            {/* CANCEL FLOW — Step 1: Reason selection */}
-            {cancelStep === 'reason' && (
-              <Animated.View entering={FadeInUp.duration(280)}>
-                {/* Header */}
-                <View className="mb-5 flex-row items-center gap-3">
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
-                    <AlertTriangle size={20} color="#ef4444" />
-                  </View>
+      {/* Bottom Sheet */}
+      <BottomSheet
+        ref={activeSheetRef}
+        index={1}
+        snapPoints={['50%']}
+        enablePanDownToClose={false}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
+        <BottomSheetScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 }}>
+          {/* CANCEL FLOW — Step 1: Reason selection */}
+          {cancelStep === 'reason' && (
+            <Animated.View entering={FadeInUp.duration(280)}>
+              {/* Header */}
+              <View className="mb-5 flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                  <AlertTriangle size={20} color="#ef4444" />
+                </View>
+                <View>
+                  <Text className="text-title text-[17px] font-extrabold tracking-tight">
+                    {ride.status === 'Active' ? 'Abort Ride' : 'Cancel Ride'}
+                  </Text>
+                  <Text className="text-xs text-slate-500">
+                    Please select a reason before{' '}
+                    {ride.status === 'Active' ? 'aborting' : 'cancelling'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Reason list */}
+              <View className="mb-5 overflow-hidden">
+                {CANCEL_REASONS.map((reason, idx) => {
+                  const selected = selectedReason === reason;
+                  return (
+                    <TouchableOpacity
+                      key={reason}
+                      activeOpacity={0.7}
+                      onPress={() => setSelectedReason(reason)}
+                      className={`flex-row items-center gap-3 px-4 py-3.5 ${
+                        selected ? 'bg-red-500/10' : 'bg-transparent'
+                      }`}>
+                      {/* Checkbox */}
+                      {selected ? (
+                        <CheckCircle2 size={20} color="#ef4444" />
+                      ) : (
+                        <Circle size={20} color="#475569" />
+                      )}
+                      <Text
+                        className={`flex-1 text-sm font-semibold ${
+                          selected ? 'text-red-400' : 'text-slate-800'
+                        }`}>
+                        {reason}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Action buttons */}
+              <View className="flex-row gap-3">
+                <Button
+                  disabled={ loading === "canceling"}
+                  onPress={() => {
+                    setCancelStep(null);
+                    setSelectedReason(null);
+                  }}
+                  className="flex-1 border-primary/90">
+                  <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
+                </Button>
+                <Button
+                  disabled={selectedReason === null || loading === "canceling"}
+                  onPress={() => calculateCancelRide()}
+                  className={`flex-1 ${
+                    selectedReason === null
+                      ? 'border-red-900/40 bg-red-900/20'
+                      : 'border-red-500/60 bg-red-500/20'
+                  }`}>
+                  <Text
+                    className={`text-[15px] font-extrabold ${
+                      selectedReason === null ? 'text-red-900' : 'text-red-400'
+                    }`}>
+                    Continue {loading === "canceling" ? "…" : "→"}
+                  </Text>
+                </Button>
+              </View>
+            </Animated.View>
+          )}
+
+          {/* CANCEL FLOW — Step 2: Confirm + fare summary */}
+          {cancelStep === 'confirm' && (
+            <Animated.View entering={FadeInUp.duration(280)}>
+              {/* Header */}
+              <View className="mb-5 flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                  <AlertTriangle size={20} color="#ef4444" />
+                </View>
+                {rideAborted ? (
                   <View>
                     <Text className="text-title text-[17px] font-extrabold tracking-tight">
-                      {ride.status === 'Active' ? 'Abort Ride' : 'Cancel Ride'}
+                      Ride Aborted by Rider
                     </Text>
                     <Text className="text-xs text-slate-500">
-                      Please select a reason before{' '}
-                      {ride.status === 'Active' ? 'aborting' : 'cancelling'}
+                      Review the trip summary before and proceed to payment.
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <Text className="text-title text-[17px] font-extrabold tracking-tight">
+                      Confirm Cancellation
+                    </Text>
+                    <Text className="text-xs text-slate-500">
+                      Review the trip summary before aborting
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Trip stats card */}
+              {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-5 overflow-hidden rounded-2xl border border-slate-700/70">
+                {/* Covered */}
+                <View className="flex-row items-center justify-between px-5 pt-4">
+                  <View className="flex-row items-center gap-2.5">
+                    <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
+                      <MaterialCommunityIcons name="map-marker-check" size={16} color="#10b981" />
+                    </View>
+                    <View>
+                      <Text className="text-xs font-lighter text-primary/50">Distance Covered</Text>
+                      <Text className="text-xs font-lighter text-primary/50">Remaining Distance</Text>
+                    </View>
+                  </View>
+                  <View>
+                    <Text className="text-xs font-lighter text-right text-emerald-400">
+                      {distanceFormat(canceledRideCharges.chargableDistance)}
+                    </Text>
+                    <Text className="text-xs font-lighter text-right text-amber-400">
+                      {distanceFormat(canceledRideCharges.remainingDistance)}
                     </Text>
                   </View>
                 </View>
 
-                {/* Reason list */}
-                <View className="mb-5 overflow-hidden">
-                  {CANCEL_REASONS.map((reason, idx) => {
-                    const selected = selectedReason === reason;
-                    return (
-                      <TouchableOpacity
-                        key={reason}
-                        activeOpacity={0.7}
-                        onPress={() => setSelectedReason(reason)}
-                        className={`flex-row items-center gap-3 px-4 py-3.5 ${
-                          selected ? 'bg-red-500/10' : 'bg-transparent'
-                        }`}>
-                        {/* Checkbox */}
-                        {selected ? (
-                          <CheckCircle2 size={20} color="#ef4444" />
-                        ) : (
-                          <Circle size={20} color="#475569" />
-                        )}
-                        <Text
-                          className={`flex-1 text-sm font-semibold ${
-                            selected ? 'text-red-400' : 'text-slate-800'
-                          }`}>
-                          {reason}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Action buttons */}
-                <View className="flex-row gap-3">
-                  <Button
-                    disabled={ loading === "canceling"}
-                    onPress={() => {
-                      setCancelStep(null);
-                      setSelectedReason(null);
-                    }}
-                    className="flex-1 border-primary/90">
-                    <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
-                  </Button>
-                  <Button
-                    disabled={selectedReason === null || loading === "canceling"}
-                    onPress={() => calculateCancelRide()}
-                    className={`flex-1 ${
-                      selectedReason === null
-                        ? 'border-red-900/40 bg-red-900/20'
-                        : 'border-red-500/60 bg-red-500/20'
-                    }`}>
-                    <Text
-                      className={`text-[15px] font-extrabold ${
-                        selectedReason === null ? 'text-red-900' : 'text-red-400'
-                      }`}>
-                      Continue {loading === "canceling" ? "…" : "→"}
-                    </Text>
-                  </Button>
-                </View>
-              </Animated.View>
-            )}
-
-            {/* CANCEL FLOW — Step 2: Confirm + fare summary */}
-            {cancelStep === 'confirm' && (
-              <Animated.View entering={FadeInUp.duration(280)}>
-                {/* Header */}
-                <View className="mb-5 flex-row items-center gap-3">
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
-                    <AlertTriangle size={20} color="#ef4444" />
-                  </View>
-                  {ride.status === "Abort" ? (
-                    <View>
-                      <Text className="text-title text-[17px] font-extrabold tracking-tight">
-                        Ride Aborted by Rider
-                      </Text>
-                      <Text className="text-xs text-slate-500">
-                        Review the trip summary before and proceed to payment.
-                      </Text>
-                    </View>
-                  ) : (
-                    <View>
-                      <Text className="text-title text-[17px] font-extrabold tracking-tight">
-                        Confirm Cancellation
-                      </Text>
-                      <Text className="text-xs text-slate-500">
-                        Review the trip summary before aborting
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Trip stats card */}
-                {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-5 overflow-hidden rounded-2xl border border-slate-700/70">
-                  {/* Covered */}
-                  <View className="flex-row items-center justify-between px-5 pt-4">
+                {/* Cancellation fare */}
+                <View className="px-5 py-4">
+                  <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-2.5">
-                      <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
-                        <MaterialCommunityIcons name="map-marker-check" size={16} color="#10b981" />
+                      <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
+                        <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
                       </View>
                       <View>
-                        <Text className="text-xs font-lighter text-primary/50">Distance Covered</Text>
-                        <Text className="text-xs font-lighter text-primary/50">Remaining Distance</Text>
-                      </View>
-                    </View>
-                    <View>
-                      <Text className="text-xs font-lighter text-right text-emerald-400">
-                        {distanceFormat(ride.distance - canceledRideCharges.remainingDistance)}
-                      </Text>
-                      <Text className="text-xs font-lighter text-right text-amber-400">
-                        {distanceFormat(canceledRideCharges.remainingDistance)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Cancellation fare */}
-                  <View className="px-5 py-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-2.5">
-                        <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
-                          <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
-                        </View>
-                        <View>
-                          <Text className="text-sm font-semibold pb-0.5">
-                            Calculated Fare
-                          </Text>
-                          <View className="flex-row justify-between gap-2 hidden">
-                            <View className="gap-1">
-                              <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
-                              <Text className="text-[10px] text-slate-600">
-                                {formatFare(canceledRideCharges.ratePerKm)}
-                              </Text>
-                            </View>
-                            <View className="gap-1">
-                              <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
-                              <Text className="text-[10px] text-slate-600">
-                                {distanceFormat(canceledRideCharges.baseDistance)}
-                              </Text>
-                            </View>
-                            <View className="gap-1">
-                              <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
-                              <Text className="text-[10px] text-slate-600">
-                                {formatFare(canceledRideCharges.basePrice)}
-                              </Text>
-                            </View>
+                        <Text className="text-sm font-semibold pb-0.5">
+                          Calculated Fare
+                        </Text>
+                        <View className="flex-row justify-between gap-2 hidden">
+                          <View className="gap-1">
+                            <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
+                            <Text className="text-[10px] text-slate-600">
+                              {formatFare(canceledRideCharges.ratePerKm)}
+                            </Text>
+                          </View>
+                          <View className="gap-1">
+                            <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
+                            <Text className="text-[10px] text-slate-600">
+                              {distanceFormat(canceledRideCharges.baseDistance)}
+                            </Text>
+                          </View>
+                          <View className="gap-1">
+                            <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
+                            <Text className="text-[10px] text-slate-600">
+                              {formatFare(canceledRideCharges.basePrice)}
+                            </Text>
                           </View>
                         </View>
                       </View>
-                      <Text className="text-2xl font-extrabold tracking-tight text-red-400">
-                        {formatFare(canceledRideCharges.calculatedFare)}
-                      </Text>
                     </View>
+                    <Text className="text-2xl font-extrabold tracking-tight text-red-400">
+                      {formatFare(canceledRideCharges.calculatedFare)}
+                    </Text>
                   </View>
-                </View>}
+                </View>
+              </View>}
 
-                {/* Selected reasons recap */}
+              {/* Selected reasons recap */}
+              {ride.status === "Abort" ? (
+                <>
+                  {riderCancelReason && <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                    <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Abort Reason
+                    </Text>
+                    <View key={id} className="mb-1 flex-row items-center gap-2">
+                      <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                      <Text className="text-xs font-medium text-slate-400">{riderCancelReason?.reason}</Text>
+                    </View>
+                  </View>}
+                </>
+              ) : (
                 <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
                   <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                     { (ride.status === "Driver Arrived" || ride.status === "Active")
@@ -643,49 +658,138 @@ export default function Ride() {
                     <Text className="text-xs font-medium text-slate-400">{selectedReason}</Text>
                   </View>
                 </View>
+              )}
 
-                {/* Action buttons */}
-                { ride.status === "Abort" ? (
+              {/* Action buttons */}
+              { ride.status === "Abort" ? (
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Continue →</Text>
+                </Button>
+              ) : ( 
+                <View className="flex-row gap-3">
                   <Button
-                    onPress={pushToPayments}
+                    onPress={() => setCancelStep('reason')}
                     className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                    <Text className="text-[15px] font-bold">Continue →</Text>
+                    <Text className="text-[15px] font-bold">← Back</Text>
                   </Button>
-                ) : ( 
-                  <View className="flex-row gap-3">
-                    <Button
-                      onPress={() => setCancelStep('reason')}
-                      className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                      <Text className="text-[15px] font-bold">← Back</Text>
-                    </Button>
 
-                    <Button
-                      disabled={loading === 'canceling'}
-                      onPress={handleConfirmCancel}
-                      className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
-                      {loading === 'canceling' ? (
-                        <ActivityIndicator size="small" color="#ef4444" />
-                      ) : (
-                        <View className="flex-row items-center gap-2">
-                          <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
-                          <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
-                        </View>
-                      )}
-                    </Button>
+                  <Button
+                    disabled={loading === 'canceling'}
+                    onPress={handleConfirmCancel}
+                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
+                    {loading === 'canceling' ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : (
+                      <View className="flex-row items-center gap-2">
+                        <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
+                        <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
+                      </View>
+                    )}
+                  </Button>
+                </View>
+              )}
+
+              {/* Disclaimer */}
+              <Text className="mt-4 text-center text-[11px] leading-4 text-slate-600">
+                Fare will be charged based on distance covered.{'\n'}
+                { ride.status !== "Abort" ? "Repeated cancellations may affect your driver rating." : ""}
+              </Text>
+            </Animated.View>
+          )}
+
+          {/* NORMAL RIDE VIEW */}
+          {cancelStep === null && (
+            <Animated.View entering={FadeInUp.duration(250)}>
+            {(rideAborted && driverCancelReason) ? (
+              <View className="gap-5">
+                {/* Icon + Header */}
+                <View className="items-center gap-3 py-4">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+                    <Text className="text-3xl">🚫</Text>
                   </View>
-                )}
+                  <View className="items-center gap-1">
+                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                      Ride Aborted
+                    </Text>
+                    <Text className="text-[20px] font-extrabold tracking-tight text-title text-center">
+                      You cancelled this ride
+                    </Text>
+                  </View>
+                </View>
 
-                {/* Disclaimer */}
-                <Text className="mt-4 text-center text-[11px] leading-4 text-slate-600">
-                  Fare will be charged based on distance covered.{'\n'}
-                  { ride.status !== "Abort" ? "Repeated cancellations may affect your driver rating." : ""}
+                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
+                  <View key={id} className="mb-1 flex-row items-center gap-2">
+                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <Text className="text-xs font-medium text-slate-400">{driverCancelReason.reason}</Text>
+                  </View>
+                </View>
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Continue →</Text>
+                </Button>
+              </View>
+            ) : (rideAborted && riderCancelReason) ? (
+              <View className="gap-5">
+                {/* Icon + Header */}
+                <View className="items-center gap-3 py-4">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+                    <Text className="text-3xl">🚫</Text>
+                  </View>
+                  <View className="items-center gap-1">
+                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                      Ride Aborted
+                    </Text>
+                    <Text className="text-[20px] font-extrabold tracking-tight text-white text-center">
+                      Rider cancelled this ride
+                    </Text>
+                  </View>
+                </View>
+                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
+                  <View key={id} className="mb-1 flex-row items-center gap-2">
+                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <Text className="text-xs font-medium text-slate-400">{riderCancelReason.reason}</Text>
+                  </View>
+                </View>
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Continue →</Text>
+                </Button>
+              </View>
+            ) : ( rideCompleted ? (
+              <View className="gap-4">
+                <View className="flex-row items-center justify-center gap-2">
+                  <View className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                  <Text className="text-[11px] text-center font-bold uppercase tracking-[0.15em] text-emerald-400">
+                    Ride Completed
+                  </Text>
+                </View>
+
+                {/* Heading */}
+                <Text className="text-[22px] text-center font-extrabold tracking-tight text-title leading-snug">
+                  You've reached the{"\n"}destination 🎉
                 </Text>
-              </Animated.View>
-            )}
 
-            {/* NORMAL RIDE VIEW */}
-            {cancelStep === null && (
-              <Animated.View entering={FadeInUp.duration(250)}>
+                {/* Completion Card */}
+                <View className="rounded-2xl border border-emerald-500/20 px-4 py-4">
+                  <Text className="text-sm font-medium text-slate-400 leading-relaxed">
+                    Great job! The ride has been completed successfully. Proceed to review payment details.
+                  </Text>
+                </View>
+                
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[54px] flex-1 items-center justify-center rounded-2xl bg-emerald-500">
+                  <Text className="text-[15px] font-bold text-white">Continue to Payment →</Text>
+                </Button>
+              </View>
+            ) : (
+              <View>
                 {/* Status banner */}
                 <RideStatusBanner ride={ride} />
 
@@ -709,7 +813,11 @@ export default function Ride() {
                       </Avatar>
                     </View>
                     <View className="flex-1">
-                      <Text className="text-title text-base font-bold" numberOfLines={1}>
+                      <Text
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                        className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight"
+                      >
                         {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
                           'Rider'}
                       </Text>
@@ -773,11 +881,11 @@ export default function Ride() {
                 )}
 
                 {/* Complete / Cancel */}
-                {ride.hasReachedDestionation ? (
+                {(ride.hasReachedDestionation && ride.status === "Active") ? (
                   <Button
                     className="my-2 w-full items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
                     disabled={loading === 'completing'}
-                    onPress={() => handleCompleteRide(driverId, ride._id)}>
+                    onPress={handleCompleteRide}>
                     <Text className="text-[17px] font-extrabold tracking-tight text-white">
                       {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
                     </Text>
@@ -804,14 +912,15 @@ export default function Ride() {
                     </Text>
                   </Button>
                 )}
-
-                
-              </Animated.View>
-            )}
-          </BottomSheetScrollView>
-        </BottomSheet>
+              </View>
+            ))};
+              
+            </Animated.View>
+          )}
+        </BottomSheetScrollView>
+      </BottomSheet>
       {driverChanged && <DriverChangedAlert />}
-      {rideCanceled && <RideCanceled cancelReason={cancelReason} />}
+      {rideCanceled && <RideCanceled riderCancelReason={riderCancelReason} />}
     </View>
   );
 };
@@ -836,7 +945,7 @@ function DriverChangedAlert() {
           <AlertDialogAction
             className="w-full"
             onPress={() => {
-              router.push("/");
+              router.back();
             }}
           >
             <Text className="text-center text-white">
@@ -850,9 +959,9 @@ function DriverChangedAlert() {
 }
 
 function RideCanceled({
-  cancelReason,
+  riderCancelReason,
 }: {
-  cancelReason: Ride["rideReasons"][number] | undefined;
+  riderCancelReason: Ride["rideReasons"][number] | undefined;
 }) {
   return (
     <AlertDialog defaultOpen>
@@ -862,11 +971,11 @@ function RideCanceled({
             Ride Canceled
           </AlertDialogTitle>
 
-          {cancelReason && (
+          {riderCancelReason && (
             <View className="flex-row gap-1 rounded-xl bg-destructive/10 p-2">
               <Text>Reason:</Text>
               <Text className="font-bold text-destructive">
-                {cancelReason.reason}
+                {riderCancelReason.reason}
               </Text>
             </View>
           )}
@@ -882,7 +991,7 @@ function RideCanceled({
           <AlertDialogAction
             className="w-full"
             onPress={() => {
-              router.push("/");
+              router.back();
             }}
           >
             <Text className="text-center text-white">

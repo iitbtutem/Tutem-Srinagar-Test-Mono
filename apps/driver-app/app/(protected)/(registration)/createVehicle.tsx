@@ -20,7 +20,7 @@ import { api } from '@tutem/api';
 import { useUser } from '@clerk/expo';
 import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -32,6 +32,8 @@ import * as ImagePicker from 'expo-image-picker';
 import ErrorScreen from '@/components/ErrorScreen';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import useThemeColors from '@/hooks/useColorScheme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 
@@ -55,8 +57,10 @@ export default function CreateVehicle() {
   const router = useRouter();
   const { showToast } = useToast();  
   const { uploadFile } = useFileUpload();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const segments = useSegments();
+  console.log("create vehicle segments : ", segments);
+
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
 
   const [imagePickupKey, setImagePickupKey] = useState<PickupImageKey>();
   const [loading, setLoading] = useState(false); 
@@ -143,12 +147,8 @@ export default function CreateVehicle() {
         insuranceImageKey,
       });
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
-      if(router.canGoBack()){
-        router.back();
-      } else {
-        router.push("/(protected)/(tabs)");
-        if(router.canDismiss()) router.dismissAll();
-      }
+      router.replace("/(protected)/(tabs)");
+      if(router.canDismiss()) router.dismissAll();
     } catch (error) {
       console.error(error);
       showToast({ title: 'Something went wrong', type: 'error' });
@@ -191,7 +191,8 @@ export default function CreateVehicle() {
   const isIos = Platform.OS === "ios";
   return (
     <View className={cn("flex-1 bg-background", { "pt-6": isIos })}>
-      <Stack.Screen options={{ headerShown: isIos ? false : true }} />
+      {!router.canGoBack() && <SafeAreaView />}
+      <Stack.Screen options={{ headerShown: isIos ? false : router.canGoBack() ? true : false }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
@@ -199,17 +200,13 @@ export default function CreateVehicle() {
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           {/* NEW wrapper */}
           <View className="mb-2 flex-row items-center px-3">
-            {isIos && <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => {
-              if(router.canGoBack()){
+            {(isIos && router.canGoBack()) && <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => {
                 router.back();
-              } else {
-                router.push("/(protected)/(tabs)");
-              }
             }}>
               <MaterialIcons
                 name="keyboard-backspace"
                 size={20}
-                color={isDark ? 'white' : 'black'}
+                color="#000"
               />
             </TouchableOpacity>}
 
@@ -562,8 +559,8 @@ export default function CreateVehicle() {
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose={true}
-        backgroundStyle={{ backgroundColor: isDark ? '#18181b' : '#FFFFFF' }}
-        handleIndicatorStyle={{ backgroundColor: isDark ? '#3f3f46' : '#E5E7EB' }}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
         )}>
@@ -572,17 +569,17 @@ export default function CreateVehicle() {
 
           {imagePickupKey && <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
               onPress={() => handlePick('camera', imagePickupKey)}>
-              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color="#1ca0d9" />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
               onPress={() => handlePick('gallery', imagePickupKey)}>
-              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color="#ed9d2d" />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>}
         </BottomSheetView>

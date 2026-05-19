@@ -211,7 +211,7 @@ export default function Feedback() {
           </Text>
         </Text>
         <Textarea
-          placeholder="Tell us more about your experience with this driver..."
+          placeholder="Tell us more about your experience with this driver…"
           value={comment}
           onChangeText={setComment}
           numberOfLines={4}

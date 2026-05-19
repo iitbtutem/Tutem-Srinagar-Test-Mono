@@ -23,7 +23,7 @@ function Separator({
 }
 
 function HorizontalRule({className}: {className?: string}) {
-    return <View className={cn("h-px bg-slate-100 dark:bg-zinc-800", className)} />
+    return <View className={cn("h-px bg-slate-100", className)} />
 }
  
 export { Separator, HorizontalRule };

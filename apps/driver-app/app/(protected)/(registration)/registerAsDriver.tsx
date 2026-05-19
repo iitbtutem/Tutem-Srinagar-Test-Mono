@@ -166,7 +166,7 @@ export default function RegisterAsRider() {
 
   if (driver && driver.driverDetails) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
@@ -281,7 +281,7 @@ export default function RegisterAsRider() {
                               <TouchableOpacity
                                 disabled={isSubmitting}
                                 className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 shadow-md"
-                                onPress={() => onChange({ fileUri: undefined, uploadedKey: '' })}>
+                                onPress={() => onChange(undefined)}>
                                 <MaterialIcons name="delete-outline" size={20} color="red" />
                               </TouchableOpacity>
                             </View>
@@ -332,16 +332,16 @@ export default function RegisterAsRider() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl bg-background border border-cyan-800"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={iconColor} />
+              <Feather name="camera" size={32} color="#1ca0d9" />
               <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl bg-background border border-orange-800"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={iconColor} />
+              <Feather name="image" size={32} color="#ed9d2d" />
               <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
             </TouchableOpacity>
           </View>

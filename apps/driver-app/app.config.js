@@ -4,7 +4,7 @@ export default {
     slug: "tutem-driver",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.jpeg",
+    icon: "./assets/images/icon.png",
     scheme: "tutem-driver",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -31,7 +31,7 @@ export default {
       softwareKeyboardLayoutMode: "pan",
       edgeToEdgeEnabled: true,
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.jpeg",
+        foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
       package: "com.driver.tutem",

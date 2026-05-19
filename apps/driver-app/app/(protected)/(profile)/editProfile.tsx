@@ -33,6 +33,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import useThemeColors from '@/hooks/useColorScheme';
 
 const formSchema = z.object({
   firstName: z
@@ -60,7 +61,7 @@ export default function EditProfile() {
   const { showToast } = useToast();  
   const { uploadFile } = useFileUpload();
 
-  const isDark = colorScheme.get() === 'dark';
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
 
   const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } =
     useLocalSearchParams<{
@@ -180,7 +181,7 @@ export default function EditProfile() {
     }
   });
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations..." />;
+  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
 
   if (organizations.length === 0) {
     return <ErrorScreen message="No organizations found" />;
@@ -525,8 +526,8 @@ export default function EditProfile() {
         index={-1}
         snapPoints={['35%']}
         enablePanDownToClose={true}
-        backgroundStyle={{ backgroundColor: isDark ? '#18181b' : '#FFFFFF' }}
-        handleIndicatorStyle={{ backgroundColor: isDark ? '#3f3f46' : '#E5E7EB' }}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor }}
         backdropComponent={(props: any) => (
           <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
         )}>
@@ -535,17 +536,17 @@ export default function EditProfile() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
+              <Feather name="camera" size={32} color="#1ca0d9" />
+              <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 dark:border-zinc-800 dark:bg-zinc-900"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={isDark ? '#a1a1aa' : 'gray'} />
-              <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>
+              <Feather name="image" size={32} color="#ed9d2d" />
+              <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetView>

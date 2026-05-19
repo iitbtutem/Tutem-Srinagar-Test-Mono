@@ -146,7 +146,7 @@ export default function Profile() {
   });
 
   if (!userId) return <ErrorScreen message="User not found" />;
-  if (rider === undefined) return <LoadingScreen message="Loading profile..." />;
+  if (rider === undefined) return <LoadingScreen message="Loading profile…" />;
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (

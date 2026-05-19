@@ -22,8 +22,7 @@ import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
-import { Link, Redirect } from 'expo-router';
-import { mapStyle } from '../../../../user-app/constants/mapStyles';
+import { Link, Redirect, useSegments } from 'expo-router';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
@@ -89,6 +88,8 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 // Main Screen
 export default function Home() {
   const { userId, getToken } = useAuth();
+    const segments = useSegments();
+    console.log("home screen segments : ", segments);
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
 
@@ -166,7 +167,7 @@ export default function Home() {
           driverDetails.isOnline &&
           !currentRide
         ) {
-          console.log('updating presence to global Channel');
+          // console.log('updating presence to global Channel');
           try {
             await globalChannel?.presence.update({
               driverId: driverDetails._id,
@@ -230,7 +231,7 @@ export default function Home() {
 
             const channel = getDriverChannel(driverDetails._id);
             if (channel) {
-              console.log('Publishing regular 10s location heartbeat...');
+              // console.log('Publishing regular 10s location heartbeat...');
               channel
                 .publish('location', {
                   ...coords,
@@ -553,8 +554,8 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
                 )}
               </View>
               {hasRides && (
-                <View className="h-9 w-9 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20">
-                  <Text className="text-sm font-extrabold text-violet-400">{rides.length}</Text>
+                <View className="h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/20">
+                  <Text className="text-sm font-extrabold text-primary">{rides.length}</Text>
                 </View>
               )}
             </View>
@@ -621,8 +622,7 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
             <Animated.View entering={FadeInUp.duration(220)}>
               {/* Header */}
               <View className="mb-5 flex-row items-start justify-between border-b border-slate-800 py-4">
-                <View className="flex-row items-center gap-x-1 pr-4">
-                  {/* Avatar */}
+                <View className="flex-1 flex-row items-center gap-x-1 pr-4">
                   <Avatar alt="Profile pic" className="h-12 w-12">
                     <AvatarImage
                       source={
@@ -638,24 +638,36 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
                       </Text>
                     </AvatarFallback>
                   </Avatar>
-                  <View>
+                  
+                  <View className="flex-1">
                     <View className="flex-row gap-2">
-                      <Text className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight">
-                        {`${selectedRide.rider.details?.firstName ?? ''} ${selectedRide.rider.details?.lastName ?? ''}`.trim() ||
-                          'Passenger'}
+                      <Text
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                        className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight"
+                      >
+                        {`${selectedRide.rider.details?.firstName ?? ''} ${
+                          selectedRide.rider.details?.lastName ?? ''
+                        }`.trim() || 'Passenger'}
                       </Text>
-                      <StarRating rating={selectedRide.rider.ratings} />
                     </View>
-                    {selectedRide.rider.details && <View className='flex-row gap-2'>
-                      <Gender gender={selectedRide.rider.details.gender} />
-                      <Age dob={selectedRide.rider.details.dob} />
-                    </View>}
+
+                    {selectedRide.rider.details && (
+                      <View className="flex-row gap-1">
+                        <Gender gender={selectedRide.rider.details.gender} />
+                        <Age dob={selectedRide.rider.details.dob} />
+                        <StarRating rating={selectedRide.rider.ratings} />
+                      </View>
+                    )}
+
                   </View>
                 </View>
-                <View className="items-end">
+                
+                <View className="ml-2 items-end">
                   <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                     Est. Fare
                   </Text>
+
                   <Text className="text-3xl font-extrabold tracking-tight text-emerald-400">
                     {formatFare(selectedRide.fare)}
                   </Text>
@@ -732,28 +744,60 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
               )}
 
               {/* Action buttons */}
-              <View className="mt-2 flex-row gap-3">
+              {selectedRide.status === "Canceled" ? (
+                <View className="gap-5">
+                {/* Icon + Header */}
+                <View className="items-center gap-3 py-4">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
+                    <Text className="text-3xl">🚫</Text>
+                  </View>
+                  <View className="items-center gap-1">
+                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                      Ride Canceled
+                    </Text>
+                    <Text className="text-[20px] font-extrabold tracking-tight text-title text-center">
+                      Rider has cancelled this ride
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
+                  <View className="mb-1 flex-row items-center gap-2">
+                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <Text className="text-xs font-medium text-slate-400">Unknown Reason</Text>
+                  </View>
+                </View>
                 <Button
-                  className="min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10 py-4"
-                  onPress={handleReject}
-                  disabled={actionLoading !== null}>
-                  {actionLoading === 'reject' ? (
-                    <ActivityIndicator size="small" color="#EF4444" />
-                  ) : (
-                    <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
-                  )}
-                </Button>
-                <Button
-                  className={`min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 py-4 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
-                  onPress={handleAccept}
-                  disabled={!acceptCheck.ok || actionLoading !== null}>
-                  {actionLoading === 'accept' ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
-                  )}
+                  onPress={() => requestSheetRef.current?.close()}
+                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Close</Text>
                 </Button>
               </View>
+              ) : (
+                <View className="mt-2 flex-row gap-3">
+                  <Button
+                    className="min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10 py-4"
+                    onPress={handleReject}
+                    disabled={actionLoading !== null}>
+                    {actionLoading === 'reject' ? (
+                      <ActivityIndicator size="small" color="#EF4444" />
+                    ) : (
+                      <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
+                    )}
+                  </Button>
+                  <Button
+                    className={`min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 py-4 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
+                    onPress={handleAccept}
+                    disabled={!acceptCheck.ok || actionLoading !== null}>
+                    {actionLoading === 'accept' ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
+                    )}
+                  </Button>
+                </View>
+              )}
             </Animated.View>
           )}
         </BottomSheetScrollView>
