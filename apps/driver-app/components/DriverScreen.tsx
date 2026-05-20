@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert } from 'react-native';
-import { Text } from '@/components/ui/text';
-import { Switch } from '@/components/ui/switch';
+import { Text, Switch } from '@tutem/ui';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import * as SecureStore from 'expo-secure-store';
 import { MapPin, Navigation } from 'lucide-react-native';

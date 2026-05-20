@@ -1,4 +1,4 @@
-import { Text } from '@/components/ui/text';
+import { Text, Input, Button } from '@tutem/ui';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -11,14 +11,11 @@ import { cn } from '@/lib/utils';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import Animated from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Input } from '@/components/ui/input';
 import { TextInput } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { useMutation } from 'convex/react';
 import { api, Id } from '@tutem/api';
-import { Button } from '@/components/ui/button';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
 

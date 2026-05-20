@@ -1,4 +1,3 @@
-import { Text } from '@/components/ui/text';
 import { api, Id } from '@tutem/api';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,16 +6,13 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useColorScheme } from 'nativewind';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
 import { Redirect, router, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchRoute } from '@/lib/maps';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { distanceFormat, formatFare, getTimeBetweenFormatted, isNearby } from '@/lib/utils';
+import { distanceFormat, formatFare, isNearby } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
-import { METERS_IN_KM } from '@/constants';
 import { MapPinCheck } from 'lucide-react-native';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
@@ -29,7 +25,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Avatar, 
+  AvatarFallback, 
+  AvatarImage, 
+  Text, 
+  Button,
+} from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import Gender from '@/components/Gender';
 import Age from '@/components/Age';

@@ -1,13 +1,11 @@
 import { useToast } from '@/components/CustomToast';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
+import { Text, Button } from '@tutem/ui';
 import { useNotification } from '@/context/NotificationContext';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Redirect, useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { ImageBackground, View } from 'react-native';
+import { View } from 'react-native';
 
 export default function RegisterAsRider() {
   const { userId } = useAuth();

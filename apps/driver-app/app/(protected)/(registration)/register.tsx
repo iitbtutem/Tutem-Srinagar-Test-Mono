@@ -1,6 +1,4 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import { TextInput, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -16,11 +14,13 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Input,
+  Text,
+  Button,
+} from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
 import { Redirect, Stack, useRouter } from 'expo-router';

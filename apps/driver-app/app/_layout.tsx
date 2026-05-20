@@ -17,7 +17,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import Offline from '@/components/offline';
 import { useInternet } from '@/hooks/useInternet';
 import { useEffect, useState } from 'react';
-import { Text } from '@/components/ui/text';
+import { Text } from '@tutem/ui';
 
 export {
   // Catch any errors thrown by the Layout component.

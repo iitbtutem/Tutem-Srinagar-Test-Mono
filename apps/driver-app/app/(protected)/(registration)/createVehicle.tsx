@@ -1,5 +1,3 @@
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import { View, TextInput, TouchableOpacity, Image, Platform } from 'react-native';
 import {
   Select,
@@ -9,20 +7,21 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Input,
+  Text,
+  Button,
+} from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
 import { useUser } from '@clerk/expo';
 import { useMutation, useQuery } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
@@ -57,8 +56,6 @@ export default function CreateVehicle() {
   const router = useRouter();
   const { showToast } = useToast();  
   const { uploadFile } = useFileUpload();
-  const segments = useSegments();
-  console.log("create vehicle segments : ", segments);
 
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
 

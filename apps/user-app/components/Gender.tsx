@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { View } from 'react-native';
-import { Text } from './ui/text';
+import { Text } from '@tutem/ui';
 
 type Gender = 'Male' | 'Female' | 'Other';
 export default function Gender({ gender }: { gender: Gender }) {

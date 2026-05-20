@@ -1,9 +1,8 @@
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
-import { useEffect } from 'react';
 
 export default function ProtectedLayout() {
   const { userId } = useAuth();

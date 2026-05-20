@@ -1,7 +1,5 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
-import { ActivityIndicator, ImageBackground, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 import { useEffect, useRef } from 'react';
 import {
   Select,
@@ -11,17 +9,19 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Text,
+  Input,
+  Button,
+} from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@tutem/api';
 import { Redirect, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth, useUser } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { useNotification } from '@/context/NotificationContext';

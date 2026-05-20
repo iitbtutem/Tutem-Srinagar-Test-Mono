@@ -1,7 +1,5 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,9 +12,6 @@ import {
   View,
 } from 'react-native';
 import { Star } from 'lucide-react-native';
-import { Separator } from '@/components/ui/seperator';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -36,12 +31,12 @@ const QUICK_TAGS = [
 ];
 
 export default function Feedback() {
-  const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
+  const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
 
   const ride = useQuery(
     api.routes.rides.getRiderCurrentRideById,
-    id ? { id } : 'skip'
+    rideId ? { id: rideId } : 'skip'
   );
 
   const submitFeedback = useMutation(api.routes.rides.submitRating);
@@ -61,7 +56,7 @@ export default function Feedback() {
   if (ride === null)
     return <ErrorScreen message="Ride not found" code="404" />;
 
-  const rider = ride.rider;
+  const driver = ride.driver;
   const activeStar = hoveredStar || score;
 
   const toggleTag = (tag: string) => {
@@ -78,8 +73,8 @@ export default function Feedback() {
     try {
       setIsSubmitting(true);
       await submitFeedback({
-        rideId: id,
-        raterType: "Driver",
+        rideId,
+        raterType: "Rider",
         score,
         comment: comment.trim() || undefined,
       });
@@ -94,37 +89,46 @@ export default function Feedback() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="px-6 pt-6 pb-24"
+      contentContainerClassName="px-6 pt-14 pb-12"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
       {/* Header */}
       <View className="mb-10">
-        <Text className="text-title/90 text-sm font-medium tracking-widest uppercase mb-1">
+        <Text className="text-primary/90 text-sm font-medium tracking-widest uppercase mb-1">
           Rate your ride
         </Text>
-        <Text className="text-title/50 text-3xl font-bold leading-tight">
+        <Text className="text-primary/50 text-3xl font-bold leading-tight">
           How was your{'\n'}experience?
         </Text>
       </View>
 
-      {/* Rider Card */}
+      {/* Driver Card */}
       <View className="bg-background border border-zinc-800 rounded-2xl p-5 mb-8 flex-row items-center gap-4">
-        <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
-          <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
+        <Avatar alt={driver.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
+          <AvatarImage source={{ uri: driver.userDetails.profilePictureKey }} />
           <AvatarFallback>
-            <Text className="text-black text-xl font-semibold">
-              {rider.userDetails.firstName?.[0] ?? 'R'}
+            <Text className="text-white text-xl font-semibold">
+              {driver.userDetails.firstName?.[0] ?? 'D'}
             </Text>
           </AvatarFallback>
         </Avatar>
         <View className="flex-1">
-          <Text className="text-title text-lg font-semibold">
-            {`${rider.userDetails.firstName} ${rider.userDetails?.lastName}`}
+          <Text className="text-primary text-lg font-semibold">
+            {`${driver.userDetails.firstName} ${driver.userDetails?.lastName}`}
           </Text>
           <Text className="text-zinc-400 text-sm mt-0.5">
             {ride.vehicle?.model ?? 'Vehicle'}
           </Text>
+          <View className="flex-row items-center mt-1.5 gap-1">
+            <Star size={13} color="#fbbf24" fill="#fbbf24" />
+            <Text className="text-amber-400 text-xs font-medium">
+              {driver.averageRating?.toFixed(1) ?? '—'}
+            </Text>
+            <Text className="text-zinc-500 text-xs">
+              {driver.totalRating ?? 0} trips
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -163,21 +167,52 @@ export default function Feedback() {
       {/* Divider */}
       <Separator />
 
+      {/* Quick tags */}
+      {/* <View className="mb-7">
+        <Text className="text-zinc-400 text-xs font-medium tracking-widest uppercase mb-4">
+          What stood out?
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {QUICK_TAGS.map((tag) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <Pressable
+                key={tag}
+                onPress={() => toggleTag(tag)}
+                className={`px-4 py-2 rounded-full border ${
+                  active
+                    ? 'bg-violet-600 border-violet-500'
+                    : 'bg-zinc-900 border-zinc-700'
+                }`}
+              >
+                <Text
+                  className={`text-sm font-medium ${
+                    active ? 'text-white' : 'text-zinc-400'
+                  }`}
+                >
+                  {active ? '✓ ' : ''}{tag}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View> */}
+
       {/* Comment */}
-      <View className="mb-6 mt-4">
-        <Text className="text-title/50 text-xs font-medium tracking-widest uppercase mb-3">
+      <View className="mb-8 mt-4">
+        <Text className="text-primary/50 text-xs font-medium tracking-widest uppercase mb-3">
           Leave a comment{' '}
-          <Text className="text-title/80 normal-case tracking-normal">
+          <Text className="text-primary/80 normal-case tracking-normal">
             (optional)
           </Text>
         </Text>
         <Textarea
-          placeholder="Tell us more about your experience with this rider…"
+          placeholder="Tell us more about your experience with this driver…"
           value={comment}
           onChangeText={setComment}
           numberOfLines={4}
           maxLength={500}
-          className="border-zinc-700 placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
+          className="border-zinc-700 placeholder:text-primary/50 rounded-xl text-sm leading-relaxed"
           textAlignVertical="top"
         />
         <Text className="text-zinc-600 text-xs text-right mt-1.5">
@@ -189,10 +224,11 @@ export default function Feedback() {
       <Button
         onPress={handleSubmit}
         disabled={isSubmitting || score === 0}
-        className={cn("rounded-2xl", {
-          'bg-zinc-800': score === 0,
-          'bg-violet-600 active:bg-violet-700' : score > 0,
-        })}
+        className={`rounded-2xl ${
+          score === 0
+            ? 'bg-zinc-800'
+            : 'bg-violet-600 active:bg-violet-700'
+        }`}
       >
         {isSubmitting ? (
           <ActivityIndicator size="small" color="#ffffff" />

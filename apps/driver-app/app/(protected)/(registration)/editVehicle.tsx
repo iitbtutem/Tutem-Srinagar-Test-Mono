@@ -1,5 +1,3 @@
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import { View, TextInput, TouchableOpacity, Image, Platform } from 'react-native';
 import {
   Select,
@@ -9,11 +7,13 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Input,
+  Text,
+  Button,
+} from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
@@ -21,7 +21,6 @@ import { useMutation } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import type { Id } from '@tutem/api';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';

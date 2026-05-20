@@ -1,6 +1,6 @@
 import { getAge } from '@/lib/utils';
 import { View } from 'react-native';
-import { Text } from './ui/text';
+import { Text } from '@tutem/ui';
 
 export default function Age({ dob }: { dob: string }) {
   const age = getAge(new Date(dob));

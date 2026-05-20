@@ -39,7 +39,6 @@ import useThemeColors from '@/hooks/useColorScheme';
 import { useToast } from '@/components/CustomToast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
-const { width } = Dimensions.get('window');
 const EXPANDED_HEADER_HEIGHT = 300;
 const COLLAPSED_HEADER_HEIGHT = 100;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;

@@ -1,8 +1,6 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
+import { Text, Input, Button } from '@tutem/ui';
 import { TriangleAlert } from 'lucide-react-native';
-import { View, ActivityIndicator, ImageBackground } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import z from 'zod';

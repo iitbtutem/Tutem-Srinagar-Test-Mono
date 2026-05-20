@@ -1,18 +1,12 @@
-import { Text } from '@/components/ui/text';
+import { Text } from '@tutem/ui';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '../../../components/RideCard';
-import { FunctionReturnType } from 'convex/server';
-import { useRef, useState } from 'react';
 import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
 import { router } from 'expo-router';
-
-type RideHistory = NonNullable<
-  FunctionReturnType<typeof api.routes.rides.getDriverHistory>[number]
->;
 
 export default function History() {
   const { userId } = useAuth();

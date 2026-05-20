@@ -11,7 +11,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Text } from './ui/text';
+import { Text } from '@tutem/ui';
 
 /**
  * A premium loading screen with smooth animations and themed aesthetics.

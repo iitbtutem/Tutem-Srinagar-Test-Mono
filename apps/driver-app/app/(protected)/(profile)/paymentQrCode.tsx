@@ -1,5 +1,4 @@
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
+import { Text, Button } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
@@ -8,7 +7,6 @@ import { ActivityIndicator, Alert, Image, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, Pencil, QrCode } from 'lucide-react-native';
 import { useMutation } from 'convex/react';
-import { Separator } from '@/components/ui/seperator';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import Loader from '@/components/Loader';
 

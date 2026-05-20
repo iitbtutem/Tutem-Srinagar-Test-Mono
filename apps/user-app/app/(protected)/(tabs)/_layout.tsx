@@ -1,14 +1,11 @@
-import CustomHeader, { HeaderGreeting } from '@/components/CustomHeader';
 import { useAuth } from '@clerk/expo';
 import { Feather, Octicons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Tabs } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const { userId } = useAuth();

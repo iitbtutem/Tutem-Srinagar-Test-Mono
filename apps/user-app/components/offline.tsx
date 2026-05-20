@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Text } from './ui/text';
+import { Text } from '@tutem/ui';
 import OfflineSvg from '@/assets/svgs/offline';
 
 export default function Offline() {

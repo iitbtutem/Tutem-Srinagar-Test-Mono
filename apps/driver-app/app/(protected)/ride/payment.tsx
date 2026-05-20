@@ -1,7 +1,5 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, Text, Button, Separator } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
@@ -13,7 +11,6 @@ import {
 } from 'react-native';
 import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
-import { Separator } from '@/components/ui/seperator';
 import { useRouter } from 'expo-router';
 
 export default function Payment() {
@@ -130,7 +127,12 @@ export default function Payment() {
       <Button
         className='mt-4 '
         onPress={() => {
-          router.push(`/ride/feedback/${rideId}`)
+          router.push({
+            pathname: "/ride/feedback",
+            params: {
+              rideId
+            }
+          })
         }}>
         <Text>Payment Received</Text>
       </Button>

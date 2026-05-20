@@ -9,7 +9,6 @@ import {
   BackHandler,
   Image,
 } from 'react-native';
-import { Text } from '@/components/ui/text';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -35,15 +34,13 @@ import {
   VERIFICATION_CONFIG,
 } from '@/constants/colors';
 import { useRouter } from 'expo-router';
-import { Button } from '@/components/ui/button';
 import { cn, formatFare } from '@/lib/utils';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useAuth } from '@clerk/expo';
-import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button, Switch } from '@tutem/ui';
 import useThemeColors from '@/hooks/useColorScheme';
 
 // Vehicle Icons

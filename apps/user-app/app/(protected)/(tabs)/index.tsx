@@ -12,7 +12,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@tutem/api';
 import { useAuth } from '@clerk/expo';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@tutem/ui';
 import { distanceFormat, formatFare } from '@/lib/utils';
 import { StatusBar } from 'expo-status-bar';
 import { HeaderGreeting } from '@/components/CustomHeader';

@@ -1,16 +1,14 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React, { useState } from 'react';
-import { ImageBackground, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
@@ -20,14 +18,18 @@ import Animated, {
   Extrapolation,
   SharedValue,
 } from 'react-native-reanimated';
-import { HorizontalRule } from '@/components/ui/seperator';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+  Avatar, 
+  AvatarFallback, 
+  AvatarImage, 
+  Text, 
+  HorizontalRule,
+} from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -42,8 +44,7 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
-    useThemeColors();
+  const { iconColor, iconBackgroundColor } = useThemeColors();
 
   const isDark = colorScheme === 'dark';
 

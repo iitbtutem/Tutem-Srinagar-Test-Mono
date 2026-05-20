@@ -1,14 +1,12 @@
 import { FontAwesome5, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from './ui/text';
 import { cn } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
 import { useAuth } from '@clerk/expo';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Link, router } from 'expo-router';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +14,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+  Avatar, 
+  AvatarFallback, 
+  AvatarImage, 
+  Text,
+} from '@tutem/ui';
 import { useMutation } from 'convex/react';
-import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import useThemeColors from '@/hooks/useColorScheme';
 

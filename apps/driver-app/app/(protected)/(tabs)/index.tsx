@@ -1,4 +1,3 @@
-import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
@@ -20,10 +19,9 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect, useSegments } from 'expo-router';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
 import { distanceFormat, formatFare } from '@/lib/utils';

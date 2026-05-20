@@ -1,5 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Text } from '@/components/ui/text';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator } from '@tutem/ui';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
@@ -25,11 +24,9 @@ import NearbyDrivers from '@/components/NearbyDrivers';
 import SheetLayer from '@/components/BottomSheetLayer';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
 import { distanceFormat, formatFare } from '../../../../driver-app/lib/utils';
-import { Separator } from '@/components/ui/seperator';
 import useThemeColors from '@/hooks/useColorScheme';
 
 // types
@@ -860,7 +857,14 @@ export default function RideRequest() {
         {/* feedback button */}
         {ride.status === "Completed" && (
           <Button
-            onPress={() => router.push(`/feedback/${id}`)}
+            onPress={() => {
+              router.push({
+                pathname: "/feedback",
+                params: {
+                  rideId: id
+                }
+              })
+            }}
           >
             <Text className=''>
               Give Feedback

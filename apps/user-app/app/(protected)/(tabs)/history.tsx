@@ -1,4 +1,3 @@
-import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
@@ -8,12 +7,12 @@ import { FunctionReturnType } from 'convex/server';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, Text } from '@tutem/ui';
 import StarRating from '@/components/StarRating';
 import { formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import Rides from '@/assets/svgs/rides';
-import { distanceFormat } from '../../../lib/utils';
+import { distanceFormat } from '@/lib/utils';
 
 type RideHistory = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderHistory>[number]>;
 

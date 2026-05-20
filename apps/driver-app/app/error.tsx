@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@tutem/ui';
 import { router } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';

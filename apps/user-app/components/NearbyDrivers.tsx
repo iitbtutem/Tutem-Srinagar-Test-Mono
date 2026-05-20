@@ -6,10 +6,9 @@ import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from "@expo/
 import { FunctionReturnType } from "convex/server";
 import { api, Id } from "@tutem/api";
 import { cn, formatFare } from "@/lib/utils";
-import { Text } from "./ui/text";
-import { Switch } from "./ui/switch";
+import { Text, Switch } from '@tutem/ui';
 import { VERIFICATION_CONFIG } from "@/constants/colors";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@tutem/ui';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -20,7 +19,7 @@ const VEHICLE_ICONS = {
 
 // NearbyDrivers
 type NearbyDriver = NonNullable<
-  FunctionReturnType<typeof api.routes.actions.getNearbyDrivers>[number]
+  FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number]
 >;
 
 type NearbyDriversProps = {

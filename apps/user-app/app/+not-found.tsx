@@ -1,7 +1,6 @@
 import { Link, Stack } from 'expo-router';
 import { View } from 'react-native';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
+import { Text, Button } from '@tutem/ui';
 
 export default function NotFoundScreen() {
   return (

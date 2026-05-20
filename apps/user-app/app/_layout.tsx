@@ -16,7 +16,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { useEffect, useState } from 'react';
 import { useInternet } from '@/hooks/useInternet';
 import { View } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { Text } from '@tutem/ui';
 import Offline from '@/components/offline';
 
 export {

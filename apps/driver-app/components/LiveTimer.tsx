@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Text } from "./ui/text";
+import { Text } from '@tutem/ui';
 
 
 // Helpers

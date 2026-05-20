@@ -1,8 +1,6 @@
 import { useToast } from '@/components/CustomToast';
 import ErrorScreen from '@/components/ErrorScreen';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -11,8 +9,10 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Text } from '@/components/ui/text';
+  Input,
+  Text,
+  Button,
+} from '@tutem/ui';
 import { useAuth } from '@clerk/expo';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';

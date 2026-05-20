@@ -1,13 +1,10 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
+import { Text, Input, Button } from '@tutem/ui';
 import { OTP_SIZE, OTP_TIMER } from '@/constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  ImageBackground,
   ScrollView,
   TextInput,
   TextInputKeyPressEvent,

@@ -1,6 +1,4 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
 import { Image, TextInput, TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useRef, useState } from 'react';
@@ -12,11 +10,13 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  Input,
+  Text,
+  Button,
+} from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,7 +26,6 @@ import { useToast } from '@/components/CustomToast';
 import ErrorScreen from '@/components/ErrorScreen';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { colorScheme } from 'nativewind';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';

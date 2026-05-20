@@ -1,8 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { View } from "react-native";
-import { ImageBackground } from "react-native";
-import { Text } from "./ui/text";
-import { Button } from "./ui/button";
+import { Text, Button } from '@tutem/ui';
 import { router } from "expo-router";
 
 export default function ErrorScreen({

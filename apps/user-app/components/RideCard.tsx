@@ -1,6 +1,6 @@
 import { TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
-import { Text } from "./ui/text";
+import { Text } from '@tutem/ui';
 import StarRating from "./StarRating";
 import { distanceFormat, formatFare } from "@/lib/utils";
 import { FunctionReturnType } from "convex/server";
