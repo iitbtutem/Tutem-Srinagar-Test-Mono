@@ -1,0 +1,148 @@
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { api, Id } from '@tutem/api';
+import { useQuery } from 'convex/react';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Image, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Upload, Pencil, QrCode } from 'lucide-react-native';
+import { useMutation } from 'convex/react';
+import { Separator } from '@/components/ui/seperator';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import Loader from '@/components/Loader';
+
+export default function PaymentQrCard() {
+  const { driverId } = useLocalSearchParams<{ driverId: Id<'driver'> }>();
+
+  const [uploading, setUploading] = useState(false);
+  const { uploadFile } = useFileUpload();
+
+  const driverPaymentQrImage = useQuery(api.routes.driver.getDriverPaymentQrImage, { driverId });
+
+  const updatePaymentQrCode = useMutation(api.routes.driver.updatePaymentQrCode);
+
+  const handlePickImage = useCallback(async () => {
+    if (!driverId) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to upload a QR code.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: false,
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      try {
+        setUploading(true);
+
+        const paymentQrCodeKey = await uploadFile(
+          result.assets[0].uri,
+          `payementQrCodes/${driverId}`
+        );
+        await updatePaymentQrCode({
+          driverId: driverId,
+          paymentQrCodeKey: paymentQrCodeKey,
+        });
+      } catch (e) {
+        Alert.alert('Upload Failed', 'Could not upload QR code. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    }
+    return;
+  }, [driverId]);
+
+  if (driverPaymentQrImage === undefined) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color="#f59e0b" />
+        <Text className="mt-3 text-sm font-medium text-zinc-400">Loading payment details…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className='flex-1 bg-white/50 px-4 py-6'>
+      <View className="overflow-hidden">
+        <View className="flex-row items-center gap-2 px-3 pb-3">
+          <View className="rounded-xl bg-orange-500/10 p-2">
+            <QrCode size={24} color="#f59e0b" strokeWidth={2} />
+          </View>
+
+          <View>
+            <Text className="text-base font-semibold text-primary">Payment QR Code</Text>
+            <Text className="mt-0.5 text-xs text-zinc-500">
+              {driverPaymentQrImage
+                ? 'Show this to your passenger for UPI payment'
+                : 'Add your UPI QR code so passengers can pay digitally'}
+            </Text>
+          </View>
+        </View>
+
+        <View className="px-3 pb-5 pt-4">
+          {/* QR Code Display - always mounted, hidden when no QR */}
+          <View style={{ display: driverPaymentQrImage ? 'flex' : 'none' }} className="items-center">
+            <View className="mb-4 rounded-2xl bg-white p-3 shadow-lg shadow-black/30">
+              <Image
+                source={{ uri: driverPaymentQrImage ?? '' }}
+                className="w-full aspect-square rounded-xl"
+                resizeMode="contain"
+              />
+            </View>
+            <Button
+              onPress={handlePickImage}
+              disabled={uploading}
+              variant={'default'}
+              className='w-full rounded-2xl'>
+              {uploading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Pencil size={15} color="#ffffff" strokeWidth={2} />
+              )}
+              <Text className="text-sm font-medium">
+                {uploading ? 'Uploading…' : 'Change QR Code'}
+              </Text>
+            </Button>
+          </View>
+
+          {/* Upload Prompt - always mounted, hidden when QR exists */}
+          <View
+            style={{ display: driverPaymentQrImage ? 'none' : 'flex' }}
+            className="items-center py-4">
+            <View className="mb-4 h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed border-primary/25 bg-muted">
+              <QrCode size={36} color="#52525b" strokeWidth={1.5} />
+            </View>
+            <Text className="mb-1 text-base font-semibold text-zinc-300">No QR Code Added</Text>
+            <Text className="mb-6 text-center text-sm leading-5 text-zinc-500">
+              Upload your UPI payment QR code to receive digital payments from passengers
+            </Text>
+            <Button
+              onPress={handlePickImage}
+              disabled={uploading}
+              className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-amber-500 active:bg-amber-400">
+              {uploading ? (
+                <ActivityIndicator size="small" color="#1c1917" />
+              ) : (
+                <Upload size={16} color="#1c1917" strokeWidth={2.5} />
+              )}
+              <Text className="text-sm font-bold text-amber-950">
+                {uploading ? 'Uploading…' : 'Upload from Gallery'}
+              </Text>
+            </Button>
+          </View>
+        </View>
+      </View>
+      {uploading && <Loader title="Uploading QR Code..." subtitle="Please wait a moment." />}
+    </View>
+  );
+}

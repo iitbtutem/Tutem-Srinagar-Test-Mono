@@ -441,6 +441,27 @@ export const removeProfilePictureKey = mutation({
   },
 });
 
+export const getDriverPaymentQrImage = query({
+  args: {
+    driverId: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.driverId);
+    if (driver === null) throw new ConvexError("Invalid User");
+    if (!driver.paymentQrCodeKey) return null;
+
+    const paymentQrCodeUrl = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({
+        Bucket: process.env.MINIO_BUCKET,
+        Key: driver.paymentQrCodeKey,
+      }),
+      { expiresIn: 300 },
+    );
+    return paymentQrCodeUrl;
+  }
+});
+
 export const updatePaymentQrCode = mutation({
   args: {
     driverId: v.id("driver"),
