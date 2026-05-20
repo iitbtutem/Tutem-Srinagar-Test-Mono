@@ -1,13 +1,13 @@
-import { cn } from '@/lib/utils';
 import * as SeparatorPrimitive from '@rn-primitives/separator';
 import { View } from 'react-native';
- 
+import { cn } from '../utils/cn';
+
 function Separator({
   className,
   orientation = 'horizontal',
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: React.ComponentProps<typeof SeparatorPrimitive.Root> & { className?: string }) {
   return (
     <SeparatorPrimitive.Root
       decorative={decorative}
@@ -22,8 +22,8 @@ function Separator({
   );
 }
 
-function HorizontalRule({className}: {className?: string}) {
-    return <View className={cn("h-px bg-slate-100", className)} />
+function HorizontalRule({ className }: { className?: string }) {
+  return <View className={cn('h-px bg-slate-100 dark:bg-zinc-800', className)} />;
 }
- 
+
 export { Separator, HorizontalRule };

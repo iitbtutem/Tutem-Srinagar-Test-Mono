@@ -1,0 +1,10 @@
+{
+  "tailwindCSS.experimental.configFile": {
+    "apps/driver-app/tailwind.config.js": "apps/driver-app/**",
+    "apps/user-app/tailwind.config.js": "apps/user-app/**",
+    "packages/ui/tailwind.config.js": "packages/ui/**"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  }
+}

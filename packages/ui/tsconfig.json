@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "react-native": ["../../apps/driver-app/node_modules/react-native"],
+      "react-native-reanimated": ["../../apps/driver-app/node_modules/react-native-reanimated"],
+      "react-native-screens": ["../../apps/driver-app/node_modules/react-native-screens"],
+      "react-native-gesture-handler": ["../../apps/driver-app/node_modules/react-native-gesture-handler"],
+      "nativewind": ["../../apps/driver-app/node_modules/nativewind"],
+      "lucide-react-native": ["../../apps/driver-app/node_modules/lucide-react-native"],
+      "@rn-primitives/avatar": ["../../apps/driver-app/node_modules/@rn-primitives/avatar"],
+      "@rn-primitives/checkbox": ["../../apps/driver-app/node_modules/@rn-primitives/checkbox"],
+      "@rn-primitives/dialog": ["../../apps/driver-app/node_modules/@rn-primitives/dialog"],
+      "@rn-primitives/dropdown-menu": ["../../apps/driver-app/node_modules/@rn-primitives/dropdown-menu"],
+      "@rn-primitives/portal": ["../../apps/driver-app/node_modules/@rn-primitives/portal"],
+      "@rn-primitives/select": ["../../apps/driver-app/node_modules/@rn-primitives/select"],
+      "@rn-primitives/separator": ["../../apps/driver-app/node_modules/@rn-primitives/separator"],
+      "@rn-primitives/slot": ["../../apps/driver-app/node_modules/@rn-primitives/slot"],
+      "@rn-primitives/switch": ["../../apps/driver-app/node_modules/@rn-primitives/switch"],
+      "@rn-primitives/alert-dialog": ["../../apps/driver-app/node_modules/@rn-primitives/alert-dialog"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "index.ts",
+    "../../apps/driver-app/nativewind-env.d.ts"
+  ]
+}

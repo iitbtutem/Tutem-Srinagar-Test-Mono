@@ -1,11 +1,11 @@
-import { cn } from '@/lib/utils';
 import * as SwitchPrimitives from '@rn-primitives/switch';
 import { Platform } from 'react-native';
+import { cn } from '../utils/cn';
 
 function Switch({
   className,
   ...props
-}: React.ComponentProps<typeof SwitchPrimitives.Root>) {
+}: React.ComponentProps<typeof SwitchPrimitives.Root> & { className?: string }) {
   return (
     <SwitchPrimitives.Root
       className={cn(

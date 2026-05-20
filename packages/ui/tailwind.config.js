@@ -1,10 +1,34 @@
-const { hairlineWidth } = require('nativewind/theme');
+const path = require('path');
+
+// Resolve driver-app's node_modules since dependencies like nativewind are installed there (non-hoisted workspaces)
+const driverAppNodeModules = path.resolve(__dirname, '../../apps/driver-app/node_modules');
+
+let hairlineWidth = () => 1;
+try {
+  hairlineWidth = require(path.join(driverAppNodeModules, 'nativewind/theme')).hairlineWidth;
+} catch (e) {
+  // fallback if not found
+}
+
+let preset;
+try {
+  preset = require(path.join(driverAppNodeModules, 'nativewind/preset'));
+} catch (e) {
+  // fallback
+}
+
+let tailwindAnimate;
+try {
+  tailwindAnimate = require(path.join(driverAppNodeModules, 'tailwindcss-animate'));
+} catch (e) {
+  // fallback
+}
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', '../../packages/ui/src/**/*.{ts,tsx}'],
-  presets: [require('nativewind/preset')],
+  content: [path.resolve(__dirname, './src/**/*.{ts,tsx}')],
+  presets: preset ? [preset] : [],
   theme: {
     extend: {
       colors: {
@@ -69,5 +93,5 @@ module.exports = {
   future: {
     hoverOnlyWhenSupported: true,
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: tailwindAnimate ? [tailwindAnimate] : [],
 };

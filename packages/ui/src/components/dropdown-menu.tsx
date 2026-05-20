@@ -1,7 +1,3 @@
-import { Icon } from '@/components/ui/icon';
-import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-view';
-import { TextClassContext } from '@/components/ui/text';
-import { cn } from '@/lib/utils';
 import * as DropdownMenuPrimitive from '@rn-primitives/dropdown-menu';
 import { Check, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react-native';
 import * as React from 'react';
@@ -15,6 +11,10 @@ import {
 } from 'react-native';
 import { FadeIn } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
+import { cn } from '../utils/cn';
+import { Icon } from './icon';
+import { NativeOnlyAnimatedView } from './native-only-animated-view';
+import { TextClassContext } from './text';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
@@ -35,6 +35,7 @@ function DropdownMenuSubTrigger({
   iconClassName,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
+    className?: string;
     children?: React.ReactNode;
     iconClassName?: string;
     inset?: boolean;
@@ -68,7 +69,7 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent> & { className?: string }) {
   return (
     <NativeOnlyAnimatedView entering={FadeIn}>
       <DropdownMenuPrimitive.SubContent
@@ -94,6 +95,7 @@ function DropdownMenuContent({
   portalHost,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+    className?: string;
     overlayStyle?: StyleProp<ViewStyle>;
     overlayClassName?: string;
     portalHost?: string;
@@ -177,6 +179,7 @@ function DropdownMenuCheckboxItem({
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem> & {
+    className?: string;
     children?: React.ReactNode;
   }) {
   return (
@@ -213,6 +216,7 @@ function DropdownMenuRadioItem({
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
+    className?: string;
     children?: React.ReactNode;
   }) {
   return (
@@ -261,7 +265,7 @@ function DropdownMenuLabel({
 function DropdownMenuSeparator({
   className,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Separator> & { className?: string }) {
   return (
     <DropdownMenuPrimitive.Separator
       className={cn('bg-border -mx-1 my-1 h-px', className)}

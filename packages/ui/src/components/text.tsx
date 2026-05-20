@@ -1,8 +1,8 @@
-import { cn } from '@/lib/utils';
-import * as Slot from '@rn-primitives/slot';
-import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { Platform, Text as RNText, type Role } from 'react-native';
+import * as Slot from '@rn-primitives/slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../utils/cn';
 
 const textVariants = cva(
   cn(
@@ -70,17 +70,17 @@ function Text({
   variant = 'default',
   ...props
 }: React.ComponentProps<typeof RNText> &
-  TextVariantProps &
-  React.RefAttributes<RNText> & {
+  TextVariantProps & {
     asChild?: boolean;
+    className?: string;
   }) {
   const textClass = React.useContext(TextClassContext);
-  const Component = asChild ? Slot.Text : RNText;
+  const Component = (asChild ? Slot.Text : RNText) as typeof RNText;
   return (
     <Component
       className={cn(textVariants({ variant }), textClass, className)}
-      role={variant ? ROLE[variant] : undefined}
-      aria-level={variant ? ARIA_LEVEL[variant] : undefined}
+      role={variant && variant in ROLE ? ROLE[variant] : undefined}
+      aria-level={variant && variant in ARIA_LEVEL ? ARIA_LEVEL[variant] : undefined}
       {...props}
     />
   );

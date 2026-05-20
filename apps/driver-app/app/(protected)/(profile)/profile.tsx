@@ -1,15 +1,11 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
 import { useAuth } from '@clerk/expo';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
-import { useAction, useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
 import React, { useMemo, useRef, useState } from 'react';
 import { Dimensions, TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -22,16 +18,21 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import { HorizontalRule } from '@/components/ui/seperator';
 import { Image } from 'react-native';
 import { cn } from '@/lib/utils';
 import {
+  HorizontalRule,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
+  Text,
+} from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -48,20 +49,24 @@ export default function Profile() {
   const { userId, signOut } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
-  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
-  
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
+    useThemeColors();
+
   const snapPoints = useMemo(() => ['50%', '80%'], []);
 
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
-  const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip');
+  const vehicle = useQuery(
+    api.routes.vehicle.getVehicleByDriverId,
+    driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip'
+  );
   const logout = useMutation(api.routes.driver.logout);
 
-  const handleLogout = async (driverId: Id<"driver"> | undefined) => {
+  const handleLogout = async (driverId: Id<'driver'> | undefined) => {
     try {
-      if(driverId !== undefined) await logout({ driverId })
+      if (driverId !== undefined) await logout({ driverId });
       await signOut();
       router.replace('/signin');
     } catch (error) {
@@ -70,8 +75,8 @@ export default function Profile() {
         type: 'error',
         title: 'Logout Failed',
         description: 'An error occurred while logging out. Please try again.',
-        position: "bottom",
-      })
+        position: 'bottom',
+      });
     }
   };
 
@@ -166,15 +171,17 @@ export default function Profile() {
 
   if (!userId) return <ErrorScreen message="Account not found" />;
   if (driver === undefined) return <LoadingScreen message="Loading profile…" />;
-  if (driver === null || driver.driverDetails === null) return <ErrorScreen message="Account not found" />;
+  if (driver === null || driver.driverDetails === null)
+    return <ErrorScreen message="Account not found" />;
 
-  const licenseVerification = VERIFICATION_CONFIG[driver.driverDetails?.isLicenseVerified ?? "Pending"];
+  const licenseVerification =
+    VERIFICATION_CONFIG[driver.driverDetails?.isLicenseVerified ?? 'Pending'];
   const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
     <View className="flex-1 bg-slate-50">
-      <Stack.Screen options={{ headerShown: false}} />
-      <StatusBar style='dark' />
+      <Stack.Screen options={{ headerShown: false }} />
+      <StatusBar style="dark" />
 
       {/* Hero Header */}
       <Animated.View
@@ -183,15 +190,15 @@ export default function Profile() {
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[badgeOpacityStyle, { position: 'absolute', top: 0, zIndex: 10 }]}
-          className="flex-row justify-between items-center px-4 pt-14 w-full">
-            <TouchableOpacity
-              className="h-9 w-9 items-center justify-center rounded-full"
-              style={{ backgroundColor: iconBackgroundColor }}
-              onPress={() => router.back()}>
-              <MaterialIcons name="arrow-back" size={18} color="#fff" />
-            </TouchableOpacity>
-          
-          <View className='flex-row items-center gap-1'>
+          className="w-full flex-row items-center justify-between px-4 pt-14">
+          <TouchableOpacity
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: iconBackgroundColor }}
+            onPress={() => router.back()}>
+            <MaterialIcons name="arrow-back" size={18} color="#fff" />
+          </TouchableOpacity>
+
+          <View className="flex-row items-center gap-1">
             <TouchableOpacity
               className="h-9 w-9 items-center justify-center rounded-full"
               style={{ backgroundColor: iconBackgroundColor }}
@@ -253,7 +260,7 @@ export default function Profile() {
             </View>
           </Animated.View>
 
-          <Animated.View style={nameContainerStyle} className="items-center gap-1 ms-4">
+          <Animated.View style={nameContainerStyle} className="ms-4 items-center gap-1">
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
               {driver.firstName} {driver.lastName}
             </Text>
@@ -273,10 +280,12 @@ export default function Profile() {
               />
               <Text className="text-xs font-medium text-white">{driver.gender}</Text>
             </Animated.View>
-            <Text className={cn("text-semibold text-xs mt-2", { 
-              "text-green-500" : driver.driverDetails.isAvailableForRide,
-              "text-red-700": !driver.driverDetails.isAvailableForRide
-              })}>{driver.driverDetails.isAvailableForRide ? "Available" : "Not Available"}
+            <Text
+              className={cn('text-semibold mt-2 text-xs', {
+                'text-green-500': driver.driverDetails.isAvailableForRide,
+                'text-red-700': !driver.driverDetails.isAvailableForRide,
+              })}>
+              {driver.driverDetails.isAvailableForRide ? 'Available' : 'Not Available'}
             </Text>
           </Animated.View>
         </View>
@@ -308,9 +317,7 @@ export default function Profile() {
                 <MaterialIcons name="cake" size={20} color="#9333ea" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400">
-                  Date of Birth
-                </Text>
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Date of Birth</Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {new Date(driver.dob).toLocaleDateString()}
                 </Text>
@@ -325,9 +332,7 @@ export default function Profile() {
                 <MaterialIcons name="wc" size={20} color="#ec4899" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400">
-                  Gender
-                </Text>
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Gender</Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {driver.gender}
                 </Text>
@@ -342,9 +347,7 @@ export default function Profile() {
                 <MaterialIcons name="phone" size={20} color="#16a34a" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400">
-                  Phone Number
-                </Text>
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Phone Number</Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {driver.phoneNumber}
                 </Text>
@@ -371,9 +374,7 @@ export default function Profile() {
                   <Feather name="credit-card" size={14} color="#2563eb" />
                 </View>
                 <View className="flex-1">
-                  <Text className="mb-0.5 text-xs font-medium text-slate-400">
-                    License Number
-                  </Text>
+                  <Text className="mb-0.5 text-xs font-medium text-slate-400">License Number</Text>
                   <Text className="font-mono text-sm font-semibold tracking-wide text-slate-800">
                     {driver.driverDetails?.licenseNumber}
                   </Text>
@@ -390,9 +391,7 @@ export default function Profile() {
                 <MaterialIcons name="corporate-fare" size={20} color="#ea580c" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400">
-                  Organization
-                </Text>
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Organization</Text>
                 <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {driver.driverDetails?.organization?.name}
                 </Text>
@@ -420,16 +419,10 @@ export default function Profile() {
                     className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-3">
                       <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-50">
-                        <MaterialIcons
-                          name="directions-car"
-                          size={20}
-                          color='#4f46e5'
-                        />
+                        <MaterialIcons name="directions-car" size={20} color="#4f46e5" />
                       </View>
                       <View>
-                        <Text className="text-sm font-bold text-slate-800">
-                          {vehicle.model}
-                        </Text>
+                        <Text className="text-sm font-bold text-slate-800">{vehicle.model}</Text>
                         <Text className="font-mono text-[11px] font-medium uppercase tracking-wider text-slate-400">
                           {vehicle.registrationNumber}
                         </Text>
@@ -443,50 +436,28 @@ export default function Profile() {
                   {/* Detail chips row */}
                   <View className="flex-row flex-wrap gap-2">
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5">
-                      <MaterialIcons
-                        name="local-gas-station"
-                        size={13}
-                        color={'#64748b'}
-                      />
+                      <MaterialIcons name="local-gas-station" size={13} color={'#64748b'} />
                       <Text className="text-xs font-semibold text-slate-600">
                         {vehicle.fuelType}
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5">
-                      <MaterialIcons
-                        name="people"
-                        size={13}
-                        color={'#64748b'}
-                      />
+                      <MaterialIcons name="people" size={13} color={'#64748b'} />
                       <Text className="text-xs font-semibold text-slate-600">
                         {vehicle.seatingCapacity} seats
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5">
-                      <MaterialIcons
-                        name="category"
-                        size={13}
-                        color={'#64748b'}
-                      />
-                      <Text className="text-xs font-semibold text-slate-600">
-                        {vehicle.type}
-                      </Text>
+                      <MaterialIcons name="category" size={13} color={'#64748b'} />
+                      <Text className="text-xs font-semibold text-slate-600">{vehicle.type}</Text>
                     </View>
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5">
                       <MaterialIcons name="star" size={13} color={'#64748b'} />
-                      <Text className="text-xs font-semibold text-slate-600">
-                        {vehicle.class}
-                      </Text>
+                      <Text className="text-xs font-semibold text-slate-600">{vehicle.class}</Text>
                     </View>
                     <View className="flex-row items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5">
-                      <MaterialIcons
-                        name="palette"
-                        size={13}
-                        color={'#64748b'}
-                      />
-                      <Text className="text-xs font-semibold text-slate-600">
-                        {vehicle.color}
-                      </Text>
+                      <MaterialIcons name="palette" size={13} color={'#64748b'} />
+                      <Text className="text-xs font-semibold text-slate-600">{vehicle.color}</Text>
                     </View>
                   </View>
                 </View>
@@ -494,11 +465,7 @@ export default function Profile() {
             ) : (
               <View className="items-center gap-3 px-6 py-6">
                 <View className="h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                  <MaterialIcons
-                    name="directions-car"
-                    size={24}
-                    color={'#94a3b8'}
-                  />
+                  <MaterialIcons name="directions-car" size={24} color={'#94a3b8'} />
                 </View>
                 <Text className="text-center text-sm text-slate-400">
                   No vehicle registered yet
@@ -522,7 +489,9 @@ export default function Profile() {
         index={-1}
         animationConfigs={{ duration: 450 }}
         snapPoints={
-          driver.driverDetails?.licenseImageFrontKey || driver.driverDetails?.licenseImageBackKey ? ['50%', '80%'] : ['30%']
+          driver.driverDetails?.licenseImageFrontKey || driver.driverDetails?.licenseImageBackKey
+            ? ['50%', '80%']
+            : ['30%']
         }
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor }}
@@ -560,7 +529,8 @@ export default function Profile() {
             </View>
 
             {/* Edit button */}
-            {(driver.driverDetails?.organization?.canDriverEditLicesnse || driver.driverDetails?.isLicenseVerified !== "Verified") && (
+            {(driver.driverDetails?.organization?.canDriverEditLicesnse ||
+              driver.driverDetails?.isLicenseVerified !== 'Verified') && (
               <TouchableOpacity
                 onPress={() => {
                   router.push({
@@ -568,7 +538,8 @@ export default function Profile() {
                     params: {
                       licenseNumber: driver.driverDetails?.licenseNumber,
                       driverId: driver.driverDetails?._id,
-                      requiresLicenseImg: driver.driverDetails?.organization?.isLicenseVerficationRequired
+                      requiresLicenseImg: driver.driverDetails?.organization
+                        ?.isLicenseVerficationRequired
                         ? 'true'
                         : 'false',
                     },
@@ -591,7 +562,7 @@ export default function Profile() {
                 {driver.driverDetails?.licenseNumber ?? '—'}
               </Text>
             </View>
-            <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-5">
+            <View className="bg-blue-5 h-8 w-8 items-center justify-center rounded-lg">
               <Feather name="hash" size={14} color="#3b82f6" />
             </View>
           </View>
@@ -660,7 +631,8 @@ export default function Profile() {
               </View>
 
               {/* Edit button */}
-              {(driver.driverDetails?.organization?.canDriverEditVehicle || vehicle.isVerified !== "Verified") && (
+              {(driver.driverDetails?.organization?.canDriverEditVehicle ||
+                vehicle.isVerified !== 'Verified') && (
                 <TouchableOpacity
                   className="h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: iconBackgroundColor }}
@@ -677,17 +649,19 @@ export default function Profile() {
                         seatingCapacity: String(vehicle.seatingCapacity),
                         vehicleClass: vehicle.class,
                         rcImageKey: vehicle.rcImageKey,
-                        isRcRequired: driver.driverDetails?.organization?.isVehicleRCVerificationRequired
+                        isRcRequired: driver.driverDetails?.organization
+                          ?.isVehicleRCVerificationRequired
                           ? 'true'
                           : 'false',
-                        isInsuranceImageRequired: driver.driverDetails?.organization?.isVehicleInsuranceImageRequired 
-                          ? "true" 
-                          : "false",
+                        isInsuranceImageRequired: driver.driverDetails?.organization
+                          ?.isVehicleInsuranceImageRequired
+                          ? 'true'
+                          : 'false',
                       },
                     });
                     vehicleBottomSheetRef.current?.close();
                   }}>
-                  <MaterialIcons name="edit" size={18} color={"black"} />
+                  <MaterialIcons name="edit" size={18} color={'black'} />
                 </TouchableOpacity>
               )}
             </View>
@@ -702,7 +676,7 @@ export default function Profile() {
                   {vehicle?.registrationNumber ?? '—'}
                 </Text>
               </View>
-              <View className="h-8 w-8 items-center justify-center rounded-lg bg-blue-5">
+              <View className="bg-blue-5 h-8 w-8 items-center justify-center rounded-lg">
                 <Feather name="hash" size={14} color="#3b82f6" />
               </View>
             </View>
@@ -719,13 +693,7 @@ export default function Profile() {
   );
 }
 
-const LicenseImageCard = ({
-  label,
-  uri,
-}: {
-  label: string;
-  uri?: string | null;
-}) => {
+const LicenseImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
   const [errored, setErrored] = useState(false);
   const showFallback = !uri || errored;
 
@@ -767,13 +735,7 @@ const LicenseImageCard = ({
   );
 };
 
-const ImageCard = ({
-  label,
-  uri,
-}: {
-  label: string;
-  uri?: string | null;
-}) => {
+const ImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
   const [errored, setErrored] = useState(false);
   const showFallback = !uri || errored;
 
@@ -784,7 +746,7 @@ const ImageCard = ({
         <Feather
           name={label === 'Front Side' ? 'maximize' : 'minimize'}
           size={11}
-          color='#9ca3af'
+          color="#9ca3af"
         />
         <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
           {label}
@@ -796,7 +758,7 @@ const ImageCard = ({
         {showFallback ? (
           <View className="items-center gap-2">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-zinc-200">
-              <Feather name="image" size={20} color='#9ca3af' />
+              <Feather name="image" size={20} color="#9ca3af" />
             </View>
             <Text className="text-xs text-slate-400">
               {!uri ? 'Image not available' : 'Failed to load'}
@@ -834,7 +796,7 @@ function ImagePickerDialog({
   const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
-  
+
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
     try {
@@ -843,7 +805,7 @@ function ImagePickerDialog({
       const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}}`);
       await uploadProfilePicture({ clerkId, profilePictureKey });
     } catch (error) {
-      console.log("Error uploading profile picture:", error);
+      console.log('Error uploading profile picture:', error);
     }
   };
 

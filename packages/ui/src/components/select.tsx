@@ -1,13 +1,13 @@
-import { Icon } from '@/components/ui/icon';
-import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-view';
-import { TextClassContext } from '@/components/ui/text';
-import { cn } from '@/lib/utils';
 import * as SelectPrimitive from '@rn-primitives/select';
 import { Check, ChevronDown, ChevronDownIcon, ChevronUpIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
+import { cn } from '../utils/cn';
+import { Icon } from './icon';
+import { NativeOnlyAnimatedView } from './native-only-animated-view';
+import { TextClassContext } from './text';
 
 type Option = SelectPrimitive.Option;
 
@@ -16,17 +16,12 @@ const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;
 
 function SelectValue({
-  ref,
   className,
   ...props
-}: SelectPrimitive.ValueProps &
-  React.RefAttributes<SelectPrimitive.ValueRef> & {
-    className?: string;
-  }) {
+}: SelectPrimitive.ValueProps & { className?: string }) {
   const { value } = SelectPrimitive.useRootContext();
   return (
     <SelectPrimitive.Value
-      ref={ref}
       className={cn(
         'text-foreground line-clamp-1 flex flex-row items-center gap-2 text-md',
         !value && 'text-muted-foreground/50',
@@ -38,21 +33,19 @@ function SelectValue({
 }
 
 function SelectTrigger({
-  ref,
   className,
   children,
   size = 'default',
   ...props
-}: SelectPrimitive.TriggerProps &
-  React.RefAttributes<SelectPrimitive.TriggerRef> & {
+}: SelectPrimitive.TriggerProps & {
     children?: React.ReactNode;
     size?: 'default' | 'sm';
+    className?: string;
   }) {
   return (
     <SelectPrimitive.Trigger
-      ref={ref}
       className={cn(
-        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-12 flex-row items-center justify-between gap-2 rounded-md px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
+        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-14 flex-row items-center justify-between gap-2 rounded-2xl px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
         Platform.select({
           web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-input/50 w-fit whitespace-nowrap text-sm outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0',
         }),
@@ -75,8 +68,7 @@ function SelectContent({
   position = 'popper',
   portalHost,
   ...props
-}: SelectPrimitive.ContentProps &
-  React.RefAttributes<SelectPrimitive.ContentRef> & {
+}: SelectPrimitive.ContentProps & {
     className?: string;
     portalHost?: string;
   }) {
@@ -135,7 +127,7 @@ function SelectContent({
 function SelectLabel({
   className,
   ...props
-}: SelectPrimitive.LabelProps & React.RefAttributes<SelectPrimitive.LabelRef>) {
+}: SelectPrimitive.LabelProps & { className?: string }) {
   return (
     <SelectPrimitive.Label
       className={cn('text-muted-foreground px-2 py-2 text-xs sm:py-1.5', className)}
@@ -148,7 +140,7 @@ function SelectItem({
   className,
   children,
   ...props
-}: SelectPrimitive.ItemProps & React.RefAttributes<SelectPrimitive.ItemRef>) {
+}: SelectPrimitive.ItemProps & { className?: string }) {
   return (
     <SelectPrimitive.Item
       className={cn(
@@ -173,7 +165,7 @@ function SelectItem({
 function SelectSeparator({
   className,
   ...props
-}: SelectPrimitive.SeparatorProps & React.RefAttributes<SelectPrimitive.SeparatorRef>) {
+}: SelectPrimitive.SeparatorProps & { className?: string }) {
   return (
     <SelectPrimitive.Separator
       className={cn(
@@ -193,7 +185,7 @@ function SelectSeparator({
 function SelectScrollUpButton({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
+}: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton> & { className?: string }) {
   if (Platform.OS !== 'web') {
     return null;
   }
@@ -213,7 +205,7 @@ function SelectScrollUpButton({
 function SelectScrollDownButton({
   className,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
+}: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton> & { className?: string }) {
   if (Platform.OS !== 'web') {
     return null;
   }
@@ -225,8 +217,6 @@ function SelectScrollDownButton({
     </SelectPrimitive.ScrollDownButton>
   );
 }
-
-
 
 export {
   Select,

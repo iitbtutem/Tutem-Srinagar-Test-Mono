@@ -1,8 +1,8 @@
-import { TextClassContext } from '@/components/ui/text';
-import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import * as React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { cn } from '../utils/cn';
+import { TextClassContext } from './text';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -89,7 +89,7 @@ function DialogFooter({
 function DialogTitle({
   className,
   ...props
-}: DialogPrimitive.TitleProps & React.RefAttributes<DialogPrimitive.TitleRef>) {
+}: DialogPrimitive.TitleProps & { className?: string }) {
   return (
     <DialogPrimitive.Title
       className={cn(
@@ -104,8 +104,7 @@ function DialogTitle({
 function DialogDescription({
   className,
   ...props
-}: DialogPrimitive.DescriptionProps &
-  React.RefAttributes<DialogPrimitive.DescriptionRef>) {
+}: DialogPrimitive.DescriptionProps & { className?: string }) {
   return (
     <DialogPrimitive.Description
       className={cn('text-sm text-muted-foreground', className)}
