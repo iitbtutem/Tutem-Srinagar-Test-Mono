@@ -92,4 +92,192 @@ function decodePolyline(t: string) {
     points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
   }
   return points;
+};
+
+// utils/geo.ts
+
+export type Coordinate = {
+  latitude: number;
+  longitude: number;
+};
+
+export type BoundingBox = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
+/**
+ * Returns distance between two coordinates in meters
+ * using the Haversine formula.
+ */
+export function getDistanceInMeters(
+  point1: Coordinate,
+  point2: Coordinate
+): number {
+  const EARTH_RADIUS_IN_METERS = 6371e3;
+
+  const lat1 = degreesToRadians(point1.latitude);
+  const lat2 = degreesToRadians(point2.latitude);
+
+  const deltaLat = degreesToRadians(
+    point2.latitude - point1.latitude
+  );
+
+  const deltaLng = degreesToRadians(
+    point2.longitude - point1.longitude
+  );
+
+  const a =
+    Math.sin(deltaLat / 2) *
+      Math.sin(deltaLat / 2) +
+    Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+
+  const c =
+    2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
+
+  return EARTH_RADIUS_IN_METERS * c;
+}
+
+/**
+ * Checks whether a point lies inside a bounding box.
+ */
+export function isPointInsideBoundingBox(
+  point: Coordinate,
+  boundingBox: BoundingBox
+): boolean {
+  return (
+    point.latitude >= boundingBox.south &&
+    point.latitude <= boundingBox.north &&
+    point.longitude >= boundingBox.west &&
+    point.longitude <= boundingBox.east
+  );
+}
+
+/**
+ * Generates a bounding box from polygon coordinates.
+ */
+export function getBoundingBoxFromPolygon(
+  polygon: Coordinate[]
+): BoundingBox {
+  if (polygon.length === 0) {
+    throw new Error(
+      "Polygon must contain at least one coordinate."
+    );
+  }
+
+  let north = polygon[0].latitude;
+  let south = polygon[0].latitude;
+  let east = polygon[0].longitude;
+  let west = polygon[0].longitude;
+
+  for (const point of polygon) {
+    if (point.latitude > north) {
+      north = point.latitude;
+    }
+
+    if (point.latitude < south) {
+      south = point.latitude;
+    }
+
+    if (point.longitude > east) {
+      east = point.longitude;
+    }
+
+    if (point.longitude < west) {
+      west = point.longitude;
+    }
+  }
+
+  return {
+    north,
+    south,
+    east,
+    west,
+  };
+}
+
+/**
+ * Checks whether a point lies inside a polygon
+ * using the Ray Casting algorithm.
+ */
+export function isPointInsidePolygon(
+  point: Coordinate,
+  polygon: Coordinate[]
+): boolean {
+  if (polygon.length < 3) {
+    return false;
+  }
+
+  const x = point.longitude;
+  const y = point.latitude;
+
+  let inside = false;
+
+  for (
+    let i = 0, j = polygon.length - 1;
+    i < polygon.length;
+    j = i++
+  ) {
+    const xi = polygon[i].longitude;
+    const yi = polygon[i].latitude;
+
+    const xj = polygon[j].longitude;
+    const yj = polygon[j].latitude;
+
+    const intersects =
+      yi > y !== yj > y &&
+      x <
+        ((xj - xi) * (y - yi)) /
+          (yj - yi) +
+          xi;
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+/**
+ * Checks whether a point lies inside a polygon
+ * with an optimized bounding box pre-check.
+ */
+export function isPointInsidePolygonWithBoundingBox(
+  point: Coordinate,
+  polygon: Coordinate[],
+  boundingBox?: BoundingBox
+): boolean {
+  const box =
+    boundingBox ??
+    getBoundingBoxFromPolygon(polygon);
+
+  if (
+    !isPointInsideBoundingBox(point, box)
+  ) {
+    return false;
+  }
+
+  return isPointInsidePolygon(
+    point,
+    polygon
+  );
+}
+
+/**
+ * Converts degrees to radians.
+ */
+function degreesToRadians(
+  degrees: number
+): number {
+  return (degrees * Math.PI) / 180;
 }

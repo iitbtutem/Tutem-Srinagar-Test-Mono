@@ -50,6 +50,31 @@ export default defineSchema({
     isVehicleInsuranceImageRequired: v.boolean(),
     canDriverEditLicesnse: v.boolean(),
     canDriverEditVehicle: v.boolean(),
+    polygon: v.optional(v.array(v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    }))),
+    boundingBox: v.optional(v.object({
+      north: v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+
+      south: v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+
+      east: v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+
+      west: v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    }))
   }),
 
   //organization rates

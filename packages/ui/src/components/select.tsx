@@ -45,7 +45,7 @@ function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-14 flex-row items-center justify-between gap-2 rounded-2xl px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
+        'border-primary dark:border-foreground/60 dark:bg-input/80 bg-muted-foreground/10 flex h-12 flex-row items-center justify-between gap-2 rounded-2xl px-3 py-2 shadow-sm shadow-black/5 sm:h-9',
         Platform.select({
           web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-input/50 w-fit whitespace-nowrap text-sm outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0',
         }),

@@ -35,6 +35,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useDriverLiveLocation } from '../../../hooks/useDriverLiveLocation';
 
 const formSchema = z.object({
   firstName: z
@@ -53,7 +54,7 @@ const formSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
 });
 export default function Register() {
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
@@ -65,6 +66,7 @@ export default function Register() {
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
+  const driverLocation = useDriverLiveLocation();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -72,7 +74,7 @@ export default function Register() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
+  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, driverLocation ? { driverLocation } : 'skip');
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
@@ -83,7 +85,6 @@ export default function Register() {
     setValue,
     setError,
     clearErrors,
-    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
@@ -206,10 +207,10 @@ export default function Register() {
 
   if (driver && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
+  if (organizations === undefined) return <LoadingScreen message="Fetching nearby organizations…" />;
 
   if (organizations.length === 0) {
-    return <ErrorScreen message="No organizations found" />;
+    return <ErrorScreen message="No organizations found near you" />;
   }
 
   return (

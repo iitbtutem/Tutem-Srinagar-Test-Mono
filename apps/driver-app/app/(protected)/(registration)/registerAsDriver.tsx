@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -53,14 +54,15 @@ export default function RegisterAsRider() {
   const router = useRouter();
   const { showToast } = useToast();  
   const { expoPushToken } = useNotification();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+    const driverLocation = useDriverLiveLocation();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
+  const organizations =useQuery(api.routes.organizations.getNearbyOrganization, driverLocation ? { driverLocation } : 'skip');
   const { uploadFile } = useFileUpload();
 
   const {
@@ -166,10 +168,10 @@ export default function RegisterAsRider() {
 
   if (driver && driver.driverDetails) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
+  if (organizations === undefined) return <LoadingScreen message="Fetching nearby organization…" />;
 
   if (organizations.length === 0) {
-    return <ErrorScreen message="No organizations found" />;
+    return <ErrorScreen message="No organizations found near you" />;
   }
 
   return (
@@ -309,7 +311,7 @@ export default function RegisterAsRider() {
               </View>
             )}
 
-            <Button onPress={onSubmit} disabled={isSubmitting}>
+            <Button onPress={onSubmit} disabled={isSubmitting} className='my-3'>
               {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
             </Button>
           </View>

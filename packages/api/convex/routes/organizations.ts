@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { VEHICLE_CLASS } from "../CONSTANTS";
+import { isPointInsidePolygon } from "../helpers/maps";
 
 // CREATE ORGANISATION
 export const createOrganization = mutation({
@@ -32,6 +33,50 @@ export const getAllOrganizations = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("organization").collect();
+  },
+});
+
+export const getNearbyOrganization = query({
+  args: {
+    driverLocation: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    })
+  },
+
+  handler: async (ctx, args) => {
+    const candidateOrganizations = await ctx.db
+      .query("organization")
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("boundingBox"), undefined),
+          q.and(
+            // latitude
+            q.gte(q.field("boundingBox.north.latitude"), args.driverLocation.latitude),
+            q.lte(q.field("boundingBox.south.latitude"), args.driverLocation.latitude),
+
+            // longitude
+            q.gte(q.field("boundingBox.east.longitude"), args.driverLocation.longitude),
+            q.lte(q.field("boundingBox.west.longitude"), args.driverLocation.longitude)
+          )
+        )
+      )
+      .collect();
+      
+    const organizations =
+      candidateOrganizations.filter((org) => {
+        // If no polygon, allow by default
+        if ((!org.boundingBox && !org.polygon) || !org.polygon || org.polygon.length < 3) {
+          return true;
+        }
+
+        return isPointInsidePolygon(
+          args.driverLocation,
+          org.polygon
+        );
+      });
+
+    return organizations;
   },
 });
 
