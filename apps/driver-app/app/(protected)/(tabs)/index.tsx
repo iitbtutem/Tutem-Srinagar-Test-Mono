@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/expo';
-import { api } from '@tutem/api';
+import { api, Id } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -12,7 +12,6 @@ import {
 import Animated, {
   FadeInDown,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -21,7 +20,7 @@ import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect, useSegments } from 'expo-router';
-import { Avatar, AvatarFallback, AvatarImage, Text, Button } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button, cn } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '@/components/StarRating';
 import { distanceFormat, formatFare } from '@/lib/utils';
@@ -31,9 +30,10 @@ import { startLocationTracking, stopLocationTracking } from '@/lib/locationServi
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
-import Gender from '@/components/Gender';
-import Age from '@/components/Age';
+import GenderAge from '@/components/GenderAge';
 import { router } from 'expo-router';
+import { colors } from '@/constants/colors';
+import Loader from '@/components/Loader';
 
 // Types
 
@@ -48,27 +48,10 @@ type Cords = { latitude: number; longitude: number };
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Map takes ~62% of screen height in the scrollable layout
-const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.42);
+const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.40);
 
 // Height of the ride requests list panel
 const LIST_PANEL_HEIGHT = Math.round(SCREEN_HEIGHT * 0.45);
-
-// Route Legend
-
-function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
-  return (
-    <View className="gap-1.5 rounded-xl border border-slate-800 bg-slate-950/90 px-3 py-2">
-      <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-green-600" />
-        <Text className="text-[10px] font-semibold text-slate-400">{labelA}</Text>
-      </View>
-      <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-red-600" />
-        <Text className="text-[10px] font-semibold text-slate-400">{labelB}</Text>
-      </View>
-    </View>
-  );
-}
 
 // Sheet Section
 
@@ -300,14 +283,8 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
 
   // Map & location
   const mapRef = useRef<MapView>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
 
-  // UI state
-  const [selectedRide, setSelectedRide] = useState<RideRequest | null>(null);
   const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
-
-  // Bottom sheet refs
-  const requestSheetRef = useRef<BottomSheet>(null);
 
   const { colorScheme: currentTheme } = useColorScheme();
   const isDark = currentTheme === 'dark';
@@ -345,43 +322,9 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
     }
   }, [driverLocation]);
 
-  // Select a ride request → fetch preview route
-  const handleSelectRide = useCallback(
-    async (ride: RideRequest) => {
-      setSelectedRide(ride);
-      requestSheetRef.current?.snapToIndex(1);
-
-      if (!driverLocation) return;
-
-      const pickupCords = { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude };
-      const destCords = {
-        latitude: ride.destination.latitude,
-        longitude: ride.destination.longitude,
-      };
-      fitMap([pickupCords, destCords]);
-    },
-    [driverLocation, fitMap]
-  );
-
-  // Deselect ride → clear preview route
-  const handleDeselectRide = useCallback(() => {
-    setSelectedRide(null);
-    requestSheetRef.current?.close();
-    if (driverLocation) {
-      mapRef.current?.animateToRegion(
-        {
-          ...driverLocation,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        },
-        400
-      );
-    }
-  }, [driverLocation]);
-
   // Accept / Reject
   const canAcceptRide = useCallback(
-    (_ride: RideRequest): { ok: boolean; reason?: string } => {
+    (): { ok: boolean; reason?: string } => {
       if (!driver?.driverDetails?.isAvailableForRide || !driver.driverDetails.isOnline)
         return { ok: false, reason: 'You must be online to accept rides' };
       return { ok: true };
@@ -389,22 +332,21 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
     [driver]
   );
 
-  const handleAccept = async () => {
-    if (!selectedRide || !driver?.driverDetails) return;
-    const { ok, reason } = canAcceptRide(selectedRide);
+  const handleAccept = async ( rideId: Id<"ride"> ) => {
+    if (!driver?.driverDetails) return;
+    const { ok, reason } = canAcceptRide();
     if (!ok) {
       showToast({ title: 'Attention!', description: reason, type: 'info' });
       return;
     }
     setActionLoading('accept');
     try {
-      await acceptRide({ driverId: driver.driverDetails._id, rideId: selectedRide._id });
+      await acceptRide({ driverId: driver.driverDetails._id, rideId });
       showToast({
         title: 'Ride Accepted',
         description: 'Ride accepted successfully',
         type: 'success',
       });
-      handleDeselectRide();
     } catch (e) {
       console.error(e);
       showToast({ title: 'Failed', description: 'Failed to accept ride', type: 'error' });
@@ -413,13 +355,12 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedRide || !driver?.driverDetails) return;
+  const handleReject = async ( rideId: Id<"ride"> ) => {
+    if (!driver?.driverDetails) return;
     setActionLoading('reject');
     try {
-      await rejectRide({ driverId: driver.driverDetails._id, rideId: selectedRide._id });
+      await rejectRide({ driverId: driver.driverDetails._id, rideId });
       showToast({ title: 'Ride Rejected', description: 'Ride rejected', type: 'success' });
-      handleDeselectRide();
     } catch (e) {
       console.error(e);
       showToast({ title: 'Failed', description: 'Failed to reject ride', type: 'error' });
@@ -428,15 +369,7 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
     }
   };
 
-  const acceptCheck = selectedRide ? canAcceptRide(selectedRide) : { ok: false, reason: undefined };
-
-  // Selected ride coords
-  const selectedPickup = selectedRide
-    ? { latitude: selectedRide.pickup.latitude, longitude: selectedRide.pickup.longitude }
-    : null;
-  const selectedDest = selectedRide
-    ? { latitude: selectedRide.destination.latitude, longitude: selectedRide.destination.longitude }
-    : null;
+  const acceptCheck = canAcceptRide();
 
   const handleClick = () => {
     if(currentRide)
@@ -445,6 +378,11 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
 
   return (
     <View className="flex-1 bg-background">
+      {actionLoading && (
+        <Loader
+          subtitle={actionLoading === 'accept' ? 'Accepting ride...' : 'Rejecting ride...'}
+        />
+      )}
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -452,7 +390,7 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
         scrollEventThrottle={16}
         contentContainerStyle={{ flexGrow: 1 }}>
         {/* MAP BLOCK - fixed height when rides exist, taller when no rides */}
-        <View style={{ height: currentRide ? SCREEN_HEIGHT * 0.5 : hasRides ? MAP_HEIGHT : SCREEN_HEIGHT * 0.6 }} className="relative">
+        <View style={{ height: currentRide ? SCREEN_HEIGHT * 0.5 : hasRides ? MAP_HEIGHT : MAP_HEIGHT * 2 }} className="relative">
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
@@ -476,12 +414,6 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
             {driverLocation && vehicle && (
               <DriverMarker location={driverLocation} vehicleClass={vehicle?.class} />
             )}
-            {selectedPickup && (
-              <Marker coordinate={selectedPickup} anchor={{ x: 0, y: 0.9 }} pinColor="green" />
-            )}
-            {selectedDest && (
-              <Marker coordinate={selectedDest} anchor={{ x: 0, y: 0.9 }} pinColor="red" />
-            )}
           </MapView>
 
           {/* Map overlay controls — pinned inside the map block */}
@@ -489,13 +421,9 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
             style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
             className="flex-row items-start justify-between"
             pointerEvents="box-none">
-            <View pointerEvents="none">
-              <Animated.View entering={FadeInUp.springify()}>
-                <RouteLegend labelA={'Pickup'} labelB={'Destination'} />
-              </Animated.View>
-            </View>
+            <View />
             <TouchableOpacity
-              onPress={() => fitMap([selectedPickup, selectedDest].filter(Boolean) as Cords[])}
+              onPress={() => fitMap([driverLocation].filter(Boolean) as Cords[])}
               activeOpacity={0.8}
               style={{ elevation: 5 }}
               className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
@@ -532,58 +460,36 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
               </Button>
             </Link>
           </View>
-        ) : (
-          <View className={`flex-1 px-4 ${hasRides ? 'pt-4' : 'pt-0'}`}>
+        ) : hasRides ? (
+          <View className="flex-1 px-4 pt-2">
             {/* Section header */}
-            <View className={`${hasRides ? 'mb-3' : 'mb-2'} flex-row items-center justify-between`}>
-              <View>
-                <Text className="text-title text-lg font-extrabold tracking-tight">
-                  Ride Requests
-                </Text>
-                {!hasRides && (
-                  <Text className="mt-0.5 text-xs font-medium text-slate-500">
-                    No active requests at the moment
-                  </Text>
-                )}
-                {hasRides && (
-                  <Text className="mt-0.5 text-xs font-medium text-slate-500">
-                    Tap a request to preview route & accept
-                  </Text>
-                )}
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-title text-lg font-extrabold tracking-tight">
+                Ride Requests
+              </Text>
+              <View className="h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/20">
+                <Text className="text-sm font-extrabold text-primary">{rides.length}</Text>
               </View>
-              {hasRides && (
-                <View className="h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/20">
-                  <Text className="text-sm font-extrabold text-primary">{rides.length}</Text>
-                </View>
-              )}
             </View>
 
-            {/* Empty state - takes minimal space when no rides */}
-            {!hasRides && !isLoading && (
-              <Animated.View
-                entering={ZoomIn.springify()}
-                className="items-center justify-center gap-2 py-2">
-                <Text className="text-2xl">🛣️</Text>
-                <Text className="text-sm font-semibold">No ride requests</Text>
-                <Text className="text-center text-xs leading-4 text-slate-400">
-                  New requests will appear here as riders book nearby
-                </Text>
-              </Animated.View>
-            )}
-
             {/* Ride cards - will fill available space when rides exist */}
-            {hasRides && (
-              <View className="flex-1">
-                {rides.map((ride, i) => (
-                  <RideCard
-                    key={ride._id}
-                    ride={ride}
-                    isSelected={selectedRide?._id === ride._id}
-                    onPress={handleSelectRide}
-                  />
-                ))}
-              </View>
-            )}
+            <View className="flex-1">
+              {rides.map((ride, i) => (
+                <RideCard
+                  key={ride._id}
+                  ride={ride}
+                  acceptCheck={acceptCheck}
+                  handleAccept={handleAccept}
+                  handleReject={handleReject}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View className="absolute bottom-0 w-full bg-background py-2">
+            <Text className="text-center text-primary text-sm font-semibold">
+              No ride requests{'\n'}We'll notify you when there are!
+            </Text>
           </View>
         )}
         </>)}
@@ -591,215 +497,8 @@ export const RideRequests = memo(({ driver, currentRide }: { driver: Driver, cur
 
       {/* Loading overlay */}
       {isLoading && (
-        <View className="absolute inset-0 items-center justify-center bg-slate-950/60">
-          <ActivityIndicator size="large" color="#7C3AED" />
-          <Text className="mt-3 text-sm font-medium text-slate-400">Loading…</Text>
-        </View>
+        <Loader subtitle='Loading...' />
       )}
-
-      {/* RIDE REQUEST DETAIL SHEET */}
-      <BottomSheet
-        ref={requestSheetRef}
-        index={-1}
-        snapPoints={['55%', '85%']}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.55}
-          />
-        )}
-        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
-        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}
-        onClose={handleDeselectRide}>
-        <BottomSheetScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 }}>
-          {selectedRide && (
-            <Animated.View entering={FadeInUp.duration(220)}>
-              {/* Header */}
-              <View className="mb-5 flex-row items-start justify-between border-b border-slate-800 py-4">
-                <View className="flex-1 flex-row items-center gap-x-1 pr-4">
-                  <Avatar alt="Profile pic" className="h-12 w-12">
-                    <AvatarImage
-                      source={
-                        selectedRide.rider.details.profilePictureKey?.trim()
-                          ? { uri: selectedRide.rider.details.profilePictureKey }
-                          : require('@/assets/images/avatar.jpg')
-                      }
-                    />
-                    <AvatarFallback className="bg-white/20">
-                      <Text className="text-sm font-bold text-primary">
-                        {selectedRide.rider.details.firstName?.[0]}
-                        {selectedRide.rider.details.lastName?.[0]}
-                      </Text>
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <View className="flex-1">
-                    <View className="flex-row gap-2">
-                      <Text
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                        className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight"
-                      >
-                        {`${selectedRide.rider.details?.firstName ?? ''} ${
-                          selectedRide.rider.details?.lastName ?? ''
-                        }`.trim() || 'Passenger'}
-                      </Text>
-                    </View>
-
-                    {selectedRide.rider.details && (
-                      <View className="flex-row gap-1">
-                        <Gender gender={selectedRide.rider.details.gender} />
-                        <Age dob={selectedRide.rider.details.dob} />
-                        <StarRating rating={selectedRide.rider.ratings} />
-                      </View>
-                    )}
-
-                  </View>
-                </View>
-                
-                <View className="ml-2 items-end">
-                  <Text className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                    Est. Fare
-                  </Text>
-
-                  <Text className="text-3xl font-extrabold tracking-tight text-emerald-400">
-                    {formatFare(selectedRide.fare)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Route visual */}
-              <View className="mb-5 flex-row gap-3 px-1">
-                <View className="items-center pt-[18px]">
-                  <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-                  <View className="my-1 w-px flex-1 bg-slate-700" />
-                  <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-                </View>
-                <View className="flex-1">
-                  <View className="mb-3.5">
-                    <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
-                      Pickup
-                    </Text>
-                    <Text className="text-title text-[15px] font-semibold leading-5">
-                      {selectedRide.pickup?.address ?? 'Not set'}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
-                      Destination
-                    </Text>
-                    <Text className="text-title text-[15px] font-semibold leading-5">
-                      {selectedRide.destination?.address ?? 'Not set'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Route loading */}
-              {routeLoading && (
-                <View className="mb-4 flex-row items-center gap-2 rounded-xl bg-slate-800/40 px-4 py-3">
-                  <ActivityIndicator size="small" color="#7C3AED" />
-                  <Text className="text-sm font-medium text-slate-400">Calculating route…</Text>
-                </View>
-              )}
-
-              {/* Stats */}
-              <SheetSection title="Trip Details">
-                <View className="flex-row gap-2.5">
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {distanceFormat(selectedRide.distance)}
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Distance
-                    </Text>
-                  </View>
-                  <View className="bg-primary-background flex-1 items-center rounded-2xl border border-slate-800 p-3.5">
-                    <Text className="mb-1 text-base font-extrabold tracking-tight text-primary">
-                      {selectedRide.expectedDuration ?? '—'}
-                    </Text>
-                    <Text className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Duration
-                    </Text>
-                  </View>
-                </View>
-              </SheetSection>
-
-              {/* Cannot accept warning */}
-              {!acceptCheck.ok && acceptCheck.reason && (
-                <Animated.View
-                  entering={FadeInDown}
-                  className="mb-4 flex-row items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
-                  <Text className="text-base">ℹ️</Text>
-                  <Text className="flex-1 text-[13px] font-semibold leading-[18px] text-amber-400">
-                    {acceptCheck.reason}
-                  </Text>
-                </Animated.View>
-              )}
-
-              {/* Action buttons */}
-              {selectedRide.status === "Canceled" ? (
-                <View className="gap-5">
-                {/* Icon + Header */}
-                <View className="items-center gap-3 py-4">
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
-                    <Text className="text-3xl">🚫</Text>
-                  </View>
-                  <View className="items-center gap-1">
-                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
-                      Ride Canceled
-                    </Text>
-                    <Text className="text-[20px] font-extrabold tracking-tight text-title text-center">
-                      Rider has cancelled this ride
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
-                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
-                  <View className="mb-1 flex-row items-center gap-2">
-                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                    <Text className="text-xs font-medium text-slate-400">Unknown Reason</Text>
-                  </View>
-                </View>
-                <Button
-                  onPress={() => requestSheetRef.current?.close()}
-                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                  <Text className="text-[15px] font-bold">Close</Text>
-                </Button>
-              </View>
-              ) : (
-                <View className="mt-2 flex-row gap-3">
-                  <Button
-                    className="min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10 py-4"
-                    onPress={handleReject}
-                    disabled={actionLoading !== null}>
-                    {actionLoading === 'reject' ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
-                    ) : (
-                      <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
-                    )}
-                  </Button>
-                  <Button
-                    className={`min-h-[56px] flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 py-4 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
-                    onPress={handleAccept}
-                    disabled={!acceptCheck.ok || actionLoading !== null}>
-                    {actionLoading === 'accept' ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
-                    )}
-                  </Button>
-                </View>
-              )}
-            </Animated.View>
-          )}
-        </BottomSheetScrollView>
-      </BottomSheet>
     </View>
   );
 });

@@ -31,6 +31,8 @@ import { useUser } from '@clerk/expo';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
 import useThemeColors from '@/hooks/useColorScheme';
+import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 
@@ -194,33 +196,21 @@ export default function EditVehicle() {
       setValue(key, result.assets[0].uri);
     }
   };
-
-  const isIos = Platform.OS === "ios";
+  
   return (    
-    <View className={cn("flex-1 bg-background", { "pt-10": isIos })}>
-      <Stack.Screen options={{ headerShown: isIos ? false : true }} />
+    <View className="flex-1 bg-background">
+      <Stack.Screen options={{
+        title: "Edit Vehicle",
+        headerShown: true,
+        header: (props) => <BasicHeader {...props} />
+      }} />
+      {isSubmitting && <Loader subtitle='Submitting...' />}
       <KeyboardAwareScrollView
         bottomOffset={50}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}>
+        contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-
-          <View className="mb-2 flex-row items-center px-3">
-            {isIos && <TouchableOpacity 
-              className="mr-2 flex-row items-center" 
-              onPress={() => {
-                router.back();
-            }}>
-              <MaterialIcons
-                name="keyboard-backspace"
-                size={20}
-                color="#000"
-              />
-            </TouchableOpacity>}
-
-            <Text className="text-lg font-semibold">Edit your vehicle details</Text>
-          </View>
 
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Registration Number */}

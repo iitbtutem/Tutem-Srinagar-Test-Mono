@@ -18,6 +18,7 @@ import Offline from '@/components/offline';
 import { useInternet } from '@/hooks/useInternet';
 import { useEffect, useState } from 'react';
 import { Text } from '@tutem/ui';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -84,7 +85,8 @@ export default function RootLayout() {
           <NotificationProvider>
             <ToastProvider>
               <KeyboardProvider>
-                <StatusBar style="light" translucent backgroundColor="#0A6FCC" />
+                <SafeAreaView edges={['top']} className="bg-primary" />
+                <StatusBar style="light" translucent backgroundColor="#2196f3" />
                   
                 <Stack
                   screenOptions={{

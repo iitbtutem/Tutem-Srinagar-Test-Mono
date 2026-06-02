@@ -20,7 +20,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { ActivityIndicator, Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
@@ -33,12 +33,13 @@ import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import { BasicHeader } from '@/components/CustomHeader';
 
 const formSchema = z.object({
   licenseNumber: z
     .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
+    .min(14, 'License number must be at least 14 characters long.')
+    .max(20, 'License number must be at most 20 characters long.'),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
   organizationId: z.string().min(1, 'Select an organization.'),
@@ -49,6 +50,8 @@ export default function RegisterAsRider() {
   const [currentFieldToUpdate, setCurrentFieldToUpdate] = useState<
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
+
+  const [initialLocationFetched, setInitialLocationFetched] = useState<{ latitude: number, longitude: number } | null>(null);
 
   const { userId } = useAuth();
   const router = useRouter();
@@ -62,13 +65,15 @@ export default function RegisterAsRider() {
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
-  const organizations =useQuery(api.routes.organizations.getNearbyOrganization, driverLocation ? { driverLocation } : 'skip');
+  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip');
   const { uploadFile } = useFileUpload();
 
   const {
     handleSubmit,
     control,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
@@ -96,7 +101,12 @@ export default function RegisterAsRider() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
+      result = await ImagePicker.launchCameraAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted')
@@ -105,7 +115,12 @@ export default function RegisterAsRider() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
+      result = await ImagePicker.launchImageLibraryAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     }
 
     if (result && !result.canceled) {
@@ -122,11 +137,11 @@ export default function RegisterAsRider() {
       }
 
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
-        showToast({
-          title: 'Error',
-          description: 'Please upload both front and back of your license',
-          type: 'error',
-        });
+        if (!data.licenseImageFrontKey)
+          setError('licenseImageFrontKey', { message: 'Front image is required' });
+        if (!data.licenseImageBackKey)
+          setError('licenseImageBackKey', { message: 'Back image is required' });
+        
         return;
       }
 
@@ -166,6 +181,12 @@ export default function RegisterAsRider() {
     }
   });
 
+  useEffect(()=> {
+    if(driverLocation && !initialLocationFetched) {
+      setInitialLocationFetched(driverLocation);
+    }
+  }, [driverLocation]);
+
   if (driver && driver.driverDetails) return <Redirect href="/" />;
 
   if (organizations === undefined) return <LoadingScreen message="Fetching nearby organization…" />;
@@ -176,17 +197,28 @@ export default function RegisterAsRider() {
 
   return (
     <View className="flex-1 bg-background">
-      <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: "Driver Registration",
+        header: (props) => <BasicHeader {...props} />, 
+      }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}>
+        contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View
           entering={FadeInRight.delay(300).duration(400)}
           className="flex-1 bg-background">
-          <Text className="my-4 mb-2 px-3 text-lg font-semibold">Fill in your details</Text>
+
+          <Text className="px-3 text-lg font-semibold">Fill in your details</Text>
+
+          <View className="mx-2 my-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <Text className="text-sm text-blue-800">
+              You are already registered with us. Fill in the required details below to
+              register as a driver.
+            </Text>
+          </View>
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Organizations Select */}
             <View>
@@ -296,6 +328,7 @@ export default function RegisterAsRider() {
                               onPress={() => {
                                 setCurrentFieldToUpdate(fieldKey);
                                 bottomSheetRef.current?.expand();
+                                clearErrors(fieldKey);
                               }}>
                               <Feather name="upload" size={24} color="gray" />
                               <Text className="font-bold tracking-wider text-gray-500">

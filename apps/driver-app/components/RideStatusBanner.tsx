@@ -83,7 +83,7 @@ function getStatusConfig(ride: CurrentRide): StatusConfig | null {
       text: "text-green-400",
       label: "Ride in Progress",
       sub: "Rider is in the vehicle",
-      timestamp: ride.startedAt ?? ride.updatedAt,
+      timestamp: ride.startedAt,
     };
   }
 
@@ -155,7 +155,7 @@ export function RideStatusBanner({ ride, className }: Props) {
   return (
     <View
       className={cn(
-        "mb-4 flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+        "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
         config.border,
         config.bg,
         className

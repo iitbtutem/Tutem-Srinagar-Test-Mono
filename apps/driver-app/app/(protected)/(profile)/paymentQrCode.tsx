@@ -1,7 +1,7 @@
 import { Text, Button } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,7 @@ import { Upload, Pencil, QrCode } from 'lucide-react-native';
 import { useMutation } from 'convex/react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import Loader from '@/components/Loader';
+import { BasicHeader } from '@/components/CustomHeader';
 
 export default function PaymentQrCard() {
   const { driverId } = useLocalSearchParams<{ driverId: Id<'driver'> }>();
@@ -71,18 +72,23 @@ export default function PaymentQrCard() {
 
   return (
     <View className='flex-1 bg-white/50 px-4 py-6'>
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: "Payment QR Code",
+        header: (props) => <BasicHeader {...props} />, 
+      }} />
       <View className="overflow-hidden">
-        <View className="flex-row items-center gap-2 px-3 pb-3">
+        <View className="flex-row items-center gap-2 pb-3">
           <View className="rounded-xl bg-orange-500/10 p-2">
             <QrCode size={24} color="#f59e0b" strokeWidth={2} />
           </View>
 
           <View>
-            <Text className="text-base font-semibold text-primary">Payment QR Code</Text>
+            <Text className="text-base font-semibold">Payment QR Code</Text>
             <Text className="mt-0.5 text-xs text-zinc-500">
               {driverPaymentQrImage
                 ? 'Show this to your passenger for UPI payment'
-                : 'Add your UPI QR code so passengers can pay digitally'}
+                : `Add your UPI QR code so passengers can \n pay digitally`}
             </Text>
           </View>
         </View>

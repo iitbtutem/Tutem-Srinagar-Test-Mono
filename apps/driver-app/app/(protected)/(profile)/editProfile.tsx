@@ -1,6 +1,5 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
 import { Image, TextInput, TouchableOpacity, View } from 'react-native';
-import LoadingScreen from '@/components/LoadingScreen';
 import { useRef, useState } from 'react';
 import {
   Select,
@@ -31,8 +30,9 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import useThemeColors from '@/hooks/useColorScheme';
+import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   firstName: z
@@ -159,8 +159,6 @@ export default function EditProfile() {
 
       setIsSubmitting(true);
 
-      showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
-
       const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${clerkId}-front`);
       const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${clerkId}-back`);
       const { dob, gender, ...rest } = data;
@@ -177,36 +175,31 @@ export default function EditProfile() {
       router.replace('/profile');
     } catch (error) {
       showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
     }
   });
 
-  if (organizations === undefined) return <LoadingScreen message="Loading organizations…" />;
-
-  if (organizations.length === 0) {
-    return <ErrorScreen message="No organizations found" />;
-  }
+  if (organizations && organizations.length === 0) {
+      return <ErrorScreen message="No organizations found near you" />;
+    }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <Stack.Screen options={{ headerShown: false }} />
+    <View className="flex-1 bg-background">
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Edit Profile',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
+
+      {isSubmitting && <Loader subtitle='submitting...' />}
+
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, padding: 12, paddingTop: 0 }}>
+        contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-          {/* NEW wrapper */}
-          <View className="my-4 mb-2 flex-row items-center px-3">
-            <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => router.back()}>
-              <MaterialIcons
-                name="keyboard-backspace"
-                size={24}
-                color={'black'}
-              />
-            </TouchableOpacity>
-
-            <Text className="text-lg font-semibold">Edit your details below</Text>
-          </View>
 
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Organization */}
@@ -215,7 +208,7 @@ export default function EditProfile() {
                 <Feather name="briefcase" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
               </View>
-              <Controller
+              {organizations ? <Controller
                 name="organizationId"
                 control={control}
                 render={({ field }) => (
@@ -256,7 +249,14 @@ export default function EditProfile() {
                     </SelectContent>
                   </Select>
                 )}
-              />
+              /> 
+              : organizations === undefined ? <Text className="text-md text-gray-600">
+                Fetching organizations...
+              </Text>
+              : <Text className="text-md text-destructive">
+                No organizations found near you.
+              </Text> }
+
               {errors.organizationId && (
                 <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
               )}
@@ -550,6 +550,6 @@ export default function EditProfile() {
           </View>
         </BottomSheetView>
       </BottomSheet>
-    </SafeAreaView>
+    </View>
   );
 }

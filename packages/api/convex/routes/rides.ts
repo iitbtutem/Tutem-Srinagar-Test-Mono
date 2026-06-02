@@ -29,7 +29,7 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     filters: v.array(
       v.union(v.literal("Bike"), v.literal("Cab"), v.literal("Auto")),
     ),
-    distance: v.number(), // keep for fare calculation
+    distance: v.number(),
     riderId: v.id("rider"),
   },
   handler: async (ctx, args) => {
@@ -39,14 +39,21 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     const riderUser = await ctx.db.get(rider.userId);
     if (riderUser === null) throw new ConvexError("Invalid user");
 
-    console.log("nearby drivers from presence:", driversInfo);
+    const settings = await ctx.db.query("rideSettings").first();
+    const MaxRideRequest = settings?.maxDriverRideRequests ?? 3;
 
     const drivers = await Promise.all(
       driversInfo.map(async (driver) => {
         const driverDetails = await ctx.db.get(driver.driverId);
 
         if ( driverDetails === null || driverDetails.isAvailableForRide === false) return null;
-        console.log("driver details", driverDetails);
+        
+        const existingRequests = await ctx.db.query("ride")
+        .withIndex("by_driver", q => q.eq("driverId", driverDetails._id))
+        .filter(q => q.eq(q.field("requestStatus"), "Pending"))
+        .collect();
+
+        if(existingRequests.length >= MaxRideRequest) return null;
 
         const userDetails = await ctx.db.get(driverDetails.userId);
         console.log("userDetails", userDetails);
@@ -457,7 +464,22 @@ export const acceptRideInternal = internalMutation({
       updatedAt: Date.now(),
     });
 
+    const existingRideRequests = await ctx.db.query("ride")
+    .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+    .filter(q => q.and(
+      q.neq(q.field("_id"), ride._id),
+      q.eq(q.field("requestStatus"), "Pending")
+    ))
+    .collect();
 
+    if(existingRideRequests.length !== 0) {
+      await Promise.all(existingRideRequests.map((rideRequest) =>
+        ctx.db.patch(rideRequest._id, {
+          requestStatus: "No Response",
+          updatedAt: Date.now(),
+        })
+      ));
+    }
 
     await ctx.db.patch(driver._id, {
       isAvailableForRide: false,

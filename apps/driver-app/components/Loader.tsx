@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, Modal } from 'react-native';
+import { boolean } from 'zod';
 
 export default function Loader({ title, subtitle }: { title?: string, subtitle?: string }) {
   const waveAnim = useRef(new Animated.Value(0)).current;
@@ -24,8 +25,14 @@ export default function Loader({ title, subtitle }: { title?: string, subtitle?:
   const letters = 'TUTEM'.split('');
 
   return (
-    <View className="absolute inset-0 items-center justify-center bg-black/40 backdrop-blur-sm">
-      <View className="rounded-2xl bg-white p-6 shadow-2xl">
+    <Modal
+      transparent
+      visible={true}
+      animationType="fade"
+      statusBarTranslucent
+    >
+      <View className="flex-1 items-center justify-center bg-black/40">
+        <View className="rounded-2xl bg-white p-6 shadow-2xl">
         <View className="flex-row items-center justify-center gap-1">
           {letters.map((letter, index) => (
             <Animated.Text
@@ -50,13 +57,14 @@ export default function Loader({ title, subtitle }: { title?: string, subtitle?:
           ))}
         </View>
 
-        <Text className="mt-4 text-center text-sm font-semibold text-gray-700">
-          {title || 'Loading...'}
-        </Text>
+        {title && <Text className="mt-4 text-center text-sm font-semibold text-gray-700">
+          {title}
+        </Text>}
         <Text className="mt-1 text-center text-xs text-gray-500">
-          {subtitle || 'Please wait.'}
+          {subtitle ? `${subtitle}…` : 'loading…'}
         </Text>
       </View>
     </View>
+    </Modal>
   );
 }

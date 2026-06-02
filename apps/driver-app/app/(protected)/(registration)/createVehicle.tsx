@@ -1,4 +1,4 @@
-import { View, TextInput, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, Image } from 'react-native';
 import {
   Select,
   SelectContent,
@@ -32,18 +32,22 @@ import ErrorScreen from '@/components/ErrorScreen';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import useThemeColors from '@/hooks/useColorScheme';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 
 const vehicleSchema = z.object({
-  registrationNumber: z.string().min(10, 'Registration number must be atleast 10 characters long.'),
+  registrationNumber: z.string("Registration number is required.")
+    .min(10, 'Registration number must be atleast 10 characters long.'),
   type: z.enum(VEHICLE_TYPE),
-  model: z.string().min(2, 'Model name must be atleast 2 characters long.'),
+  model: z.string("Enter your vehicle model")
+    .min(2, 'Model name must be atleast 2 characters long.'),
   fuelType: z.enum(FUEL_TYPE),
-  color: z.string().min(3, 'Color must be atleast 3 characters long.'),
+  color: z.string("Color must be a string.")
+    .min(3, 'Color must be atleast 3 characters long.'),
   seatingCapacity: z
-    .number()
+    .number("Seating capacity must be a number.")
     .min(2, 'Seating capacity must be atleast 2.')
     .max(50, 'Seasting capacity cannot exceed 50'),
   class: z.enum(VEHICLE_CLASS),
@@ -60,7 +64,7 @@ export default function CreateVehicle() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
 
   const [imagePickupKey, setImagePickupKey] = useState<PickupImageKey>();
-  const [loading, setLoading] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const driver = useQuery(api.routes.driver.getUser, { clerkId: user?.id ?? '' });
   const addVehicle = useMutation(api.routes.vehicle.addVehicle);
@@ -78,20 +82,9 @@ export default function CreateVehicle() {
     setValue,
     setError,
     clearErrors,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: {
-      registrationNumber: '',
-      type: undefined,
-      model: '',
-      fuelType: undefined,
-      color: '',
-      seatingCapacity: undefined,
-      class: undefined,
-      rcImageKey: '',
-      insuranceImageKey: '',
-    },
   });
 
   if (driver === null) return <ErrorScreen message="Driver not found" />;
@@ -101,7 +94,7 @@ export default function CreateVehicle() {
   if (!driver.driverDetails.organization) return <ErrorScreen message="Organization not found" />;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
-    setLoading(true);
+    setIsSubmitting(true);
     const driverDetails = driver.driverDetails;
     try {
       const rcImageKey = await uploadFile(data.rcImageKey, `vehicleRegisration/${driver._id}}`);
@@ -150,7 +143,7 @@ export default function CreateVehicle() {
       console.error(error);
       showToast({ title: 'Something went wrong', type: 'error' });
     } finally {
-      setLoading(true);
+      setIsSubmitting(false);
     }
   });
 
@@ -166,7 +159,12 @@ export default function CreateVehicle() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
+      result = await ImagePicker.launchCameraAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted')
@@ -175,7 +173,12 @@ export default function CreateVehicle() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
+      result = await ImagePicker.launchImageLibraryAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     }
 
     if (result && !result.canceled) {
@@ -185,30 +188,19 @@ export default function CreateVehicle() {
 
   const { isVehicleRCVerificationRequired, isVehicleInsuranceImageRequired } = driver.driverDetails.organization;
 
-  const isIos = Platform.OS === "ios";
   return (
-    <View className={cn("flex-1 bg-background", { "pt-6": isIos })}>
-      {!router.canGoBack() && <SafeAreaView />}
-      <Stack.Screen options={{ headerShown: isIos ? false : router.canGoBack() ? true : false }} />
+    <View className="flex-1 bg-background">
+      <Stack.Screen options={{
+        title: "Register Vehicle",
+        headerShown: true,
+        header: (props) => <BasicHeader {...props} />
+      }} />
+      {isSubmitting && <Loader subtitle='Submitting...' />}
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 12 }}>
+        contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-          {/* NEW wrapper */}
-          <View className="mb-2 flex-row items-center px-3">
-            {(isIos && router.canGoBack()) && <TouchableOpacity className="mr-2 flex-row items-center" onPress={() => {
-                router.back();
-            }}>
-              <MaterialIcons
-                name="keyboard-backspace"
-                size={20}
-                color="#000"
-              />
-            </TouchableOpacity>}
-
-            <Text className="text-lg font-semibold">Register your vehicle</Text>
-          </View>
 
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Registration Number */}
@@ -543,10 +535,10 @@ export default function CreateVehicle() {
 
             <Button 
               onPress={onSubmit}
-              disabled={ loading }
+              disabled={ isSubmitting }
               className='my-4'
               >
-              <Text>{loading ? "Registering…" : "Register Vehicle"}</Text>
+              <Text>{isSubmitting ? "Registering…" : "Register Vehicle"}</Text>
             </Button>
           </View>
         </Animated.View>

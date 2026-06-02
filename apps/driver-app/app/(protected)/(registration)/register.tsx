@@ -31,11 +31,11 @@ import ErrorScreen from '@/components/ErrorScreen';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import type { Id } from '@tutem/api';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useDriverLiveLocation } from '../../../hooks/useDriverLiveLocation';
+import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   firstName: z
@@ -46,12 +46,15 @@ const formSchema = z.object({
   dob: z.date('Enter your DOB'),
   licenseNumber: z
     .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
+    .min(14, 'License number must be at least 14 characters long.')
+    .max(20, 'License number must be at most 20 characters long.'),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
   organizationId: z.string().min(1, 'Select an organization.'),
-  phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
+  phoneNumber: z.string()
+  .min(1, 'Phone number is required')
+  .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
+  .length(10, "Phone number must be exactly 10 digits"),
 });
 export default function Register() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
@@ -68,16 +71,24 @@ export default function Register() {
   const { uploadFile } = useFileUpload();
   const driverLocation = useDriverLiveLocation();
 
+  const [initialLocationFetched, setInitialLocationFetched] = useState<{ latitude: number, longitude: number } | null>(null);
+
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, driverLocation ? { driverLocation } : 'skip');
+  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip');
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
+
+  useEffect(()=> {
+    if(driverLocation && !initialLocationFetched) {
+      setInitialLocationFetched(driverLocation);
+    }
+  }, [driverLocation]);
 
   const {
     handleSubmit,
@@ -122,7 +133,12 @@ export default function Register() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
+      result = await ImagePicker.launchCameraAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted')
@@ -131,7 +147,12 @@ export default function Register() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
+      result = await ImagePicker.launchImageLibraryAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     }
 
     if (result && !result.canceled) {
@@ -149,15 +170,10 @@ export default function Register() {
 
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
         if (!data.licenseImageFrontKey)
-          setError('licenseImageFrontKey', { message: 'Front image required' });
+          setError('licenseImageFrontKey', { message: 'Front image is required' });
         if (!data.licenseImageBackKey)
-          setError('licenseImageBackKey', { message: 'Back image required' });
+          setError('licenseImageBackKey', { message: 'Back image is required' });
 
-        showToast({
-          title: 'Error',
-          description: 'Please upload both front and back of your license',
-          type: 'error',
-        });
         return;
       }
 
@@ -207,16 +223,16 @@ export default function Register() {
 
   if (driver && userId) return <Redirect href="/" />;
 
-  if (organizations === undefined) return <LoadingScreen message="Fetching nearby organizations…" />;
+  // if (organizations === undefined) return <LoadingScreen message="Fetching nearby organizations…" />;
 
-  if (organizations.length === 0) {
+  if (organizations && organizations.length === 0) {
     return <ErrorScreen message="No organizations found near you" />;
   }
 
   return (
     <View className="flex-1 bg-background">
-      <SafeAreaView className="bg-background" edges={['top', 'left', 'right']} />
       <Stack.Screen options={{ headerShown: false }} />
+      {isSubmitting && <Loader subtitle="Submitting..." />}
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
@@ -233,7 +249,7 @@ export default function Register() {
                 <Feather name="briefcase" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
               </View>
-              <Controller
+              {organizations ? <Controller
                 name="organizationId"
                 control={control}
                 render={({ field }) => (
@@ -260,7 +276,14 @@ export default function Register() {
                     </SelectContent>
                   </Select>
                 )}
-              />
+              /> 
+              : organizations === undefined ? <Text className="text-md text-gray-600">
+                Fetching organizations...
+              </Text>
+              : <Text className="text-md text-destructive">
+                No organizations found near you.
+              </Text> }
+              
 
               {errors.organizationId && (
                 <Text className="text-md text-destructive">{errors.organizationId.message}</Text>

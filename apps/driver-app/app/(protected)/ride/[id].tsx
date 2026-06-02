@@ -9,9 +9,9 @@ import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils
 import { Avatar, AvatarFallback, AvatarImage, Separator } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Gender from '@/components/Gender';
-import Age from '@/components/Age';
+import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
+import { colors } from '@/constants/colors';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
 
@@ -101,8 +101,7 @@ function RiderCard({
               <Phone size={11} color="#94a3b8" strokeWidth={2} />
               <Text className="text-xs text-slate-500">{details.phoneNumber}</Text>
             </View>
-            <Gender gender={details.gender} />
-            <Age dob={details.dob} />
+            <GenderAge gender={details.gender} dob={details.dob} />
           </View>
         </View>
         {ratings.average !== null && (
@@ -135,11 +134,11 @@ function RouteCard({
       {/* Pickup */}
       <View className="flex-row items-start gap-3">
         <View className="items-center" style={{ width: 22 }}>
-          <View className="mt-1 h-3 w-3 rounded-full bg-emerald-500" />
+          <View className="mt-1 h-3 w-3 rounded-full" style={{ backgroundColor: colors.pickup }} />
           <View className="my-1 w-0.5 flex-1 bg-slate-200" style={{ minHeight: 24 }} />
         </View>
         <View className="flex-1 pb-2">
-          <Text className="mb-0.5 text-xs text-slate-400">Pickup</Text>
+          <Text className="mb-0.5 text-xs" style={{ color: colors.pickup }}>Pickup</Text>
           <Text className="text-sm font-medium leading-snug text-slate-800">{ride.pickup.address}</Text>
         </View>
       </View>
@@ -148,10 +147,10 @@ function RouteCard({
       {(ride.status === "Abort" && ride.dropOff) && (
         <View className="flex-row items-start gap-3">
           <View className="items-center" style={{ width: 22 }}>
-            <MaterialCommunityIcons name="map-marker-minus-outline" size={14} color="#e11d48" />
+            <MaterialCommunityIcons name="map-marker-minus-outline" size={14} color={colors.destination} />
           </View>
           <View className="flex-1">
-            <Text className="mb-0.5 text-xs text-slate-400">Drop Off</Text>
+            <Text className="mb-0.5 text-xs" style={{ color: colors.destination }}>Drop Off</Text>
             <Text className="text-sm font-medium leading-snug text-slate-800">
               {ride.destination.address}
             </Text>
@@ -162,10 +161,10 @@ function RouteCard({
       {/* Destination */}
       <View className="flex-row items-start gap-3">
         <View className="items-center" style={{ width: 22 }}>
-          <MapPin size={14} color="#e11d48" strokeWidth={2.2} />
+          <MapPin size={14} color={colors.destination} strokeWidth={2.2} />
         </View>
         <View className="flex-1">
-          <Text className="mb-0.5 text-xs text-slate-400">Destination</Text>
+          <Text className="mb-0.5 text-xs" style={{ color: colors.destination }}>Destination</Text>
           <Text className="text-sm font-medium leading-snug text-slate-800">
             {ride.destination.address}
           </Text>

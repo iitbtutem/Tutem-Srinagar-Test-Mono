@@ -39,8 +39,8 @@ import useThemeColors from '@/hooks/useColorScheme';
 import { useToast } from '@/components/CustomToast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
-const EXPANDED_HEADER_HEIGHT = 300;
-const COLLAPSED_HEADER_HEIGHT = 100;
+const EXPANDED_HEADER_HEIGHT = 240;
+const COLLAPSED_HEADER_HEIGHT = 60;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
@@ -117,14 +117,14 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -150], // Shifted further left to compensate
+      [0, -140], // Shifted further left to compensate
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -75],
+      [0, -65],
       Extrapolation.CLAMP
     );
 
@@ -139,19 +139,33 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -50], // Shifted less to the right to balance with avatar
+      [0, -75], // Shifted less to the right to balance with avatar
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -155],
+      [0, -145],
       Extrapolation.CLAMP
     );
 
     return {
       transform: [{ translateX }, { translateY }, { scale }],
+    };
+  });
+
+  const actionButtonStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE / 2],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      pointerEvents: opacity < 0.5 ? 'none' : 'auto',
     };
   });
 
@@ -178,18 +192,17 @@ export default function Profile() {
   const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar style="dark" />
 
       {/* Hero Header */}
       <Animated.View
-        style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className="overflow-hidden bg-primary pt-12">
+        style={[headerAnimatedStyle, { position: 'absolute', width: '100%' }]}
+        className="overflow-hidden bg-primary">
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
-          style={[badgeOpacityStyle, { position: 'absolute', top: 0, zIndex: 10 }]}
-          className="w-full flex-row items-center justify-between px-4 pt-14">
+          style={[actionButtonStyle, { position: 'absolute', top: 0, zIndex: 1 }]}
+          className="w-full flex-row items-center justify-between px-4 mt-2">
           <TouchableOpacity
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: iconBackgroundColor }}
@@ -279,13 +292,6 @@ export default function Profile() {
               />
               <Text className="text-xs font-medium text-white">{driver.gender}</Text>
             </Animated.View>
-            <Text
-              className={cn('text-semibold mt-2 text-xs', {
-                'text-green-500': driver.driverDetails.isAvailableForRide,
-                'text-red-700': !driver.driverDetails.isAvailableForRide,
-              })}>
-              {driver.driverDetails.isAvailableForRide ? 'Available' : 'Not Available'}
-            </Text>
           </Animated.View>
         </View>
       </Animated.View>
@@ -695,6 +701,7 @@ export default function Profile() {
 const LicenseImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
   const [errored, setErrored] = useState(false);
   const showFallback = !uri || errored;
+  console.log("uri: ", uri);
 
   return (
     <View className="overflow-hidden rounded-2xl border border-zinc-200">

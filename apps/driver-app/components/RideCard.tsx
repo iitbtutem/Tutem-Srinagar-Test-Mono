@@ -1,12 +1,15 @@
-import { TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
-import { Text } from '@tutem/ui';
+import { Button, Text } from '@tutem/ui';
 import StarRating from "./StarRating";
 import { distanceFormat, formatFare } from "@/lib/utils";
 import { FunctionReturnType } from "convex/server";
-import { api } from "@tutem/api";
+import { api, Id } from "@tutem/api";
 import { Feather } from "@expo/vector-icons";
 import { format } from "date-fns";
+import { colors } from "@/constants/colors";
+import GenderAge from "./GenderAge";
+import { useState } from "react";
 
 
 type RideRequest = NonNullable<
@@ -21,12 +24,14 @@ type CurrentRide = NonNullable<FunctionReturnType<typeof api.routes.rides.getDri
 
 export function RideRequestCard({
   ride,
-  isSelected,
-  onPress,
+  handleAccept,
+  handleReject,
+  acceptCheck
 }: {
   ride: RideRequest;
-  isSelected: boolean;
-  onPress: (ride: RideRequest) => void;
+  handleAccept: (rideId: Id<"ride">) => void;
+  handleReject: (rideId: Id<"ride">) => void;
+  acceptCheck: { ok: boolean; reason?: string };
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -37,24 +42,17 @@ export function RideRequestCard({
       style={animStyle}
       className="mb-3"
     >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={() => { scale.value = withSpring(0.97, { damping: 40 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 30 }); }}
-        onPress={() => onPress(ride)}
-        className={`rounded-2xl border p-4 overflow-hidden ${
-          isSelected
-            ? 'bg-background border-violet-500/50'
-            : 'bg-primary-background border-slate-800'
-        }`}
-      >
+      <View className="rounded-2xl border p-4 overflow-hidden bg-background border-violet-500/50">
         {/* Header */}
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1">
             <Text className="text-title text-base font-bold mb-1">
               {`${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            <StarRating rating={ride.rider.ratings} />
+            <View className="flex-row gap-1">
+              <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
+              <StarRating rating={ride.rider.ratings} />
+            </View>
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}
@@ -64,28 +62,46 @@ export function RideRequestCard({
         {/* Route timeline */}
         <View className="flex-row items-stretch mb-3 pl-0.5">
           <View className="items-center w-4">
-            <View className="w-2 h-2 rounded-full bg-teal-500 mt-[3px]" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
             <View className="w-px flex-1 bg-slate-700 my-1" />
-            <View className="w-2 h-2 rounded-full bg-violet-500" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
           </View>
           <View className="flex-1 ml-3 gap-2.5">
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
               {ride.pickup?.address ?? 'Pickup location'}
             </Text>
+            
+            <View className="flex-row gap-3">
+              <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance) ?? "-"}</Text>
+              {ride.expectedDuration && (
+                <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
+              )}
+            </View>
+
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
               {ride.destination?.address ?? 'Dropoff location'}
             </Text>
           </View>
         </View>
 
-        {/* Footer */}
-        <View className="flex-row gap-3">
-          <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance) ?? "-"}</Text>
-          {ride.expectedDuration && (
-            <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
-          )}
+        <View className="mt-2 flex-row gap-3">
+          <Button
+            size="sm"
+            className=" flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10"
+            onPress={() => handleReject(ride._id)}
+          >
+            <Text className="text-[15px] font-extrabold text-red-400">✕ Decline</Text>
+          </Button>
+          <Button
+            size="sm"
+            className={` flex-1 items-center justify-center rounded-2xl border-2 border-green-500 bg-green-600 ${!acceptCheck.ok ? 'opacity-30' : 'opacity-100'}`}
+            onPress={() => handleAccept(ride._id)}
+            disabled={!acceptCheck.ok}
+          >
+            <Text className="text-[15px] font-extrabold text-white">✓ Accept</Text>
+          </Button>
         </View>
-      </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 }
@@ -128,9 +144,9 @@ export function RideHistoryCard({
         {/* Route timeline */}
         <View className="flex-row items-stretch mb-3 pl-0.5">
           <View className="items-center w-4">
-            <View className="w-2 h-2 rounded-full bg-teal-500 mt-[3px]" />
-            <View className="w-px flex-1 bg-slate-700 my-1" />
-            <View className="w-2 h-2 rounded-full bg-violet-500" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
+            <View className="w-px flex-1 bg-slate-700" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
           </View>
           <View className="flex-1 ml-3 gap-2.5">
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
@@ -189,7 +205,10 @@ export function CurrentRideCard({
             <Text className="text-title text-base font-bold mb-1">
               {`${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            <StarRating rating={ride.rider.ratings} />
+            <View className="flex-row gap-1">
+              <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
+              <StarRating rating={ride.rider.ratings} />
+            </View>
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}
@@ -199,27 +218,28 @@ export function CurrentRideCard({
         {/* Route timeline */}
         <View className="flex-row items-stretch mb-3 pl-0.5">
           <View className="items-center w-4">
-            <View className="w-2 h-2 rounded-full bg-teal-500 mt-[3px]" />
-            <View className="w-px flex-1 bg-slate-700 my-1" />
-            <View className="w-2 h-2 rounded-full bg-violet-500" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
+            <View className="w-px flex-1 bg-slate-700" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
           </View>
           <View className="flex-1 ml-3 gap-2.5">
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
               {ride.pickup?.address ?? 'Pickup location'}
             </Text>
+
+            <View className="flex-row gap-3">
+              <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance) ?? "-"}</Text>
+              {ride.expectedDuration && (
+                <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
+              )}
+            </View>
+
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
               {ride.destination?.address ?? 'Dropoff location'}
             </Text>
           </View>
         </View>
-
-        {/* Footer */}
-        <View className="flex-row gap-3">
-          <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance) ?? "-"}</Text>
-          {ride.expectedDuration && (
-            <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
-          )}
-        </View>
+        
       </TouchableOpacity>
     </Animated.View>
   );

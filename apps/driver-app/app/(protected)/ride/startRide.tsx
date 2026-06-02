@@ -4,10 +4,11 @@ import { RIDE_OTP_TIMER_MINUTES } from '@/constants';
 import { useCountdown } from '@/hooks/useCountdown';
 import { api, Id } from '@tutem/api';
 import { useAction, useQuery } from 'convex/react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, TextInput, TextInputKeyPressEvent, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Loader from '@/components/Loader';
+import { BasicHeader } from '@/components/CustomHeader';
 
 const RIDE_OTP_SIZE = 4;
 
@@ -24,11 +25,6 @@ export default function startRide() {
   const { formattedTime, timeLeft, reset } = useCountdown({ initialTime: RIDE_OTP_TIMER_MINUTES * 60})
   const { showToast } = useToast();
   const inputRef = useRef<(TextInput | null)[]>([]);
-
-  const ride = useQuery(
-    api.routes.rides.getRideToStart,
-    driverId && rideId ? { id: rideId, driverId } : 'skip'
-  );
 
   const startRide = useAction(api.actions.ride.startRide);
   const generateRideOtp = useAction(api.actions.ride.generateRideOtp)
@@ -52,7 +48,7 @@ export default function startRide() {
   const otp = inputArr.join('');
 
   const verifyOtp = async () => {
-    if (!ride || !driverId) {
+    if (!driverId) {
       showToast({ type: 'error', title: 'Failed to start ride' });
       return;
     }
@@ -86,13 +82,23 @@ export default function startRide() {
         description: error.data ?? "Failed to resend otp. Try Again"
       })
     }
-  }
-
-  if (ride === undefined) return <ActivityIndicator />;
-  if (ride === null || ride.status !== "Driver Arrived") return;
+  };
 
   return (
-    <Animated.View entering={FadeInDown.delay(200)} className="flex-1 p-6 mb-4 items-center">
+    <View className="flex-1 px-4 py-6 bg-background" >
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Start Ride',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
+
+      <Text className='text-center' variant={"title"}>Verify OTP</Text>
+
+      <Text variant={"muted"} className='text-center mb-6'>
+        Enter the {RIDE_OTP_SIZE}-digit code to start the ride.
+      </Text>
+
+      {loading && <Loader title={ loading === "start" ? "Start Ride" : undefined } subtitle={loading === "start" ? "Verifying OTP..." : "Sending OTP..."} />}
       <View className="mb-6 w-full flex-row justify-center gap-3">
         {inputArr.map((_, idx) => (
           <Input
@@ -126,7 +132,7 @@ export default function startRide() {
           </Text>
         </View>
       </Button>
-      <Text className="mt-2 text-center text-[11px] font-medium text-slate-500">
+      <Text className="mt-3 text-center text-[11px] font-medium text-slate-500">
         Confirm the rider is in the vehicle before starting
       </Text>
 
@@ -148,6 +154,6 @@ export default function startRide() {
         <ActivityIndicator size="large" color="#7C3AED" />
         <Text className="mt-3 text-sm font-medium text-slate-400">{ loading === 'start' ? "Starting" : "Sending"}…</Text>
       </View>}
-    </Animated.View>
+    </View>
   );
 }

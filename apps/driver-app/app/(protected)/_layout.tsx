@@ -1,4 +1,4 @@
-import CustomHeader from '@/components/CustomHeader';
+
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
@@ -14,30 +14,23 @@ export default function ProtectedLayout() {
   return (
     <SafeAreaView edges={["bottom"]} className='flex-1' >
       <Stack screenOptions={{ 
-        headerShown: true,
-        header: (props) => user && <CustomHeader {...props} user={user} />,
+        headerShown: false,
         }}>
         <Stack.Protected guard={protectedGuard && user?.driverDetails !== null}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="editProfile"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
           />
           <Stack.Screen
             name="createVehicle"
             options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
+              animation: 'fade',
             }}
           />
           <Stack.Screen
             name="editVehicle"
             options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
+              animation: 'fade',
             }}
           />
         </Stack.Protected>

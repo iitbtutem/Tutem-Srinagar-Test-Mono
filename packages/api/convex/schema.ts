@@ -167,6 +167,7 @@ export default defineSchema({
     nearbyRadius: v.number(),
     arrivedDistance: v.number(),
     driverResponseTime: v.number(),
+    maxDriverRideRequests: v.optional(v.number()),
   })
 
 });

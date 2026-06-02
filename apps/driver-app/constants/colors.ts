@@ -16,3 +16,11 @@ export const VERIFICATION_CONFIG = {
     label: 'Rejected',
   },
 } as const;
+
+export const colors = {
+  primary: "#40a4f5",
+  secondary: "#f59e0b",
+  background: "#ffffff",
+  pickup: "#3db858",
+  destination: "#b0251e",
+}

@@ -9,7 +9,7 @@ import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Redirect, router, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchRoute } from '@/lib/maps';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Fontisto, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { distanceFormat, formatFare, isNearby } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
@@ -32,9 +32,10 @@ import {
   Button,
 } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
-import Gender from '@/components/Gender';
-import Age from '@/components/Age';
+import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
+import { colors } from '@/constants/colors';
+import Loader from '@/components/Loader';
 
 // Types
 
@@ -58,6 +59,13 @@ const CANCEL_REASONS = [
   'Safety concern with rider',
   'Vehicle breakdown / issue',
   'Personal emergency',
+  'Other reason',
+];
+const CANCEL_REASONS_AFTER_START = [
+  'Safety concern during trip',
+  'Vehicle breakdown / issue',
+  'Route blocked or inaccessible',
+  'Incorrect destination provided',
   'Other reason',
 ];
 
@@ -84,12 +92,12 @@ function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
   return (
     <View className="gap-1.5 rounded-xl border border-slate-800 bg-slate-950/90 px-3 py-2">
       <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-green-600" />
-        <Text className="text-[10px] font-semibold text-slate-400">{labelA}</Text>
+        <Fontisto name="map-marker-alt" size={10} color={colors.pickup} />
+        <Text className="text-[10px] font-semibold text-white">{labelA}</Text>
       </View>
       <View className="flex-row items-center gap-2">
-        <View className="h-1 w-4 rounded-full bg-red-600" />
-        <Text className="text-[10px] font-semibold text-slate-400">{labelB}</Text>
+        <Fontisto name="map-marker-alt" size={10} color={colors.destination} />
+        <Text className="text-[10px] font-semibold text-white">{labelB}</Text>
       </View>
     </View>
   );
@@ -97,43 +105,40 @@ function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
 
 function RouteCard ({ pickup, destination }: { pickup: { address : string } & Cords, destination: { address: string } & Cords }) {
   return (
-    <View className="bg-primary-background my-2 mb-4 rounded-2xl border border-slate-800 p-4">
-    <View className="mb-4 flex-row items-start gap-3">
-      <View className="mt-1 items-center">
-        <View className="h-2.5 w-2.5 rounded-full bg-teal-500" />
-        <View className="mt-1 h-8 w-px bg-slate-700" />
+    <View className="bg-primary-background mb-1 rounded-2xl border border-slate-800 p-4">
+    <View className="flex-row items-stretch mb-3 pl-0.5">
+      <View className="items-center w-4">
+        <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
+        <View className="w-px flex-1 bg-slate-700 my-1" />
+        <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
       </View>
-      <View className="flex-1">
+      <View className="flex-1 ml-3 gap-2.5">
         <TouchableOpacity
           onPress={() => openNavigation(pickup.latitude, pickup.longitude)}
           activeOpacity={0.75}
           className="flex-1">
-          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-teal-400">
+          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]" style={{ color: colors.pickup }}>
             Pickup
           </Text>
           <Text className="text-title text-[14px] font-semibold leading-5">
             {pickup?.address ?? 'Pickup not set'}
           </Text>
-          <Text className="text-xs font-bold text-teal-400">Navigate →</Text>
+          <Text className="text-xs font-bold" style={{ color: colors.pickup }}>Navigate →</Text>
         </TouchableOpacity>
-      </View>
-    </View>
-    <View className="flex-row items-start gap-3">
-      <View className="h-2.5 w-2.5 rounded-full bg-violet-500" />
-      <View className="flex-1">
+
         <TouchableOpacity
           onPress={() =>
             openNavigation(destination.latitude, destination.longitude)
           }
           activeOpacity={0.75}
           className="flex-1">
-          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px] text-violet-400">
+          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]" style={{ color: colors.destination }}>
             Destination
           </Text>
           <Text className="text-title text-[14px] font-semibold leading-5">
             {destination?.address ?? 'Destination not set'}
           </Text>
-          <Text className="text-xs font-bold text-violet-400">Navigate →</Text>
+          <Text className="text-xs font-bold" style={{ color: colors.destination }}>Navigate →</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -353,13 +358,12 @@ export default function Ride() {
     calculateCancelRide();
   }, [ride?.status])
 
-  console.log("Ride ::::::::::: ", ride)
   // Guards
   if (ride === undefined || vehicle === undefined || settings === undefined)
     return (
       <View className="absolute inset-0 items-center justify-center bg-background">
         <ActivityIndicator size="large" color="purple" />
-        <Text className="mt-3 text-sm font-medium text-purple-800">Loading…</Text>
+        <Text className="mt-3 text-sm font-medium text-purple-800">Loading ride details…</Text>
       </View>
     );
 
@@ -385,6 +389,8 @@ export default function Ride() {
   const riderCancelReason = ride.rideReasons.find(reason => reason.driverId === undefined);
   const driverCancelReason = ride.rideReasons.find(reason => reason.driverId === driverId);
 
+  const cancelReasons = ride.status === "Active" ? CANCEL_REASONS_AFTER_START : CANCEL_REASONS;
+
   return (
     <View className="flex-1">
       <Stack.Screen
@@ -397,6 +403,28 @@ export default function Ride() {
           headerTitleStyle: { fontWeight: '700', color: '#0f172a' },
         }}
       />
+      {loading && (
+        <Loader
+        title={
+          loading === "driverArrived"
+          ? "Arrived"
+          : loading === "completing"
+          ? "Completing Ride"
+          : (loading === "canceling" && ride.status === "Active")
+          ? "Ending Ride"
+          : undefined
+        }
+          subtitle={
+            loading === "driverArrived" 
+              ? "Updating status…" 
+              : loading === "completing" 
+              ? "Calculating fare…" 
+              : (loading === "canceling" && ride.status === "Active")
+              ? "Calculating fare…"
+              : "Cancelling ride…"
+            }
+        />
+      )}
       <View style={{ height: MAP_HEIGHT }} pointerEvents={(driverChanged || rideCanceled) ? 'none' : 'auto'}>
         {/* Full-screen map */}
         <MapView
@@ -418,7 +446,7 @@ export default function Ride() {
           <Marker
             coordinate={{ latitude: ride.pickup.latitude, longitude: ride.pickup.longitude }}
             anchor={{ x: 0, y: 0.9 }}
-            pinColor="green"
+            pinColor={colors.pickup}
           />
           <Marker
             coordinate={{
@@ -426,7 +454,7 @@ export default function Ride() {
               longitude: ride.destination.longitude,
             }}
             anchor={{ x: 0, y: 0.9 }}
-            pinColor="red"
+            pinColor={colors.destination}
           />
         </MapView>
       </View>
@@ -458,17 +486,17 @@ export default function Ride() {
       <BottomSheet
         ref={activeSheetRef}
         index={1}
-        snapPoints={['50%']}
+        snapPoints={['40%']}
         enablePanDownToClose={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
         <BottomSheetScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 }}>
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 }}>
           {/* CANCEL FLOW — Step 1: Reason selection */}
           {cancelStep === 'reason' && (
             <Animated.View entering={FadeInUp.duration(280)}>
               {/* Header */}
-              <View className="mb-5 flex-row items-center gap-3">
+              <View className="mb-2 flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
                   <AlertTriangle size={20} color="#ef4444" />
                 </View>
@@ -484,8 +512,8 @@ export default function Ride() {
               </View>
 
               {/* Reason list */}
-              <View className="mb-5 overflow-hidden">
-                {CANCEL_REASONS.map((reason, idx) => {
+              <View className="mb-2 overflow-hidden">
+                {cancelReasons.map((reason, idx) => {
                   const selected = selectedReason === reason;
                   return (
                     <TouchableOpacity
@@ -535,7 +563,7 @@ export default function Ride() {
                     className={`text-[15px] font-extrabold ${
                       selectedReason === null ? 'text-red-900' : 'text-red-400'
                     }`}>
-                    Continue {loading === "canceling" ? "…" : "→"}
+                    Continue →
                   </Text>
                 </Button>
               </View>
@@ -546,7 +574,7 @@ export default function Ride() {
           {cancelStep === 'confirm' && (
             <Animated.View entering={FadeInUp.duration(280)}>
               {/* Header */}
-              <View className="mb-5 flex-row items-center gap-3">
+              <View className="mb-3 flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
                   <AlertTriangle size={20} color="#ef4444" />
                 </View>
@@ -572,7 +600,7 @@ export default function Ride() {
               </View>
 
               {/* Trip stats card */}
-              {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-5 overflow-hidden rounded-2xl border border-slate-700/70">
+              {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-3 overflow-hidden rounded-2xl border border-slate-700/70">
                 {/* Covered */}
                 <View className="flex-row items-center justify-between px-5 pt-4">
                   <View className="flex-row items-center gap-2.5">
@@ -637,7 +665,7 @@ export default function Ride() {
               {/* Selected reasons recap */}
               {ride.status === "Abort" ? (
                 <>
-                  {riderCancelReason && <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                  {riderCancelReason && <View className="mb-3 rounded-2xl border border-slate-800/50 px-4 py-3">
                     <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Abort Reason
                     </Text>
@@ -648,7 +676,7 @@ export default function Ride() {
                   </View>}
                 </>
               ) : (
-                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                <View className="mb-3 rounded-2xl border border-slate-800/50 px-4 py-3">
                   <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                     { (ride.status === "Driver Arrived" || ride.status === "Active")
                     ? "Abort Reason"
@@ -680,20 +708,17 @@ export default function Ride() {
                     disabled={loading === 'canceling'}
                     onPress={handleConfirmCancel}
                     className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
-                    {loading === 'canceling' ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <View className="flex-row items-center gap-2">
-                        <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
-                        <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
-                      </View>
-                    )}
+                    
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
+                      <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
+                    </View>
                   </Button>
                 </View>
               )}
 
               {/* Disclaimer */}
-              <Text className="mt-4 text-center text-[11px] leading-4 text-slate-600">
+              <Text className="mt-3 text-center text-[11px] leading-4 text-slate-600">
                 Fare will be charged based on distance covered.{'\n'}
                 { ride.status !== "Abort" ? "Repeated cancellations may affect your driver rating." : ""}
               </Text>
@@ -795,7 +820,7 @@ export default function Ride() {
                 <RideStatusBanner ride={ride} />
 
                 {/* Rider + fare */}
-                <View className="mb-2 flex-row items-center justify-between border-b border-slate-800/60 pb-3">
+                <View className="my-2 flex-row items-center justify-between">
                   <View className="flex-1 flex-row items-center gap-3">
                     <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
                       <Avatar alt="Profile pic" className="h-12 w-12">
@@ -817,15 +842,12 @@ export default function Ride() {
                       <Text
                         numberOfLines={2}
                         ellipsizeMode="tail"
-                        className="text-title mb-1.5 text-[22px] font-extrabold tracking-tight"
+                        className="text-title mb-0.5 text-[22px] font-extrabold tracking-tight"
                       >
                         {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
                           'Rider'}
                       </Text>
-                      <View className='flex-row gap-2'>
-                        <Gender gender={ride.rider.details.gender} />
-                        <Age dob={ride.rider.details.dob} />
-                      </View>
+                      <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
                       {ride.rider.ratings?.average != null && (
                         <View className="mt-0.5 flex-row items-center gap-1">
                           <Text className="text-xs text-amber-400">★</Text>
@@ -851,68 +873,68 @@ export default function Ride() {
 
                 <RouteCard pickup={ ride.pickup } destination={ ride.destination } />
 
-                {/* Arrived button */}
-                {isRideOpen && isDriverNearby && (
-                  <Button
-                    className="mb-2 w-full flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
-                    disabled={loading === 'driverArrived'}
-                    onPress={handleDriverArrived}>
-                    <MapPinCheck size={20} color="#fff" />
-                    <Text className="text-[17px] font-bold tracking-tight text-white">
-                      {loading === 'driverArrived' ? 'Notifying Rider…' : "I've Arrived"}
-                    </Text>
-                  </Button>
-                )}
+                <View className="my-2 flex-row gap-2 justify-between items-center">
+                  {/* Arrived button */}
+                  {isRideOpen && isDriverNearby && (
+                    <View className="flex-1">
+                      <Button
+                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
+                        disabled={loading === 'driverArrived'}
+                        onPress={handleDriverArrived}>
+                        <MapPinCheck size={20} color="#fff" />
+                        <Text className="text-[17px] font-bold tracking-tight text-white">
+                          I've Arrived
+                        </Text>
+                      </Button>
+                    </View>
+                  )}
 
-                {/* Start Ride button */}
-                {isDriverArrivedStatus && (
-                  <Button
-                    className="my-2 w-full items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
-                    disabled={loading === 'starting'}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/ride/startRide',
-                        params: { driverId, rideId: id },
-                      })
-                    }>
-                    <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                      {loading === 'starting' ? 'Starting…' : '▶ Start Ride'}
-                    </Text>
-                  </Button>
-                )}
+                  {/* Start Ride button */}
+                  {isDriverArrivedStatus && (
+                    <View className="flex-1">
+                      <Button
+                        className="items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
+                        disabled={loading === 'starting'}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/ride/startRide',
+                            params: { driverId, rideId: id },
+                          })
+                        }>
+                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                          ▶ Start Ride
+                        </Text>
+                      </Button>
+                    </View>
+                  )}
 
-                {/* Complete / Cancel */}
-                {(ride.hasReachedDestionation && ride.status === "Active") ? (
-                  <Button
-                    className="my-2 w-full items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
-                    disabled={loading === 'completing'}
-                    onPress={handleCompleteRide}>
-                    <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                      {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
-                    </Text>
-                  </Button>
-                ) : (
-                  <Button
-                    onPress={() => setCancelStep('reason')}
-                    disabled={loading === 'canceling'}
-                    variant="destructive"
-                    className="my-2 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
-                    {loading === 'canceling' ? (
-                      <ActivityIndicator size="small" color="#dc2626" />
+                  {/* Complete / Cancel */}
+                  <View className="flex-1">
+                    {(ride.hasReachedDestionation && ride.status === "Active") ? (
+                      <Button
+                        className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
+                        disabled={loading === 'completing'}
+                        onPress={handleCompleteRide}>
+                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                          {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
+                        </Text>
+                      </Button>
                     ) : (
-                      <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+                      <Button
+                        onPress={() => setCancelStep('reason')}
+                        disabled={loading === 'canceling'}
+                        variant="destructive"
+                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
+                        <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+                          <Text className="text-sm font-semibold text-red-600">
+                          {ride.status === 'Active'
+                            ? 'End Ride'
+                            : 'Cancel Ride'}
+                        </Text>
+                      </Button>
                     )}
-                    <Text className="text-sm font-semibold text-red-600">
-                      {loading === 'canceling'
-                        ? ride.status === 'Active'
-                          ? 'Ending…'
-                          : 'Cancelling…'
-                        : ride.status === 'Active'
-                          ? 'End Ride'
-                          : 'Cancel Ride Request'}
-                    </Text>
-                  </Button>
-                )}
+                  </View>
+                </View>
               </View>
             ))};
               

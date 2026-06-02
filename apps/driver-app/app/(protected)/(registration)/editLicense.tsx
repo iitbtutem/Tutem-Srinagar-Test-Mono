@@ -3,11 +3,10 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, Platform, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
-import { cn } from '@/lib/utils';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import Animated from 'react-native-reanimated';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -18,12 +17,14 @@ import { useMutation } from 'convex/react';
 import { api, Id } from '@tutem/api';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
+import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   licenseNumber: z
     .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
+    .min(14, 'License number must be at least 14 characters long.')
+    .max(20, 'License number must be at most 20 characters long.'),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
 });
@@ -78,7 +79,12 @@ export default function EditLicense() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ quality: 0.3 });
+      result = await ImagePicker.launchCameraAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted')
@@ -87,7 +93,12 @@ export default function EditLicense() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ quality: 0.3 });
+      result = await ImagePicker.launchImageLibraryAsync({ 
+        allowsMultipleSelection: false,
+        mediaTypes: 'images',
+        allowsEditing: true,
+        quality: 0.3,
+      });
     }
 
     if (result && !result.canceled) {
@@ -106,21 +117,14 @@ export default function EditLicense() {
 
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
         if (!data.licenseImageFrontKey)
-          setError('licenseImageFrontKey', { message: 'Front image required' });
+          setError('licenseImageFrontKey', { message: 'Front image is required' });
         if (!data.licenseImageBackKey)
-          setError('licenseImageBackKey', { message: 'Back image required' });
+          setError('licenseImageBackKey', { message: 'Back image is required' });
 
-        showToast({
-          title: 'Error',
-          description: 'Please upload both front and back of your license',
-          type: 'error',
-        });
         return;
       }
 
       setIsSubmitting(true);
-
-      showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
       const frontImageKey = await uploadFile(data.licenseImageFrontKey, `licenses/${driverId}-front`);
       const backImageKey = await uploadFile(data.licenseImageBackKey, `licenses/${driverId}-back`);
@@ -146,33 +150,19 @@ export default function EditLicense() {
       setIsSubmitting(false);
     }
   });
-
-  const isIos = Platform.OS === "ios";
   return (
-    <View className={cn("flex-1 bg-background", { "pt-10": isIos })}>
-      <Stack.Screen options={{ headerShown: isIos ? false : true }} />
+    <View className="flex-1 bg-background">
+      {isSubmitting && <Loader subtitle='submitting...' />}
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Edit License',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
       <KeyboardAwareScrollView
         bottomOffset={62}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }} // ensures scroll space
-        className="flex-1">
+        contentContainerStyle={{ flexGrow: 1, padding: 8, paddingBottom: 100 }}>
         <Animated.View className="flex-1 gap-4 px-3 py-4">
-          {/* Title */}
-          <View className="mb-2 flex-row items-center px-3">
-            {isIos && <TouchableOpacity 
-              className="mr-2 flex-row items-center" 
-              onPress={() => {
-                router.back();
-            }}>
-              <MaterialIcons
-                name="keyboard-backspace"
-                size={20}
-                color="#000"
-              />
-            </TouchableOpacity>}
-
-            <Text className="text-lg font-semibold">Edit your License details</Text>
-          </View>
 
           {/* License number */}
           <View>
@@ -245,6 +235,7 @@ export default function EditLicense() {
                             onPress={() => {
                               setCurrentFieldToUpdate(fieldKey);
                               bottomSheetRef.current?.expand();
+                              clearErrors(fieldKey);
                             }}>
                             <Feather name="upload" size={20} color="gray" />
                             <Text className="text-sm font-medium text-muted-foreground">
@@ -262,7 +253,7 @@ export default function EditLicense() {
               ))}
             </View>
           )}
-          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting} className='mt-4'>
+          <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting} className='my-4'>
             {isSubmitting || formIsSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
