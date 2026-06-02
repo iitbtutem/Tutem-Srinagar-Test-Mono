@@ -2,7 +2,7 @@ import ErrorScreen from '@/components/ErrorScreen';
 import { Card, CardContent, CardHeader, CardTitle, Text, Button, Separator } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
@@ -12,6 +12,8 @@ import {
 import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
 import { useRouter } from 'expo-router';
+import Loader from '@/components/Loader';
+import { BasicHeader } from '@/components/CustomHeader';
 
 export default function Payment() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
@@ -22,8 +24,7 @@ export default function Payment() {
   if (ride === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#f59e0b" />
-        <Text className="mt-3 text-zinc-400 text-sm font-medium">Loading payment details…</Text>
+        <Loader subtitle="Loading ride details..." />
       </View>
     );
   }
@@ -35,7 +36,12 @@ export default function Payment() {
       className="flex-1 bg-white/50"
       contentContainerClassName="px-4 pb-12"
       showsVerticalScrollIndicator={false}
-    >
+    >      
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Payment',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
       {/* Header */}
       <View className="my-4">
         <Text className="text-2xl font-bold text-primary tracking-tight">Payment</Text>

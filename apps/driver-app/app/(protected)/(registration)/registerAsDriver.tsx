@@ -25,7 +25,6 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { ActivityIndicator, Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import Animated, { FadeInRight } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import z from 'zod';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';

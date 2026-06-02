@@ -3,7 +3,7 @@ import { Text, Input, Button } from '@tutem/ui';
 import { RIDE_OTP_TIMER_MINUTES } from '@/constants';
 import { useCountdown } from '@/hooks/useCountdown';
 import { api, Id } from '@tutem/api';
-import { useAction, useQuery } from 'convex/react';
+import { useAction } from 'convex/react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, TextInput, TextInputKeyPressEvent, View } from 'react-native';

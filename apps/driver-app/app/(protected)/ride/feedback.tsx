@@ -2,7 +2,7 @@ import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
+import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -21,15 +23,6 @@ const RATING_LABELS: Record<number, string> = {
   4: 'Great',
   5: 'Excellent!',
 };
-
-const QUICK_TAGS = [
-  'Safe driver',
-  'Friendly',
-  'On time',
-  'Professional',
-  'Clean car',
-  'Great music',
-];
 
 export default function Feedback() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
@@ -45,7 +38,6 @@ export default function Feedback() {
   const [score, setScore] = useState(0);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [comment, setComment] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (ride === undefined)
@@ -59,12 +51,6 @@ export default function Feedback() {
 
   const rider = ride.rider;
   const activeStar = hoveredStar || score;
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
 
   const handleSubmit = async () => {
     if (score === 0) {
@@ -94,6 +80,13 @@ export default function Feedback() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Feedback',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
+
+      {isSubmitting && <Loader subtitle='submitting...' />}
       {/* Header */}
       <View className="mb-10">
         <Text className="text-title/90 text-sm font-medium tracking-widest uppercase mb-1">
@@ -190,23 +183,19 @@ export default function Feedback() {
           'bg-violet-600 active:bg-violet-700' : score > 0,
         })}
       >
-        {isSubmitting ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Text
-            className={`text-center text-base font-semibold ${
-              score === 0 ? 'text-zinc-500' : 'text-white'
-            }`}
-          >
-            Submit Feedback
-          </Text>
-        )}
+        <Text
+          className={`text-center text-base font-semibold ${
+            score === 0 ? 'text-zinc-500' : 'text-white'
+          }`}
+        >
+          Submit Feedback
+        </Text>
       </Button>
 
       {/* Skip */}
       <Pressable onPress={() => router.replace('/')} className="mt-4 py-3">
         <Text className="text-zinc-500 text-sm text-center">
-          Skip for now
+          Skip
         </Text>
       </Pressable>
     </ScrollView>

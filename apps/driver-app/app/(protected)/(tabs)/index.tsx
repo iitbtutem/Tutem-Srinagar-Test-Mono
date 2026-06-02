@@ -9,30 +9,21 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect, useSegments } from 'expo-router';
-import { Avatar, AvatarFallback, AvatarImage, Text, Button, cn } from '@tutem/ui';
+import { Text, Button } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import StarRating from '@/components/StarRating';
-import { distanceFormat, formatFare } from '@/lib/utils';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
-import GenderAge from '@/components/GenderAge';
 import { router } from 'expo-router';
-import { colors } from '@/constants/colors';
 import Loader from '@/components/Loader';
 
 // Types

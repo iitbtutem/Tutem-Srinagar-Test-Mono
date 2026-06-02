@@ -127,10 +127,10 @@ export function RideHistoryCard({
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 40 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 30 }); }}
         onPress={() => onPress(ride)}
-        className="rounded-2xl border p-4 overflow-hidden bg-background border-violet-500/50"
+        className="rounded-2xl border overflow-hidden bg-background border-violet-500/50"
       >
         {/* Header */}
-        <View className="flex-row justify-between items-start mb-3">
+        <View className="flex-row justify-between items-start mx-4 my-3">
           <View className="flex-1">
             <Text className="text-title text-base font-bold mb-1">
               {`${ride.rider?.userDetails?.firstName ?? ''} ${ride.rider?.userDetails?.lastName ?? ''}`.trim() || 'Passenger'}
@@ -142,7 +142,7 @@ export function RideHistoryCard({
         </View>
 
         {/* Route timeline */}
-        <View className="flex-row items-stretch mb-3 pl-0.5">
+        <View className="flex-row items-stretch mx-4 mb-3 pl-0.5">
           <View className="items-center w-4">
             <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
             <View className="w-px flex-1 bg-slate-700" />
@@ -157,7 +157,7 @@ export function RideHistoryCard({
             </Text>
           </View>
         </View>
-        {ride.startedAt && <View className="flex-row justify-end items-center border-t border-gray-100">
+        {ride.startedAt && <View className="flex-row justify-end items-center border-t border-gray-100 bg-primary/5 px-4 py-2">
           <View className="flex-row items-center">
             <Feather name="calendar" size={14} color="#9CA3AF" />
             <Text className="text-gray-500 text-xs ml-1.5">
@@ -191,7 +191,7 @@ export function CurrentRideCard({
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 40 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 30 }); }}
         onPress={onPress}
-        className="rounded-xl border-2 border-border bg-card shadow-sm p-4 overflow-hidden"
+        className="rounded-xl border-2 border-primary bg-card shadow-sm p-4 overflow-hidden"
         >
         <View className="flex-row justify-between items-center border-b border-slate-950 pb-2">
           <Text className="text-primary font-bold">Current Ride</Text>

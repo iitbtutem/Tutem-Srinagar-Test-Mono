@@ -1,8 +1,6 @@
 import { Octicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
 import { useAuth } from '@clerk/expo';
 import { useQuery } from 'convex/react';
 import HomeScreenHeader from '@/components/CustomHeader';

@@ -5,9 +5,8 @@ import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useMemo, useRef, useState } from 'react';
-import { Dimensions, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
@@ -19,7 +18,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Image } from 'react-native';
-import { cn } from '@/lib/utils';
 import {
   HorizontalRule,
   Dialog,
