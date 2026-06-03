@@ -22,7 +22,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { ActivityIndicator, Image, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import z from 'zod';
@@ -33,6 +33,7 @@ import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { BasicHeader } from '@/components/CustomHeader';
+import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   licenseNumber: z
@@ -201,6 +202,7 @@ export default function RegisterAsRider() {
         title: "Driver Registration",
         header: (props) => <BasicHeader {...props} />, 
       }} />
+      {isSubmitting && <Loader subtitle='submitting...' />}
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
@@ -344,7 +346,7 @@ export default function RegisterAsRider() {
             )}
 
             <Button onPress={onSubmit} disabled={isSubmitting} className='my-3'>
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
+              <Text>Submit</Text>
             </Button>
           </View>
         </Animated.View>

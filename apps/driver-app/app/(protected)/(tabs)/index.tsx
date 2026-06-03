@@ -5,7 +5,6 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   TouchableOpacity,
-  ActivityIndicator,
   Dimensions,
   ScrollView,
 } from 'react-native';
@@ -245,8 +244,7 @@ export default function Home() {
   if (driver === undefined || currentRide === undefined)
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#7C3AED" />
-        <Text className="mt-3 text-sm font-medium text-slate-400">Loading…</Text>
+        <Loader subtitle='Loading...' />
       </View>
     );
   if (driver === null) return <Redirect href={'/register'} />;

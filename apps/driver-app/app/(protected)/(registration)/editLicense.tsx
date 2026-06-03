@@ -3,7 +3,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, TouchableOpacity, View } from 'react-native';
+import { Image, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
@@ -254,11 +254,7 @@ export default function EditLicense() {
             </View>
           )}
           <Button onPress={onSubmit} disabled={isSubmitting || formIsSubmitting} className='my-4'>
-            {isSubmitting || formIsSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className='text-white'>Submit</Text>
-            )}
+            <Text>Submit</Text>
           </Button>
         </Animated.View>
       </KeyboardAwareScrollView>

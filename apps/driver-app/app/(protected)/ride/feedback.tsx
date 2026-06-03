@@ -5,14 +5,12 @@ import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
   View,
 } from 'react-native';
 import { Star } from 'lucide-react-native';
-import { cn } from '@/lib/utils';
 import { BasicHeader } from '@/components/CustomHeader';
 import Loader from '@/components/Loader';
 import { colors } from '@/constants/colors';
@@ -44,7 +42,7 @@ export default function Feedback() {
   if (ride === undefined)
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="small" color="#a78bfa" />
+        <Loader subtitle="Loading..." />
       </View>
     );
   if (ride === null)

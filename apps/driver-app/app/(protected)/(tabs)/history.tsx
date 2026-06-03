@@ -2,11 +2,12 @@ import { Text } from '@tutem/ui';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '../../../components/RideCard';
 import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
 import { router } from 'expo-router';
+import Loader from '@/components/Loader';
 
 export default function History() {
   const { userId } = useAuth();
@@ -19,7 +20,9 @@ export default function History() {
   );
 
   if (rides === undefined)
-    return <ActivityIndicator className="flex-1" color={iconColor} size="large" />;
+    return <View className="flex-1 bg-background">
+      <Loader subtitle='Loading previous rides...' />
+    </View>;
 
   return (
     <View className="flex-1 bg-background">

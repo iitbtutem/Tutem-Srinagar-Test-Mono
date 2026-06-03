@@ -1,7 +1,7 @@
 import { api, Id } from '@tutem/api';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, Linking, Platform, Dimensions } from 'react-native';
+import { View, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -362,8 +362,7 @@ export default function Ride() {
   if (ride === undefined || vehicle === undefined || settings === undefined)
     return (
       <View className="absolute inset-0 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="purple" />
-        <Text className="mt-3 text-sm font-medium text-purple-800">Loading ride details…</Text>
+        <Loader subtitle='Loading ride details...' />
       </View>
     );
 

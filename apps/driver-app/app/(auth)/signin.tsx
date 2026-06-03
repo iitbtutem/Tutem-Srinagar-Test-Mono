@@ -1,6 +1,6 @@
 import { Text, Input, Button } from '@tutem/ui';
 import { ArrowRight, TriangleAlert } from 'lucide-react-native';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import z from 'zod';
@@ -76,7 +76,7 @@ export default function Signin() {
       setLoading(false);
     }
   };
-  if (isLoading || !isLoaded) return <ActivityIndicator />
+  if (isLoading || !isLoaded) return <Loader subtitle='Loading...' />
   if (isSignedIn && isAuthenticated) return <Redirect href={'/'} />
 
   return (

@@ -6,7 +6,7 @@ import { api, Id } from '@tutem/api';
 import { useAction } from 'convex/react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, TextInput, TextInputKeyPressEvent, View } from 'react-native';
+import { TextInput, TextInputKeyPressEvent, View } from 'react-native';
 import Loader from '@/components/Loader';
 import { BasicHeader } from '@/components/CustomHeader';
 
@@ -150,10 +150,6 @@ export default function startRide() {
           </Text>
         </Button>
       </View>
-      {loading && <View className="pointer-events-none absolute inset-0 items-center justify-center">
-        <ActivityIndicator size="large" color="#7C3AED" />
-        <Text className="mt-3 text-sm font-medium text-slate-400">{ loading === 'start' ? "Starting" : "Sending"}…</Text>
-      </View>}
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Image, View } from 'react-native';
+import { Alert, Image, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, Pencil, QrCode } from 'lucide-react-native';
 import { useMutation } from 'convex/react';
@@ -64,8 +64,7 @@ export default function PaymentQrCard() {
   if (driverPaymentQrImage === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#f59e0b" />
-        <Text className="mt-3 text-sm font-medium text-zinc-400">Loading payment details…</Text>
+        <Loader subtitle='Loading payment details...' />
       </View>
     );
   }
@@ -108,11 +107,7 @@ export default function PaymentQrCard() {
               disabled={uploading}
               variant={'default'}
               className='w-full rounded-2xl'>
-              {uploading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Pencil size={15} color="#ffffff" strokeWidth={2} />
-              )}
+              <Pencil size={15} color="#ffffff" strokeWidth={2} />
               <Text className="text-sm font-medium">
                 {uploading ? 'Uploading…' : 'Change QR Code'}
               </Text>
@@ -134,13 +129,9 @@ export default function PaymentQrCard() {
               onPress={handlePickImage}
               disabled={uploading}
               className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-amber-500 active:bg-amber-400">
-              {uploading ? (
-                <ActivityIndicator size="small" color="#1c1917" />
-              ) : (
-                <Upload size={16} color="#1c1917" strokeWidth={2.5} />
-              )}
+              <Upload size={16} color="#1c1917" strokeWidth={2.5} />
               <Text className="text-sm font-bold text-amber-950">
-                {uploading ? 'Uploading…' : 'Upload from Gallery'}
+                Upload from Gallery
               </Text>
             </Button>
           </View>

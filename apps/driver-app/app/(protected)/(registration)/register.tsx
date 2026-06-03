@@ -528,7 +528,7 @@ export default function Register() {
             )}
 
             <Button onPress={onSubmit} disabled={isSubmitting} className='my-4'>
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Submit</Text>}
+              <Text>Submit</Text>
             </Button>
           </View>
         </Animated.View>
