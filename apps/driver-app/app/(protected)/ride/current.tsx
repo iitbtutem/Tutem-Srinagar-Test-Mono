@@ -72,7 +72,7 @@ const CANCEL_REASONS_AFTER_START = [
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Map takes ~62% of screen height in the scrollable layout
-const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.60);
+const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.75);
 
 function openNavigation(lat: number, lng: number) {
   const url = Platform.select({
@@ -486,7 +486,7 @@ export default function Ride() {
       <BottomSheet
         ref={activeSheetRef}
         index={1}
-        snapPoints={['40%']}
+        snapPoints={['23%', "55%"]}
         enablePanDownToClose={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
@@ -584,7 +584,7 @@ export default function Ride() {
                       Ride Aborted by Rider
                     </Text>
                     <Text className="text-xs text-slate-500">
-                      Review the trip summary before and proceed to payment.
+                      {`Review the trip summary before and \n proceed to payment.`}
                     </Text>
                   </View>
                 ) : (

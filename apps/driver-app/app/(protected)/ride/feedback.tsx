@@ -15,6 +15,7 @@ import { Star } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { BasicHeader } from '@/components/CustomHeader';
 import Loader from '@/components/Loader';
+import { colors } from '@/constants/colors';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -98,7 +99,7 @@ export default function Feedback() {
       </View>
 
       {/* Rider Card */}
-      <View className="bg-background border border-zinc-800 rounded-2xl p-5 mb-8 flex-row items-center gap-4">
+      <View className="bg-background border border-primary rounded-2xl p-5 mb-8 flex-row items-center gap-4">
         <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
           <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
           <AvatarFallback>
@@ -109,7 +110,7 @@ export default function Feedback() {
         </Avatar>
         <View className="flex-1">
           <Text className="text-title text-lg font-semibold">
-            {`${rider.userDetails.firstName} ${rider.userDetails?.lastName}`}
+            {`${rider.userDetails.firstName} ${rider.userDetails?.lastName ?? ""}`}
           </Text>
           <Text className="text-zinc-400 text-sm mt-0.5">
             {ride.vehicle?.model ?? 'Vehicle'}
@@ -131,7 +132,7 @@ export default function Feedback() {
             >
               <Star
                 size={44}
-                color={star <= activeStar ? '#fbbf24' : '#3f3f46'}
+                color={star <= activeStar ? '#fbbf24' : colors.primary}
                 fill={star <= activeStar ? '#fbbf24' : 'transparent'}
                 strokeWidth={1.5}
               />
@@ -166,7 +167,7 @@ export default function Feedback() {
           onChangeText={setComment}
           numberOfLines={4}
           maxLength={500}
-          className="border-zinc-700 placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
+          className="placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
           textAlignVertical="top"
         />
         <Text className="text-zinc-600 text-xs text-right mt-1.5">
@@ -177,11 +178,7 @@ export default function Feedback() {
       {/* Submit */}
       <Button
         onPress={handleSubmit}
-        disabled={isSubmitting || score === 0}
-        className={cn("rounded-2xl", {
-          'bg-zinc-800': score === 0,
-          'bg-violet-600 active:bg-violet-700' : score > 0,
-        })}
+        disabled={isSubmitting || score === 0}        
       >
         <Text
           className={`text-center text-base font-semibold ${

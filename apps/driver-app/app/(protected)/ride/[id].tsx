@@ -12,6 +12,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
+import Loader from '@/components/Loader';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
 
@@ -126,7 +127,6 @@ function RouteCard({
 }: {
   ride: Ride
 }) {
-  const dropOffAddress = ride.dropOff?.address;
   
   return (
     <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -324,9 +324,8 @@ export default function RideDetailScreen() {
 
   if (ride === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
-        <ActivityIndicator size="large" color="#6366f1" />
-        <Text className="mt-3 text-sm text-slate-400">Loading ride details…</Text>
+      <View className="flex-1 bg-background">
+        <Loader subtitle="Loading ride details..." />
       </View>
     );
   }
@@ -337,16 +336,11 @@ export default function RideDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          header: (props) => <BasicHeader {...props} />,
-          title: 'Ride Details',
-          headerBackTitle: 'Back',
-          headerStyle: { backgroundColor: '#f8fafc' },
-          headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: '700', color: '#0f172a' },
-        }}
-      />
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Ride Details',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
 
       <ScrollView
         className="flex-1 bg-slate-50"
