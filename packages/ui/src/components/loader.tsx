@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, Modal } from 'react-native';
-import { boolean } from 'zod';
 
-export default function Loader({ title, subtitle }: { title?: string, subtitle?: string }) {
+function Loader({ title, subtitle }: { title?: string, subtitle?: string }) {
   const waveAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -67,4 +66,6 @@ export default function Loader({ title, subtitle }: { title?: string, subtitle?:
     </View>
     </Modal>
   );
-}
+};
+
+export { Loader }

@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  ImageBackground,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,20 +16,29 @@ import { useAuth } from '@clerk/expo';
 
 import { Card, CardContent } from '@tutem/ui';
 import { distanceFormat, formatFare } from '@/lib/utils';
-import { StatusBar } from 'expo-status-bar';
-import { HeaderGreeting } from '@/components/CustomHeader';
+import { HomeScreenHeader } from '@/components/CustomHeader';
 
-const IMAGES = {
-  ride_pooling: require('@/assets/images/ride_pooling.png'),
-  ride_request: require('@/assets/images/ride_request.png'),
-  walk_companion: require('@/assets/images/walk_companion.png'),
-} as const;
-
-const SERVICES = [
-  { id: 'ride_request', name: 'Ride Request', image: 'ride_request', href: '/whereto' },
-  { id: 'ride_pooling', name: 'Ride Pooling', image: 'ride_pooling', href: '/' },
-  { id: 'walk_companion', name: 'Walk Companion', image: 'walk_companion', href: '/' },
+const services = [
+  { id: 'ride_request', name: 'Ride Request', image: require('@/assets/images/ride_pooling.png'), href: '/whereto' },
+  { id: 'ride_pooling', name: 'Ride Pooling', image: require('@/assets/images/ride_request.png'), href: '/' },
+  { id: 'walk_mode', name: 'Walk Mode', image: require('@/assets/images/walk_mode.png'), href: '/' },
 ] as const;
+
+const youtubeVideos = [
+  { id: 'theytLvdnaE', title: "Ride Booking", subtitle: "Watch quick ride booking insights" },
+  { id: '6e7vblkc4eM', title: "SOS", subtitle: "Watch quick SOS insights" },
+  { id: 'bpDMl2VgqJw', title: "User Pairing", subtitle: "Watch quick user pairing insights" },
+];
+
+const getYoutubeThumbnail = (url: string) => {
+  const match = url.match(
+    /(?:youtu\.be\/|youtube\.com\/watch\?v=)([^?&]+)/
+  );
+
+  const videoId = match?.[1];
+
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+};
 
 export default function HomeScreen() {
   const { userId } = useAuth();
@@ -35,57 +46,52 @@ export default function HomeScreen() {
 
   const user = useQuery(api.routes.rider.getRider, userId && userId !== '' ? { clerkId: userId } : 'skip');
 
+  const openVideo = async (videoId: string) => {
+    const appUrl = `youtube://watch?v=${videoId}`;
+    const webUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    const supported = await Linking.canOpenURL(appUrl);
+
+    await Linking.openURL(supported ? appUrl : webUrl);
+  };
+
   return (
     <View className="flex-1 bg-background">
-      <StatusBar backgroundColor='#0A6FCC' style='light' translucent />
 
-      {user && <HeaderGreeting user={user} />}
+      {user && <HomeScreenHeader user={user} />}
       <ScrollView showsVerticalScrollIndicator={false} className='bg-background'>
         {/*  Ride Services  */}
-        <View className="mt-6 px-4">
-          <Text className="mb-4 text-xl font-semibold text-foreground">Ride Services</Text>
-          <FlatList
-            data={SERVICES}
-            keyExtractor={(item) => item.id}
-            numColumns={3}
-            scrollEnabled={false}
-            columnWrapperStyle={{ gap: 14 }}
-            contentContainerStyle={{ gap: 14 }}
-            renderItem={({ item: service }) => (
-              <View className="flex-1 gap-1 bg-slate-950/5 rounded-xl p-3">
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => router.push(service.href)}
-                  className="aspect-square w-full items-center justify-center rounded-full p-3 bg-card shadow-sm">
-                  {/* Icon container */}
-                  <View className="h-24 w-24 items-center justify-center rounded-full">
-                    <Image
-                      source={IMAGES[service.image]}
-                      style={{ width: 80, height: 80 }}
-                      resizeMode="cover"
-                    />
-                  </View>
-                </TouchableOpacity>
+        <View className="flex-row gap-2 mt-2 px-4">
+          {services.map((service) => (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push(service.href)}
+              className="aspect-square items-center justify-center flex-1 bg-primary/10 rounded-xl py-3 px-2">
+              {/* Icon container */}
+              <Image
+                source={service.image}
+                style={{ width: "100%", height: 70 }}
+                resizeMode="cover"
+              />
 
-                {/* Label with fixed min-height to prevent layout shift */}
-                <View className="min-h-[40px] justify-center">
-                  <Text className="text-center text-xs font-medium text-foreground">
-                    {service.name}
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
+            {/* Label with fixed min-height to prevent layout shift */}
+            <View className="justify-center">
+              <Text className="text-center text-xs font-bold text-foreground">
+                {service.name}
+              </Text>
+            </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <ActiveRideCard />
 
-        {/* -------- Insights -------- */}
+        {/* Insights */}
         <View className="mt-8">
           <Text className="mx-6 mb-4 text-xl font-semibold text-foreground">Insights</Text>
 
           <FlatList
-            data={[{ id: 'vid1' }, { id: 'vid2' }, { id: 'vid3' }] as const}
+            data={youtubeVideos}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
@@ -93,19 +99,23 @@ export default function HomeScreen() {
               paddingHorizontal: 24,
               gap: 14,
             }}
-            renderItem={() => (
-              <View className="h-40 w-64 overflow-hidden rounded-2xl bg-card shadow-sm">
+            renderItem={({item}) => (
+              <View className="h-56 w-64 overflow-hidden rounded-2xl bg-primary/10">
                 {/* Thumbnail */}
-                <View className="flex-1 items-center justify-center bg-muted/40">
-                  <MaterialIcons name="play-circle" size={48} color="#6b7280" />
-                </View>
+                <ImageBackground 
+                  className="flex-1 items-center justify-center" 
+                  source={{
+                  uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`}}
+                >
+                  <TouchableOpacity onPress={() => openVideo(item.id)}>
+                    <MaterialIcons name="play-circle" size={48} color="#fff" />
+                  </TouchableOpacity>
+                </ImageBackground>
 
                 {/* Footer */}
-                <View className="p-3">
-                  <Text className="text-sm font-semibold text-foreground">Safety Tips</Text>
-                  <Text className="text-xs text-muted-foreground">
-                    Watch quick ride safety insights
-                  </Text>
+                <View className="p-3 pt-1">
+                  <Text className="text-sm font-semibold text-foreground">{item.title}</Text>
+                  <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
                 </View>
               </View>
             )}

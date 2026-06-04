@@ -1,4 +1,4 @@
-import { Text, Input, Button } from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -18,7 +18,6 @@ import { api, Id } from '@tutem/api';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
 import { BasicHeader } from '@/components/CustomHeader';
-import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   licenseNumber: z

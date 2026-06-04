@@ -30,12 +30,12 @@ import {
   AvatarImage, 
   Text, 
   Button,
+  Loader,
 } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
-import Loader from '@/components/Loader';
 
 // Types
 

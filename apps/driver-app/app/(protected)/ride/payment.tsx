@@ -1,5 +1,5 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Card, CardContent, CardHeader, CardTitle, Text, Button, Separator } from '@tutem/ui';
+import { Card, CardContent, CardHeader, CardTitle, Text, Button, Separator, Loader } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -12,7 +12,6 @@ import {
 import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
 import { useRouter } from 'expo-router';
-import Loader from '@/components/Loader';
 import { BasicHeader } from '@/components/CustomHeader';
 
 export default function Payment() {

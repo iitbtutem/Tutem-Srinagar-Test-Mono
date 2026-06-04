@@ -79,3 +79,5 @@ export {
   AlertDialogTrigger,
 } from "./src/components/alert-dialog";
 export { Alert, AlertDescription, AlertTitle } from "./src/components/alert";
+export { Loader } from "./src/components/loader";
+export { GenderAge } from "./src/components/gender-age";

@@ -1,13 +1,13 @@
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '@/components/RideCard';
 import { FunctionReturnType } from 'convex/server';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Avatar, AvatarFallback, AvatarImage, Text } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Text, Loader } from '@tutem/ui';
 import StarRating from '@/components/StarRating';
 import { formatFare } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -37,7 +37,7 @@ export default function History() {
   };
 
   if (rides === undefined)
-    return <ActivityIndicator className="flex-1" color={iconColor} size="large" />;
+    return <Loader subtitle='loading previous rides...' />;
 
   return (
     <View className="flex-1 bg-background">

@@ -1,4 +1,4 @@
-import { Text, Input, Button } from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { ArrowRight, TriangleAlert } from 'lucide-react-native';
 import { View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
@@ -9,7 +9,6 @@ import { useAuth, useSignIn, useSignUp } from '@clerk/expo';
 import { useToast } from '@/components/CustomToast';
 import { useState } from 'react';
 import { useConvexAuth } from 'convex/react';
-import Loader from '@/components/Loader';
 
 const emailSchema = z.object({
   email: z.email('Enter a valid email address.'),

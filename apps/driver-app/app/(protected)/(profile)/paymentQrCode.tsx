@@ -1,4 +1,4 @@
-import { Text, Button } from '@tutem/ui';
+import { Text, Button, Loader } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -8,7 +8,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Upload, Pencil, QrCode } from 'lucide-react-native';
 import { useMutation } from 'convex/react';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import Loader from '@/components/Loader';
 import { BasicHeader } from '@/components/CustomHeader';
 
 export default function PaymentQrCard() {

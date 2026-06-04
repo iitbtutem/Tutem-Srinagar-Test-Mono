@@ -13,9 +13,7 @@ export default function ProtectedLayout() {
 
   return (
     <SafeAreaView edges={["bottom"]} className='flex-1' >
-      <Stack screenOptions={{ 
-        headerShown: false,
-        }}>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={protectedGuard && user?.driverDetails !== null}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen

@@ -8,7 +8,6 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
-import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
@@ -18,6 +17,8 @@ import { useInternet } from '@/hooks/useInternet';
 import { View } from 'react-native';
 import { Text } from '@tutem/ui';
 import Offline from '@/components/offline';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -45,7 +46,6 @@ const tokenCache = {
 };
 
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme();
   const [launchedOffline, setLaunchedOffline] = useState(false);
   
   const { isOnline, checked } = useInternet();
@@ -82,11 +82,9 @@ export default function RootLayout() {
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <NotificationProvider>
             <ToastProvider>
-              <StatusBar
-                style={colorScheme === 'dark' ? 'light' : 'dark'}
-                backgroundColor={colorScheme === 'dark' ? '#000' : '#edeef0'}
-              />
-              <View className={cn("flex-1 bg-background", colorScheme === 'dark' ? 'dark' : '')}>
+              <SafeAreaView edges={['top']} className="bg-primary" />
+              <StatusBar style="light" translucent backgroundColor={colors.primary} />
+                  
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -100,7 +98,6 @@ export default function RootLayout() {
                   </View>
                 )}
                 <PortalHost />
-              </View>
             </ToastProvider>
           </NotificationProvider>
         </ConvexProviderWithClerk>

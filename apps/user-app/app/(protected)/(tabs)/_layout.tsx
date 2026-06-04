@@ -1,6 +1,9 @@
+import { BasicHeader } from '@/components/CustomHeader';
+import { colors } from '@/constants/colors';
 import { useAuth } from '@clerk/expo';
 import { Feather, Octicons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
+import { Text } from '@tutem/ui';
 import { useQuery } from 'convex/react';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -21,14 +24,14 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: '#bfbfbf',
-        header: () => <View className='bg-primary h-10' />,
+        headerShown: false,
         // header: (props) => user && <CustomHeader {...props} user={user} />,
         tabBarStyle: {
-          backgroundColor: "#0A6FCC",
-          borderTopColor: isDark ? '#262626' : '#E5E7EB',
-          height: 75,
-          paddingTop: 6,
-          paddingBottom: 6
+          backgroundColor: colors.primary,
+          borderTopColor: '#E5E7EB',
+          height: 60,
+          paddingTop: 5,
+          paddingBottom: 5
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -39,9 +42,9 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          animation: 'fade',
-          tabBarIcon: ({ color }) => (
-            <Feather name="map" size={23} color={color} />
+          animation: "shift",
+          tabBarIcon: ({ color, focused }) => (
+            <Octicons name={focused ? 'home-fill' : 'home'} size={24} color={color} />
           ),
         }}
       />
@@ -49,7 +52,15 @@ export default function TabsLayout() {
         name="history"
         options={{
           title: 'History',
-          animation: 'fade',
+          animation: "shift",
+          headerShown: true,
+          header: () => (
+            <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-3">
+              <Text className="flex-1 font-semibold text-center text-base text-white">
+                Previous Rides
+              </Text>
+            </View>
+          ),
           tabBarIcon: ({ color }) => (
             <Octicons name="history" size={24} color={color} />
           ),

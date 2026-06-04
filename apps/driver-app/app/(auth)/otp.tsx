@@ -1,19 +1,15 @@
-import { Text, Input, Button } from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { OTP_SIZE, OTP_TIMER } from '@/constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
   TextInput,
   TextInputKeyPressEvent,
   View,
 } from 'react-native';
 import { useSignIn, useSignUp } from '@clerk/expo';
 import { useToast } from '@/components/CustomToast';
-import { colorScheme } from 'nativewind';
-import Loader from '@/components/Loader';
 
 export default function OtpScreen() {
   const { email, mode } = useLocalSearchParams<{ email: string; mode: 'signin' | 'signup' }>();
@@ -26,8 +22,6 @@ export default function OtpScreen() {
 
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
-
-  const theme = colorScheme.get();
 
   const handleChange = (value: string, index: number) => {
     if (isNaN(Number(value))) return;
@@ -172,21 +166,21 @@ export default function OtpScreen() {
       </View>
 
       <View className="mt-2 gap-y-4 items-center">
-      {/* submit button */}
-      <Button
-        className="w-full"
-          onPress={() => {
-            const missingNumber = inputArr.some((input) => isNaN(Number(input)) || input === '');
-            if (missingNumber) return;
-            console.log(inputArr.join(''));
-            verifyOtp(inputArr.join(''));
-          }}
-          disabled={loading || inputArr.some((v) => v === '')}>
-          <Text className="text-base">Verify OTP</Text>
-          <ArrowRight size={20} color={'#fff'} strokeWidth={3} />
-        </Button>
+        {/* submit button */}
+        <Button
+          className="w-full"
+            onPress={() => {
+              const missingNumber = inputArr.some((input) => isNaN(Number(input)) || input === '');
+              if (missingNumber) return;
+              console.log(inputArr.join(''));
+              verifyOtp(inputArr.join(''));
+            }}
+            disabled={loading || inputArr.some((v) => v === '')}>
+            <Text className="text-base">Verify OTP</Text>
+            <ArrowRight size={20} color={'#fff'} strokeWidth={3} />
+          </Button>
 
-      {/* resend otp */}
+        {/* resend otp */}
         <View className="flex-row items-center">
           <Text variant={"link"} className='text-center'>
             Didn't receive OTP?

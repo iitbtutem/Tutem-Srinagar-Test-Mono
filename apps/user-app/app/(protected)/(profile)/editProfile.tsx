@@ -1,6 +1,6 @@
-import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
-import { TextInput, View } from 'react-native';
-import { useRef } from 'react';
+import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
+import { ScrollView, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -12,17 +12,19 @@ import {
   Text,
   Input,
   Button,
+  Loader
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { BasicHeader } from '@/components/CustomHeader';
 
 const formSchema = z.object({
   firstName: z
@@ -31,10 +33,15 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
+  phoneNumber: z.string()
+    .min(1, 'Phone number is required')
+    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
+    .length(10, "Phone number must be exactly 10 digits"),
 });
 
 export default function EditProfile() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -70,22 +77,29 @@ export default function EditProfile() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
+      setIsSubmitting(true);
       const {dob, gender, ...rest} = data;
       await updateUser({ ...rest, clerkId: clerkId });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
-      router.replace('/profile');
+      router.back();
     } catch (error) {
       showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
     }
   });
 
   return (
-    <Animated.ScrollView
-      entering={FadeIn.delay(300).duration(400)}
-      className="flex-1 bg-background p-3">
-      <Text className="my-4 mb-2 text-lg font-semibold">Edit your details below</Text>
+    <ScrollView className="flex-1 bg-background">
+      <Stack.Screen options={{ 
+        headerShown: true,
+        title: 'Edit Profile',
+        header: (props) => <BasicHeader {...props} />,
+      }} />
+
+      {isSubmitting && <Loader subtitle='submitting...' />}
       <View className="gap-3 px-3 pb-20 pt-2">
         {/* First name */}
         <View>
@@ -185,7 +199,7 @@ export default function EditProfile() {
                 <CustomDatePicker
                   disabled={true}
                   ref={dobRef}
-                  title="Choose DOB"
+                  placeholder="Choose DOB"
                   date={field.value}
                   setDate={(date) => {
                     field.onChange(date);
@@ -248,10 +262,10 @@ export default function EditProfile() {
           )}
         </View>
 
-        <Button onPress={onSubmit}>
+        <Button onPress={onSubmit} className='my-3'>
           <Text>Submit</Text>
         </Button>
       </View>
-    </Animated.ScrollView>
+    </ScrollView>
   );
 }

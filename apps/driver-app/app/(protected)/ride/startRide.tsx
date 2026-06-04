@@ -1,5 +1,5 @@
 import { useToast } from '@/components/CustomToast';
-import { Text, Input, Button } from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { RIDE_OTP_TIMER_MINUTES } from '@/constants';
 import { useCountdown } from '@/hooks/useCountdown';
 import { api, Id } from '@tutem/api';
@@ -7,7 +7,6 @@ import { useAction } from 'convex/react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { TextInput, TextInputKeyPressEvent, View } from 'react-native';
-import Loader from '@/components/Loader';
 import { BasicHeader } from '@/components/CustomHeader';
 
 const RIDE_OTP_SIZE = 4;

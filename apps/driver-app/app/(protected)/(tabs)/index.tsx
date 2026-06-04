@@ -14,7 +14,7 @@ import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect, useSegments } from 'expo-router';
-import { Text, Button } from '@tutem/ui';
+import { Text, Button, Loader } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
@@ -23,7 +23,6 @@ import useThemeColors from '@/hooks/useColorScheme';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { router } from 'expo-router';
-import Loader from '@/components/Loader';
 
 // Types
 

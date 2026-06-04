@@ -8,11 +8,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "tailwind-merge": "^3.3.1"
   },
   "peerDependencies": {
+    "@rn-primitives/alert-dialog": "^1.4.0",
     "@rn-primitives/avatar": "^1.2.0",
     "@rn-primitives/checkbox": "^1.4.0",
     "@rn-primitives/dialog": "^1.2.0",
@@ -22,7 +25,6 @@
     "@rn-primitives/separator": "^1.4.0",
     "@rn-primitives/slot": "^1.4.0",
     "@rn-primitives/switch": "^1.4.0",
-    "@rn-primitives/alert-dialog": "^1.4.0",
     "expo": "*",
     "lucide-react-native": "*",
     "nativewind": "*",

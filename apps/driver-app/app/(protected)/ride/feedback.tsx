@@ -1,5 +1,5 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea, Loader } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { BasicHeader } from '@/components/CustomHeader';
-import Loader from '@/components/Loader';
 import { colors } from '@/constants/colors';
 
 const RATING_LABELS: Record<number, string> = {

@@ -1,18 +1,15 @@
-import { Text, Input, Button } from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { OTP_SIZE, OTP_TIMER } from '@/constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
   TextInput,
   TextInputKeyPressEvent,
   View,
 } from 'react-native';
 import { useSignIn, useSignUp } from '@clerk/expo';
 import { useToast } from '@/components/CustomToast';
-import { colorScheme } from 'nativewind';
 
 export default function OtpScreen() {
   const { email, mode } = useLocalSearchParams<{ email: string; mode: 'signin' | 'signup' }>();
@@ -25,8 +22,6 @@ export default function OtpScreen() {
 
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
-
-  const theme = colorScheme.get();
 
   const handleChange = (value: string, index: number) => {
     if (isNaN(Number(value))) return;
@@ -132,13 +127,11 @@ export default function OtpScreen() {
   }, [timer]);
 
   return (
-    <ScrollView
-      className="bg-background px-4 py-10"
-      contentContainerStyle={{ flexGrow: 1, gap: 12 }}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}>
-      <Text className="text-2xl font-semibold">
-        Enter the {OTP_SIZE}-digit code sent to {email}.
+    <View className="flex-1 px-4 py-10 bg-background" >
+      <Text className='text-center' variant={"title"}>Verify Your Email</Text>
+      
+      <Text variant={"muted"} className='text-center mb-2'>
+        Enter the {OTP_SIZE}-digit code sent to {`\n`} {email}.
       </Text>
 
       {/* OTP input */}
@@ -169,55 +162,47 @@ export default function OtpScreen() {
         ))}
       </View>
 
-      {loading && (
-        <View className="items-center py-2">
-          <ActivityIndicator size="small" />
-          <Text className="mt-2 text-sm text-muted-foreground">Verifying...</Text>
-        </View>
-      )}
-
-      {/* OTP action buttons */}
-      <View className="mt-3 gap-y-4">
+      <View className="mt-2 gap-y-4 items-center">
+        {/* submit button */}
         <Button
-          className="self-start rounded-full"
-          variant={'secondary'}
-          onPress={resendOtp}
-          disabled={timer > 0 || loading}>
-          <Text>
-            Resend code via email
-            {timer > 0 ? ` (0:${String(timer).padStart(2, '0')})` : null}
+          className="w-full"
+            onPress={() => {
+              const missingNumber = inputArr.some((input) => isNaN(Number(input)) || input === '');
+              if (missingNumber) return;
+              verifyOtp(inputArr.join(''));
+            }}
+            disabled={loading || inputArr.some((v) => v === '')}>
+            <Text className="text-base">Verify OTP</Text>
+            <ArrowRight size={20} color={'#fff'} strokeWidth={3} />
+          </Button>
+
+        {/* resend otp */}
+        <View className="flex-row items-center">
+          <Text variant={"link"} className='text-center'>
+            Didn't receive OTP?
           </Text>
-        </Button>
+          <Button
+            variant={'link'}
+            onPress={resendOtp}
+            disabled={timer > 0 || loading}>
+            <Text>
+              Resend
+              {timer > 0 ? ` (0:${String(timer).padStart(2, '0')})` : null}
+            </Text>
+          </Button>
+        </View>
       </View>
 
-      {/* Navigation Buttons */}
-      <View
-        style={{
-          marginTop: 'auto',
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingTop: 24,
-        }}>
-        <Button
-          className="h-12 w-12 items-center justify-center rounded-full"
-          onPress={goBack}
-          variant={'secondary'}
-          disabled={loading}>
-          <ArrowLeft size={24} color={theme === 'light' ? '#000' : '#fff'} />
-        </Button>
-        <Button
-          className="h-18 self-start rounded-3xl"
-          variant={'secondary'}
-          onPress={() => {
-            const missingNumber = inputArr.some((input) => isNaN(Number(input)) || input === '');
-            if (missingNumber) return;
-            verifyOtp(inputArr.join(''));
-          }}
-          disabled={loading || inputArr.some((v) => v === '')}>
-          <Text className="text-base">Verify</Text>
-          <ArrowRight size={20} color={theme === 'light' ? '#000' : '#fff'} />
-        </Button>
-      </View>
-    </ScrollView>
+      {/* Back Button */}
+      <Button
+        className="h-18 self-start rounded-3xl bg-slate-950/5 mt-auto"
+        onPress={goBack}
+        disabled={loading}>
+        <ArrowLeft size={20} color={'#000'}  strokeWidth={3} />
+        <Text className="text-base text-black">Back</Text>
+      </Button>
+
+      {loading && <Loader subtitle='verifying' /> }
+    </View>
   );
 }

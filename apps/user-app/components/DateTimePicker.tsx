@@ -1,14 +1,15 @@
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Text, Button } from '@tutem/ui';
+import { Text, Button, cn } from '@tutem/ui';
 import { Feather } from '@expo/vector-icons';
-import { cn } from '@/lib/utils';
 
 type CustomDatePickerProps = {
-  title?: string;
+  placeholder?: string;
   date: Date | null;
   setDate: (date: Date) => void;
   disabled?: boolean;
+  minimumDate?: Date,
+  maximumDate?: Date,
 };
 
 export type CustomDatePickerHandle = {
@@ -16,28 +17,25 @@ export type CustomDatePickerHandle = {
 };
 
 const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProps>(
-  ({ title = 'Choose Date', date, setDate, disabled = false }, ref) => {
+  ({ placeholder = 'Choose Date', date, setDate, disabled = false, ...props }, ref) => {
     const [show, setShow] = useState(false);
 
     useImperativeHandle(ref, () => ({
       open: () => setShow(true),
     }));
 
-    const today = new Date();
-    const minimumDob = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-
     return (
       <>
         <Button
           disabled={disabled}
           onPress={() => setShow(true)}
-          className="justify-start bg-muted-foreground/10 dark:bg-input/80">
+          className="justify-start h-12 bg-muted-foreground/10 dark:bg-input/80">
           <Feather name="calendar" size={18} color="gray" />
           <Text
             className={cn('pl-1 text-sm font-medium text-muted-foreground/50', {
               'text-primary': !!date,
             })}>
-            {date?.toLocaleDateString() ?? title}
+            {date?.toLocaleDateString() ?? placeholder}
           </Text>
         </Button>
         {show && (
@@ -49,7 +47,8 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
               setDate(new Date(e.nativeEvent.timestamp));
             }}
             value={new Date()}
-            maximumDate={minimumDob}
+            minimumDate={props.minimumDate}
+            maximumDate={props.maximumDate}
           />
         )}
       </>

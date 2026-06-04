@@ -1,5 +1,5 @@
-import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
-import { TextInput, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
+import { TextInput, View, TouchableOpacity, Image } from 'react-native';
 import LoadingScreen from '@/components/LoadingScreen';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,6 +17,7 @@ import {
   Input,
   Text,
   Button,
+  Loader,
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,7 +36,7 @@ import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useDriverLiveLocation } from '../../../hooks/useDriverLiveLocation';
-import Loader from '@/components/Loader';
+import { subYears } from 'date-fns';
 
 const formSchema = z.object({
   firstName: z
@@ -52,9 +53,9 @@ const formSchema = z.object({
   licenseImageBackKey: z.string().optional(),
   organizationId: z.string().min(1, 'Select an organization.'),
   phoneNumber: z.string()
-  .min(1, 'Phone number is required')
-  .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
-  .length(10, "Phone number must be exactly 10 digits"),
+    .min(1, 'Phone number is required')
+    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
+    .length(10, "Phone number must be exactly 10 digits"),
 });
 export default function Register() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
@@ -178,8 +179,6 @@ export default function Register() {
       }
 
       setIsSubmitting(true);
-
-      showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
       const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${userId}-front`);
       const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
@@ -391,12 +390,13 @@ export default function Register() {
                   <>
                     <CustomDatePicker
                       ref={dobRef}
-                      title="Choose DOB"
+                      placeholder="Choose DOB"
                       date={field.value}
                       setDate={(date) => {
                         field.onChange(date);
                         licenseRef.current?.focus();
                       }}
+                      maximumDate={subYears(new Date(), 18)}
                     />
                     {fieldState.error && (
                       <Text className="text-md text-destructive">{fieldState.error.message}</Text>

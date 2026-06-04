@@ -1,4 +1,4 @@
-import { Text } from '@tutem/ui';
+import { Loader, Text } from '@tutem/ui';
 import { useAuth } from '@clerk/expo';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
@@ -7,7 +7,6 @@ import { RideHistoryCard as RideCard } from '../../../components/RideCard';
 import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
 import { router } from 'expo-router';
-import Loader from '@/components/Loader';
 
 export default function History() {
   const { userId } = useAuth();

@@ -12,6 +12,7 @@ import {
   Input,
   Text,
   Button,
+  Loader,
 } from '@tutem/ui';
 import { useAuth } from '@clerk/expo';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -33,7 +34,6 @@ import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { BasicHeader } from '@/components/CustomHeader';
-import Loader from '@/components/Loader';
 
 const formSchema = z.object({
   licenseNumber: z

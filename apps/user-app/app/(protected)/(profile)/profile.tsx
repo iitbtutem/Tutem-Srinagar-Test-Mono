@@ -5,11 +5,8 @@ import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
 import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -29,24 +26,21 @@ import {
   AvatarImage, 
   Text, 
   HorizontalRule,
+  Loader,
 } from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
-import { cn } from '@/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
-const EXPANDED_HEADER_HEIGHT = 300;
-const COLLAPSED_HEADER_HEIGHT = 100;
+const EXPANDED_HEADER_HEIGHT = 220;
+const COLLAPSED_HEADER_HEIGHT = 60;
 const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
   const { userId, signOut } = useAuth();
   const router = useRouter();
-  const { colorScheme } = useColorScheme();
   const { iconColor, iconBackgroundColor } = useThemeColors();
-
-  const isDark = colorScheme === 'dark';
 
   const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
   const logout = useMutation(api.routes.rider.logout);
@@ -95,14 +89,14 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -150], // Shifted further left to compensate
+      [0, -140], // Shifted further left to compensate
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -75],
+      [0, -65],
       Extrapolation.CLAMP
     );
 
@@ -117,14 +111,14 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -50], // Shifted less to the right to balance with avatar
+      [0, -75], // Shifted less to the right to balance with avatar
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -155],
+      [0, -145],
       Extrapolation.CLAMP
     );
 
@@ -133,7 +127,7 @@ export default function Profile() {
     };
   });
 
-  const badgeOpacityStyle = useAnimatedStyle(() => {
+  const actionButtonStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE / 2],
@@ -143,61 +137,59 @@ export default function Profile() {
 
     return {
       opacity,
+      pointerEvents: opacity < 0.5 ? 'none' : 'auto',
     };
   });
 
   if (!userId) return <ErrorScreen message="User not found" />;
-  if (rider === undefined) return <LoadingScreen message="Loading profile…" />;
+  if (rider === undefined) return <Loader subtitle="Loading profile…" />;
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   return (
-    <>
-      <StatusBar style={isDark ? 'dark' : 'light'} backgroundColor={isDark ? '#000' : '#FFF'} />
+    <View className="flex-1 bg-background">
 
       {/* Hero Header */}
       <Animated.View
-        style={[headerAnimatedStyle, { position: 'absolute', top: 0, left: 0, right: 0 }]}
-        className={cn('overflow-hidden bg-primary pt-12 shadow-xl shadow-primary/30', {
-          'bg-slate-600': isDark,
-        })}>
+        style={[headerAnimatedStyle, { position: 'absolute', width: '100%' }]}
+        className='overflow-hidden bg-primary'>
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
-          style={[badgeOpacityStyle, { position: 'absolute', top: 0, right: 0, zIndex: 10 }]}
-          className="flex-row justify-between items-center gap-1 pr-4 pt-14">
+          style={[actionButtonStyle, { position: 'absolute', top: 0, zIndex: 1 }]}
+          className="w-full flex-row items-center justify-between px-4 mt-2">
           <TouchableOpacity
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: iconBackgroundColor }}
-            onPress={() =>
-              router.back()
-            }>
-            <MaterialIcons name="arrow-back" size={18} color={iconColor} />
+            onPress={() => router.back()}>
+            <MaterialIcons name="arrow-back" size={18} color="#fff" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            className="h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: iconBackgroundColor }}
-            onPress={() =>
-              router.push({
-                pathname: '/editProfile',
-                params: {
-                  firstName: rider.firstName,
-                  lastName: rider?.lastName,
-                  dob: rider.dob,
-                  phoneNumber: rider.phoneNumber,
-                  gender: rider.gender,
-                  clerkId: rider?.clerkId,
-                },
-              })
-            }>
-            <MaterialIcons name="edit" size={18} color={iconColor} />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-1">
+            <TouchableOpacity
+              className="h-9 w-9 items-center justify-center rounded-full"
+              style={{ backgroundColor: iconBackgroundColor }}
+              onPress={() =>
+                router.push({
+                  pathname: '/editProfile',
+                  params: {
+                    firstName: rider.firstName,
+                    lastName: rider?.lastName,
+                    dob: rider.dob,
+                    phoneNumber: rider.phoneNumber,
+                    gender: rider.gender,
+                    clerkId: rider?.clerkId,
+                  },
+                })
+              }>
+              <MaterialIcons name="edit" size={18} color={iconColor} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            className="h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: iconBackgroundColor }}
-            onPress={() => handleLogout(rider.riderDetails?._id)}>
-            <MaterialIcons name="logout" size={18} color={iconColor} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              className="h-9 w-9 items-center justify-center rounded-full"
+              style={{ backgroundColor: iconBackgroundColor }}
+              onPress={() => handleLogout(rider.riderDetails?._id)}>
+              <MaterialIcons name="logout" size={18} color={iconColor} />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
         {/* Profile Identity — untouched, parallax works as before */}
@@ -235,22 +227,6 @@ export default function Profile() {
             <Text className="text-2xl font-bold tracking-wide text-primary-foreground">
               {rider.firstName} {rider.lastName}
             </Text>
-            <Animated.View
-              style={badgeOpacityStyle}
-              className="flex-row items-center gap-1.5 rounded-full bg-primary-foreground/50 px-3 py-1">
-              <MaterialIcons
-                name={
-                  rider.gender === 'Male'
-                    ? 'male'
-                    : rider?.gender === 'Female'
-                      ? 'female'
-                      : 'transgender'
-                }
-                size={13}
-                color="rgba(255,255,255,0.8)"
-              />
-              <Text className="text-xs font-medium text-white">{rider.gender}</Text>
-            </Animated.View>
           </Animated.View>
         </View>
       </Animated.View>
@@ -348,7 +324,8 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-    </>
+      
+    </View>
   );
 }
 

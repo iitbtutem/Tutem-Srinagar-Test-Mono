@@ -7,7 +7,6 @@ import { useMutation, useQuery } from 'convex/react';
 import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import LoadingScreen from '@/components/LoadingScreen';
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -30,6 +29,7 @@ import {
   AvatarImage,
   Button,
   Text,
+  Loader,
 } from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
@@ -181,7 +181,7 @@ export default function Profile() {
   });
 
   if (!userId) return <ErrorScreen message="Account not found" />;
-  if (driver === undefined) return <LoadingScreen message="Loading profile…" />;
+  if (driver === undefined) return <Loader subtitle="Loading profile…" />;
   if (driver === null || driver.driverDetails === null)
     return <ErrorScreen message="Account not found" />;
 

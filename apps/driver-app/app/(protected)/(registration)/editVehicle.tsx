@@ -10,6 +10,7 @@ import {
   Input,
   Text,
   Button,
+  Loader,
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +33,6 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
 import useThemeColors from '@/hooks/useColorScheme';
 import { BasicHeader } from '@/components/CustomHeader';
-import Loader from '@/components/Loader';
 
 type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 

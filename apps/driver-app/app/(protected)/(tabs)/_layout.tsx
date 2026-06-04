@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/expo';
 import { useQuery } from 'convex/react';
 import HomeScreenHeader from '@/components/CustomHeader';
 import { api } from '@tutem/api';
+import { colors } from '@/constants/colors';
 
 export default function TabsLayout() {
   const { userId } = useAuth();
@@ -19,7 +20,7 @@ export default function TabsLayout() {
         headerShown: true,
         header: () => user && <HomeScreenHeader user={user} />,
         tabBarStyle: {
-          backgroundColor: '#40a4f5',
+          backgroundColor: colors.primary,
           borderTopColor: '#E5E7EB',
           height: 60,
           paddingBottom: 5,

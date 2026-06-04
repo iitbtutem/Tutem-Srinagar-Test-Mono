@@ -6,13 +6,12 @@ import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-nati
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage, Separator } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Loader, Separator } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
-import Loader from '@/components/Loader';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
 

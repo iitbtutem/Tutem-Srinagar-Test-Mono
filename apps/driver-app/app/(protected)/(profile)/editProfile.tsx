@@ -1,4 +1,4 @@
-import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DatePicker';
+import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
 import { Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRef, useState } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   Input,
   Text,
   Button,
+  Loader
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import useThemeColors from '@/hooks/useColorScheme';
 import { BasicHeader } from '@/components/CustomHeader';
-import Loader from '@/components/Loader';
+import { subYears } from 'date-fns';
 
 const formSchema = z.object({
   firstName: z
@@ -43,10 +44,13 @@ const formSchema = z.object({
   dob: z.date('Enter your DOB'),
   licenseNumber: z
     .string('License number is required.')
-    .min(14, 'Invalid license number')
-    .max(20, 'Invalid license number'),
+    .min(14, 'License number must be at least 14 characters long.')
+    .max(20, 'License number must be at most 20 characters long.'),
   organizationId: z.string().min(1, 'Select an organization.'),
-  phoneNumber: z.string().min(1, 'Phone number is required').max(10, 'Invalid phone number'),
+  phoneNumber: z.string()
+    .min(1, 'Phone number is required')
+    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
+    .length(10, "Phone number must be exactly 10 digits"),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
 });
@@ -362,12 +366,13 @@ export default function EditProfile() {
                     <CustomDatePicker
                       disabled={true}
                       ref={dobRef}
-                      title="Choose DOB"
+                      placeholder="Choose DOB"
                       date={field.value}
                       setDate={(date) => {
                         field.onChange(date);
                         licenseRef.current?.focus();
                       }}
+                      maximumDate={subYears(new Date(), 18)}
                     />
                     {fieldState.error && (
                       <Text className="text-md text-destructive">{fieldState.error.message}</Text>
