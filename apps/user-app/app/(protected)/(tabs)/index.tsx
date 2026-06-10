@@ -66,6 +66,7 @@ export default function HomeScreen() {
         <View className="flex-row gap-2 px-4">
           {services.map((service) => (
             <TouchableOpacity
+              key={service.id}
               activeOpacity={0.8}
               onPress={() => router.push(service.href)}
               className="aspect-square items-center justify-center flex-1 bg-primary/10 rounded-xl px-2">

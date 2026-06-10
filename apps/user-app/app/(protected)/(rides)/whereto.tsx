@@ -103,6 +103,9 @@ type NearbyDriversPanelProps = {
   riderGender: 'Male' | 'Female' | 'Other';
   genderMatch: boolean;
   setGenderMatch: React.Dispatch<React.SetStateAction<boolean>>;
+  hasSearchedDrivers: boolean;
+  onFindDriver: () => void;
+  isSearchingDrivers: boolean;
 };
 
 function NearbyDriversPanel({
@@ -114,6 +117,9 @@ function NearbyDriversPanel({
   setFilters,
   genderMatch,
   setGenderMatch,
+  hasSearchedDrivers,
+  onFindDriver,
+  isSearchingDrivers,
 }: NearbyDriversPanelProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
   console.log("DRIVERS", drivers)
@@ -163,121 +169,137 @@ function NearbyDriversPanel({
         </View>
       </View>
 
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-lg font-bold text-foreground">Nearby drivers</Text>
-        <Text className="text-xs text-muted-foreground">{drivers.length} available</Text>
-      </View>
-
-      {/* Driver list */}
-      {drivers.length > 0 ? (
-        <BottomSheetScrollView
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ gap: 3 }}>
-          {drivers.map((driver) => {
-            const isSelected = selectedDriver === driver.driver._id;
-            const verificationStatus = driver?.driver?.isLicenseVerified;
-
-            const licenseVerification = verificationStatus
-              ? VERIFICATION_CONFIG[verificationStatus]
-              : VERIFICATION_CONFIG['Pending'];
-
-            return (
-              <TouchableOpacity
-                key={driver.driver._id}
-                onPress={() => onSelect(driver.driver._id)}
-                activeOpacity={0.85}
-                style={{ minWidth: 160 }}
-                className={cn(
-                  'flex-row items-center gap-3 rounded-2xl border px-3 py-2.5',
-                  isSelected
-                    ? 'border-foreground bg-foreground/10'
-                    : 'border-transparent bg-muted/20'
-                )}>
-                {/* Avatar */}
-                <Avatar alt="Profile pic" className="h-9 w-9">
-                  <AvatarImage
-                    source={
-                      driver.driver.userDetails.profilePictureKey?.trim()
-                        ? { uri: driver.driver.userDetails.profilePictureKey }
-                        : require('@/assets/images/avatar.jpg')
-                    }
-                  />
-                  <AvatarFallback className="bg-white/20">
-                    <Text className="text-xs font-bold text-primary">
-                      {driver.driver.userDetails.firstName?.[0]}
-                      {driver.driver.userDetails?.lastName?.[0]}
-                    </Text>
-                  </AvatarFallback>
-                </Avatar>
-
-                {/* Middle Content */}
-                <View className="flex-1">
-                  {/* Name + Verified */}
-                  <View className="flex-row items-center gap-1.5">
-                    <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
-                      {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
-                    </Text>
-
-                    {/* Verified Badge (inline, not floating) */}
-                    <View className="flex-row items-center gap-1">
-                      <Feather
-                        name={licenseVerification.icon as any}
-                        size={12}
-                        color={licenseVerification.color}
-                      />
-                      <Text
-                        style={{ color: licenseVerification.color }}
-                        className="text-[10px] font-semibold">
-                        {licenseVerification.label}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Gender + Vehicle */}
-                  <View className="mt-0.5 flex-row items-center gap-2">
-                    {driver.driver.averageRating && (
-                      <>
-                        <Ionicons name="star" size={12} color="orange" />
-                        <Text className="text-xs text-muted-foreground">
-                          {driver.driver.averageRating}
-                        </Text>
-                        <Text className="text-xs text-muted-foreground">•</Text>
-                      </>
-                    )}
-                    {/* dot separator */}
-
-                    <Text className="text-xs text-muted-foreground">{driver.vehicle.class}</Text>
-
-                    <Text className="text-xs text-muted-foreground">•</Text>
-                    
-                    <View className="flex-row items-center gap-0.5">
-                      <MaterialIcons
-                        name={
-                          driver.driver.userDetails.gender === 'Male'
-                            ? 'male'
-                            : driver.driver.userDetails.gender === 'Female'
-                              ? 'female'
-                              : 'transgender'
-                        }
-                        size={13}
-                        color="rgba(255,255,255,0.5)"
-                      />
-                      <Text className="text-xs text-muted-foreground">
-                        {driver.driver.userDetails.gender || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Fare */}
-                <Text className="text-base font-bold text-foreground">₹{driver.fare}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </BottomSheetScrollView>
+      {!hasSearchedDrivers ? (
+        <Button onPress={onFindDriver} className="mt-auto h-14 rounded-xl" disabled={isSearchingDrivers}>
+          {isSearchingDrivers ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-lg font-bold text-secondary">Find My Driver</Text>
+          )}
+        </Button>
       ) : (
-        <Text>No nearby drivers.</Text>
+        <>
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Nearby drivers</Text>
+            {isSearchingDrivers ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <Text className="text-xs text-muted-foreground">{drivers.length} available</Text>
+            )}
+          </View>
+
+          {/* Driver list */}
+          {drivers.length > 0 ? (
+            <BottomSheetScrollView
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 3 }}>
+              {drivers.map((driver) => {
+                const isSelected = selectedDriver === driver.driver._id;
+                const verificationStatus = driver?.driver?.isLicenseVerified;
+
+                const licenseVerification = verificationStatus
+                  ? VERIFICATION_CONFIG[verificationStatus]
+                  : VERIFICATION_CONFIG['Pending'];
+
+                return (
+                  <TouchableOpacity
+                    key={driver.driver._id}
+                    onPress={() => onSelect(driver.driver._id)}
+                    activeOpacity={0.85}
+                    style={{ minWidth: 160 }}
+                    className={cn(
+                      'flex-row items-center gap-3 rounded-2xl border px-3 py-2.5',
+                      isSelected
+                        ? 'border-foreground bg-foreground/10'
+                        : 'border-transparent bg-muted/20'
+                    )}>
+                    {/* Avatar */}
+                    <Avatar alt="Profile pic" className="h-9 w-9">
+                      <AvatarImage
+                        source={
+                          driver.driver.userDetails.profilePictureKey?.trim()
+                            ? { uri: driver.driver.userDetails.profilePictureKey }
+                            : require('@/assets/images/avatar.jpg')
+                        }
+                      />
+                      <AvatarFallback className="bg-white/20">
+                        <Text className="text-xs font-bold text-primary">
+                          {driver.driver.userDetails.firstName?.[0]}
+                          {driver.driver.userDetails?.lastName?.[0]}
+                        </Text>
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Middle Content */}
+                    <View className="flex-1">
+                      {/* Name + Verified */}
+                      <View className="flex-row items-center gap-1.5">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                          {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
+                        </Text>
+
+                        {/* Verified Badge (inline, not floating) */}
+                        <View className="flex-row items-center gap-1">
+                          <Feather
+                            name={licenseVerification.icon as any}
+                            size={12}
+                            color={licenseVerification.color}
+                          />
+                          <Text
+                            style={{ color: licenseVerification.color }}
+                            className="text-[10px] font-semibold">
+                            {licenseVerification.label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Gender + Vehicle */}
+                      <View className="mt-0.5 flex-row items-center gap-2">
+                        {driver.driver.averageRating && (
+                          <>
+                            <Ionicons name="star" size={12} color="orange" />
+                            <Text className="text-xs text-muted-foreground">
+                              {driver.driver.averageRating}
+                            </Text>
+                            <Text className="text-xs text-muted-foreground">•</Text>
+                          </>
+                        )}
+                        {/* dot separator */}
+
+                        <Text className="text-xs text-muted-foreground">{driver.vehicle.class}</Text>
+
+                        <Text className="text-xs text-muted-foreground">•</Text>
+                        
+                        <View className="flex-row items-center gap-0.5">
+                          <MaterialIcons
+                            name={
+                              driver.driver.userDetails.gender === 'Male'
+                                ? 'male'
+                                : driver.driver.userDetails.gender === 'Female'
+                                  ? 'female'
+                                  : 'transgender'
+                            }
+                            size={13}
+                            color="rgba(255,255,255,0.5)"
+                          />
+                          <Text className="text-xs text-muted-foreground">
+                            {driver.driver.userDetails.gender || 'N/A'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Fare */}
+                    <Text className="text-base font-bold text-foreground">₹{driver.fare}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </BottomSheetScrollView>
+          ) : (
+            <Text>{isSearchingDrivers ? 'Searching for drivers...' : 'No nearby drivers.'}</Text>
+          )}
+        </>
       )}
     </View>
   );
@@ -302,7 +324,7 @@ export default function WhereTo() {
   const pickupRef = useRef<any>(null);
   const destinationRef = useRef<any>(null);
 
-  const snapPoints = useMemo(() => ['40%', '90%'], []);
+  const snapPoints = useMemo(() => ['40%', '80%'], []);
   const [sheetIndex, setSheetIndex] = useState(1);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
 
@@ -345,6 +367,7 @@ export default function WhereTo() {
 
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);
+  const [hasSearchedDrivers, setHasSearchedDrivers] = useState(false);
 
   const apiKey =
     Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -363,7 +386,7 @@ export default function WhereTo() {
 
   // Discovery logic using Action
   useEffect(() => {
-    if (bothSelected && showDrivers && selectedRoute && rider && rider.riderDetails && pickupLocation) {
+    if (bothSelected && showDrivers && hasSearchedDrivers && selectedRoute && rider && rider.riderDetails && pickupLocation) {
       const riderId = rider.riderDetails._id;
       const pickupLat = pickupLocation.coords.latitude;
       const pickupLon = pickupLocation.coords.longitude;
@@ -404,6 +427,7 @@ export default function WhereTo() {
   }, [
     bothSelected, 
     showDrivers, 
+    hasSearchedDrivers,
     selectedRoute?.distance.value, 
     rider?.riderDetails?._id, 
     genderMatch, 
@@ -463,6 +487,13 @@ export default function WhereTo() {
         1000
       );
       setMapSelectionMode(null);
+
+      if (destination) {
+        setShowDrivers(true);
+        setHasSearchedDrivers(false);
+        setSheetIndex(0);
+        Keyboard.dismiss();
+      }
     }
   };
 
@@ -489,7 +520,8 @@ export default function WhereTo() {
 
       // Auto-show drivers panel when destination is selected
       setShowDrivers(true);
-      setSheetIndex(1);
+      setHasSearchedDrivers(false);
+      setSheetIndex(0);
       Keyboard.dismiss();
       setMapSelectionMode(null);
     }
@@ -499,28 +531,48 @@ export default function WhereTo() {
     pickupRef.current?.setAddressText(pickupLocation?.title || '');
     setDestination(null);
     setShowDrivers(false);
+    setHasSearchedDrivers(false);
     setSelectedDriverId(null);
     setSheetIndex(1);
   };
 
   const confirmLocationFromMap = () => {
     if (!tempLocation && pickupLocation && destination) {
-      setSheetIndex(1);
+      setSheetIndex(0);
       return;
     }
     if (!tempLocation) return;
 
     const { title, latitude, longitude } = tempLocation;
+    let isBoth = false;
+    
     if (mapSelectionMode === 'pickup') {
       setPickupLocation({ title, coords: { latitude, longitude } });
       pickupRef.current?.setAddressText(title);
+
+      if (destination) {
+        setShowDrivers(true);
+        setHasSearchedDrivers(false);
+        isBoth = true;
+      }
     } else if (mapSelectionMode === 'destination') {
       setDestination({ title, coords: { latitude, longitude } });
       destinationRef.current?.setAddressText(title);
-      setShowDrivers(true);
+      
+      if (pickupLocation) {
+        setShowDrivers(true);
+        setHasSearchedDrivers(false);
+        isBoth = true;
+      } else {
+        // Also show drivers if destination is set, wait no, only if both. 
+        // But the existing code did setShowDrivers(true) here unconditionally.
+        setShowDrivers(true);
+        setHasSearchedDrivers(false);
+      }
     }
+    
     setTempLocation(null);
-    setSheetIndex(1);
+    setSheetIndex(isBoth || (mapSelectionMode === 'destination' && pickupLocation) ? 0 : 1);
     setMapSelectionMode(null);
     setTimeout(() => {
       if (mapSelectionMode === 'pickup') pickupRef.current?.blur();
@@ -839,7 +891,7 @@ export default function WhereTo() {
                       <Ionicons name="arrow-back" size={24} color={'black'} />
                     </TouchableOpacity>
                     <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
-                      Choose a driver
+                      {hasSearchedDrivers ? 'Choose a driver' : 'Find My Driver'}
                     </Text>
                   </View>
 
@@ -886,6 +938,9 @@ export default function WhereTo() {
                     genderMatch={genderMatch}
                     setGenderMatch={setGenderMatch}
                     riderGender={rider!.gender} // REMINDER GET IT CHECKED OUT, TO SEE IF IM GETTING THE USER THE RIGHT WAY
+                    hasSearchedDrivers={hasSearchedDrivers}
+                    onFindDriver={() => setHasSearchedDrivers(true)}
+                    isSearchingDrivers={isSearchingDrivers}
                   />
                 </View>
               </SheetLayer>
@@ -1268,8 +1323,15 @@ export default function WhereTo() {
                   </View>
 
                   {/* Confirm button */}
-                  <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">Choose driver</Text>
+                  <Button onPress={() => {
+                    setSheetIndex(1);
+                    if (!hasSearchedDrivers) {
+                      setHasSearchedDrivers(true);
+                    }
+                  }} className="h-14 rounded-xl">
+                    <Text className="text-lg font-bold text-secondary">
+                      {hasSearchedDrivers ? 'Choose driver' : 'Find My Driver'}
+                    </Text>
                   </Button>
                 </View>
               </SheetLayer>
