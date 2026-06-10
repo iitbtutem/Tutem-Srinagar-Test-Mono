@@ -101,7 +101,7 @@ export default function HomeScreen() {
             gap: 14,
           }}
           renderItem={({item}) => (
-            <View className="h-56 w-64 overflow-hidden rounded-2xl bg-primary/10">
+            <View className="h-52 w-72 overflow-hidden rounded-2xl bg-primary/10">
               {/* Thumbnail */}
               <ImageBackground 
                 className="flex-1 items-center justify-center" 
