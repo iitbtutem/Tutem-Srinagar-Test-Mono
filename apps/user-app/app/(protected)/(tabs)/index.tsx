@@ -19,8 +19,8 @@ import { distanceFormat, formatFare } from '@/lib/utils';
 import { HomeScreenHeader } from '@/components/CustomHeader';
 
 const services = [
-  { id: 'ride_request', name: 'Ride Request', image: require('@/assets/images/ride_pooling.png'), href: '/whereto' },
-  { id: 'ride_pooling', name: 'Ride Pooling', image: require('@/assets/images/ride_request.png'), href: '/' },
+  { id: 'ride_request', name: 'Ride Request', image: require('@/assets/images/ride_request.png'), href: '/whereto' },
+  { id: 'ride_pooling', name: 'Ride Pooling', image: require('@/assets/images/ride_pooling.png'), href: '/' },
   { id: 'walk_mode', name: 'Walk Mode', image: require('@/assets/images/walk_mode.png'), href: '/' },
 ] as const;
 
@@ -59,14 +59,16 @@ export default function HomeScreen() {
     <View className="flex-1 bg-background">
 
       {user && <HomeScreenHeader user={user} />}
+
       <ScrollView showsVerticalScrollIndicator={false} className='bg-background'>
+        <Text className="mx-6 mb-3 text-xl font-bold">Ride Services</Text>
         {/*  Ride Services  */}
-        <View className="flex-row gap-2 mt-2 px-4">
+        <View className="flex-row gap-2 px-4">
           {services.map((service) => (
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => router.push(service.href)}
-              className="aspect-square items-center justify-center flex-1 bg-primary/10 rounded-xl py-3 px-2">
+              className="aspect-square items-center justify-center flex-1 bg-primary/10 rounded-xl px-2">
               {/* Icon container */}
               <Image
                 source={service.image}
@@ -87,42 +89,48 @@ export default function HomeScreen() {
         <ActiveRideCard />
 
         {/* Insights */}
-        <View className="mt-8">
-          <Text className="mx-6 mb-4 text-xl font-semibold text-foreground">Insights</Text>
+        <Text className="mx-6 mt-4 mb-3 text-xl font-bold">Insights</Text>
 
-          <FlatList
-            data={youtubeVideos}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{
-              paddingHorizontal: 24,
-              gap: 14,
-            }}
-            renderItem={({item}) => (
-              <View className="h-56 w-64 overflow-hidden rounded-2xl bg-primary/10">
-                {/* Thumbnail */}
-                <ImageBackground 
-                  className="flex-1 items-center justify-center" 
-                  source={{
-                  uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`}}
-                >
-                  <TouchableOpacity onPress={() => openVideo(item.id)}>
-                    <MaterialIcons name="play-circle" size={48} color="#fff" />
-                  </TouchableOpacity>
-                </ImageBackground>
+        <FlatList
+          data={youtubeVideos}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            gap: 14,
+          }}
+          renderItem={({item}) => (
+            <View className="h-56 w-64 overflow-hidden rounded-2xl bg-primary/10">
+              {/* Thumbnail */}
+              <ImageBackground 
+                className="flex-1 items-center justify-center" 
+                source={{
+                uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`}}
+              >
+                <TouchableOpacity onPress={() => openVideo(item.id)}>
+                  <MaterialIcons name="play-circle" size={48} color="#fff" />
+                </TouchableOpacity>
+              </ImageBackground>
 
-                {/* Footer */}
-                <View className="p-3 pt-1">
-                  <Text className="text-sm font-semibold text-foreground">{item.title}</Text>
-                  <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
-                </View>
+              {/* Footer */}
+              <View className="p-3 pt-1">
+                <Text className="text-sm font-semibold text-foreground">{item.title}</Text>
+                <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
               </View>
-            )}
-          />
-        </View>
+            </View>
+          )}
+        />
 
-        <View className="h-10" />
+        <View className="my-2">
+          <Text className="text-lg font-bold text-center tracking-wide -mb-2">Developed for public convenience</Text>
+          <Text className="text-lg font-bold text-center tracking-wide">No commission charged</Text>
+        </View>
+        <Image
+          source={require("@/assets/images/footer.png")}
+          style={{ width: "100%", height: 130 }}
+          resizeMode="cover"
+        />
       </ScrollView>
     </View>
   );
