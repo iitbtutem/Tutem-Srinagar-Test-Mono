@@ -320,12 +320,15 @@ export default function WhereTo() {
     useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const confirmSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
   const pickupRef = useRef<any>(null);
   const destinationRef = useRef<any>(null);
 
   const snapPoints = useMemo(() => ['45%', '85%'], []);
+  const confirmSnapPoints = useMemo(() => ['50%'], []);
   const [sheetIndex, setSheetIndex] = useState(1);
+  const [confirmSheetOpen, setConfirmSheetOpen] = useState(false);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
 
   const [filters, setFilters] = useState<VehicleClass[]>([]);
@@ -659,9 +662,14 @@ export default function WhereTo() {
   // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (selectedDriverId) {
+      if (confirmSheetOpen) {
+        confirmSheetRef.current?.close();
+        setConfirmSheetOpen(false);
         setSelectedDriverId(null);
-        setSheetIndex(1);
+        setTimeout(() => {
+          bottomSheetRef.current?.snapToIndex(1);
+          setSheetIndex(1);
+        }, 200);
         return true;
       }
       if (showDrivers) {
@@ -673,7 +681,7 @@ export default function WhereTo() {
     });
 
     return () => backHandler.remove();
-  }, [showDrivers, selectedDriverId, handleBackToPlanning]);
+  }, [showDrivers, confirmSheetOpen, handleBackToPlanning]);
 
   const rotationStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }],
@@ -687,6 +695,25 @@ export default function WhereTo() {
   const selectedDriver = nearbyDrivers?.find(
     (nearbyDriver) => nearbyDriver.driver._id === selectedDriverId
   );
+
+  const handleDriverSelect = useCallback((driverId: string) => {
+    setSelectedDriverId(driverId);
+    // Collapse the main sheet then open the confirm sheet
+    bottomSheetRef.current?.collapse();
+    setConfirmSheetOpen(true);
+    setTimeout(() => confirmSheetRef.current?.snapToIndex(0), 100);
+  }, []);
+
+  const handleCloseConfirm = useCallback(() => {
+    confirmSheetRef.current?.close();
+    setConfirmSheetOpen(false);
+    setSelectedDriverId(null);
+    // Re-open the main sheet at the driver-list snap point
+    setTimeout(() => {
+      bottomSheetRef.current?.snapToIndex(1);
+      setSheetIndex(1);
+    }, 100);
+  }, []);
 
   const handleConfirmRide = async () => {
     if (rider?._id === undefined || rider.riderDetails === null) return;
@@ -899,10 +926,7 @@ export default function WhereTo() {
                   <NearbyDriversPanel
                     drivers={nearbyDrivers ?? []}
                     selectedDriver={selectedDriverId}
-                    onSelect={(id) => {
-                      setSelectedDriverId(id);
-                      setSheetIndex(1);
-                    }}
+                    onSelect={handleDriverSelect}
                     sheetState={sheetState}
                     isDark={isDark}
                     filters={filters}
@@ -1119,115 +1143,6 @@ export default function WhereTo() {
 
             {/* LAYER 3: Collapsed — map pin selection (always present) */}
 
-            {(bothSelected || showDrivers) && selectedDriver && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0}>
-                <View className="px-6">
-                  <View className="mb-2 flex-row items-center">
-                    <TouchableOpacity onPress={() => { setSelectedDriverId(null); setSheetIndex(1); }} className="-ml-2 px-2">
-                      <Ionicons name="arrow-back" size={24} color={'black'} />
-                    </TouchableOpacity>
-                    <Text className="mr-6 flex-1 text-center text-xl font-extrabold text-foreground">
-                      Confirmation
-                    </Text>
-                  </View>
-
-                  <View className="mb-3 gap-2">
-                    <View className="flex-row items-center justify-between gap-3">
-                      <View className="items-center justify-center gap-1.5">
-                        <Avatar alt="Profile pic" className="h-14 w-14">
-                          <AvatarImage
-                            source={
-                              selectedDriver.driver.userDetails.profilePictureKey?.trim()
-                                ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
-                                : require('@/assets/images/avatar.jpg')
-                            }
-                          />
-                          <AvatarFallback className="bg-white/20">
-                            <Text className="text-xs font-bold text-primary">
-                              {selectedDriver.driver.userDetails.firstName?.[0]}
-                              {selectedDriver.driver.userDetails?.lastName?.[0]}
-                            </Text>
-                          </AvatarFallback>
-                        </Avatar>
-                        <GenderAge
-                          gender={selectedDriver.driver.userDetails.gender}
-                          dob={selectedDriver.driver.userDetails.dob}
-                        />
-                        </View>
-                        <View className="min-w-0 flex-1 gap-0.5">
-                          {/* Name + Verified */}
-                          <Text className="font-semibold text-primary">
-                            {selectedDriver.driver.userDetails.firstName}{' '}
-                            {selectedDriver.driver.userDetails.lastName}
-                          </Text>
-
-                          <Text className="text-xs font-medium">Organization Name Dummy</Text>
-
-                          <View className="flex-row items-center justify-start">
-                            <MaterialCommunityIcons
-                              name={VEHICLE_ICONS[selectedDriver.vehicle.class]}
-                              size={18}
-                              color="black"
-                            />
-                            <Text className="text-sm text-slate-600">
-                              {' •'}{selectedDriver.vehicle.model} {'•'}
-                              {selectedDriver.vehicle.registrationNumber} {'•'}
-                              {selectedDriver.vehicle.color}
-                            </Text>
-                          </View>
-
-                          {/* vehicle and driver rating and verification */}
-                          <View className="mt-0.5 flex-row items-center gap-2">
-                            <Rating rating={selectedDriver.driver.rating} />
-
-                            {/* Verified Badge (inline, not floating) */}
-                            <View className="flex-row items-center gap-1">
-                              <Feather
-                                name={licenseVerification.icon as any}
-                                size={12}
-                                color={licenseVerification.color}
-                              />
-                              <Text
-                                style={{ color: licenseVerification.color }}
-                                className="text-sm font-semibold">
-                                {licenseVerification.label}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      
-                    </View>
-
-                    <View className="h-[1px] bg-border" />
-
-                    <View className="flex-row items-center justify-between rounded-xl bg-muted/30 px-3">
-                      {/* <View>
-                        <Text className="text-muted-foreground">Arriving in</Text>
-                        <Text className="text-lg font-bold text-foreground">7 min</Text>
-                      </View> */}
-                      <View className="w-full flex-row justify-between gap-1.5">
-                        <View>
-                          <Text numberOfLines={1} className="text-sm font-bold truncate">Pickup: {pickupLocation?.title}</Text>
-                          <Text numberOfLines={1} className="text-sm font-bold truncate">Destination: {destination?.title}</Text>
-                          <Text className="text-sm font-bold">
-                            Distance: {distanceFormat(selectedRoute?.distance.value ?? 0)}
-                          </Text> 
-                          <Text className="text-sm font-bold">
-                            Expected Fare: {formatFare(selectedDriver.fare)}
-                          </Text>                       
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Confirm button */}
-                  <Button onPress={handleConfirmRide} className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">Confirm Ride</Text>
-                  </Button>
-                </View>
-              </SheetLayer>
-            )}
-
             {(bothSelected || showDrivers) && !selectedDriver && (
               <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
                 <View className="px-6 py-2">
@@ -1370,6 +1285,120 @@ export default function WhereTo() {
               </SheetLayer>
             )}
           </View>
+        </View>
+      </BottomSheet>
+
+      {/* ── Confirmation Bottom Sheet ── */}
+      <BottomSheet
+        ref={confirmSheetRef}
+        index={-1}
+        snapPoints={confirmSnapPoints}
+        enablePanDownToClose={false}
+        enableDynamicSizing={false}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
+        animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
+        enableHandlePanningGesture={false}
+        enableContentPanningGesture={false}
+      >
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingBottom: insets.bottom + 16 }}>
+          {/* Header */}
+          <View className="mb-2 flex-row items-center">
+            <TouchableOpacity onPress={handleCloseConfirm} className="-ml-2 px-2">
+              <Ionicons name="arrow-back" size={24} color={'black'} />
+            </TouchableOpacity>
+            <Text className="mr-6 flex-1 text-center text-xl font-extrabold text-foreground">
+              Confirm Ride
+            </Text>
+          </View>
+
+          {/* Content */}
+          <View style={{ flex: 1 }}>
+            {selectedDriver && (
+              <View style={{ gap: 12 }}>
+                {/* Driver card */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ alignItems: 'center', gap: 6 }}>
+                    <Avatar alt="Profile pic" className="h-14 w-14">
+                      <AvatarImage
+                        source={
+                          selectedDriver.driver.userDetails.profilePictureKey?.trim()
+                            ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
+                            : require('@/assets/images/avatar.jpg')
+                        }
+                      />
+                      <AvatarFallback className="bg-white/20">
+                        <Text className="text-xs font-bold text-primary">
+                          {selectedDriver.driver.userDetails.firstName?.[0]}
+                          {selectedDriver.driver.userDetails?.lastName?.[0]}
+                        </Text>
+                      </AvatarFallback>
+                    </Avatar>
+                    <GenderAge
+                      gender={selectedDriver.driver.userDetails.gender}
+                      dob={selectedDriver.driver.userDetails.dob}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Text className="font-semibold text-primary">
+                      {selectedDriver.driver.userDetails.firstName}{' '}
+                      {selectedDriver.driver.userDetails.lastName}
+                    </Text>
+                    <Text className="text-xs font-medium">Organization Name Dummy</Text>
+
+                    <View className="flex-row items-center justify-start">
+                      <MaterialCommunityIcons
+                        name={VEHICLE_ICONS[selectedDriver.vehicle.class]}
+                        size={18}
+                        color={colors.primary}
+                      />
+                      <Text className="ml-1 text-sm text-slate-600">
+                        {selectedDriver.vehicle.model} • {selectedDriver.vehicle.registrationNumber} • {selectedDriver.vehicle.color}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                      <Rating rating={selectedDriver.driver.rating} />
+                      {licenseVerification && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name={licenseVerification.icon as any} size={12} color={licenseVerification.color} />
+                          <Text style={{ color: licenseVerification.color }} className="text-xs font-semibold">
+                            {licenseVerification.label}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+
+                <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)' }} />
+
+                {/* Trip details */}
+                <View className='rounded-2xl bg-primary/5 p-4'>
+                  <View className='flex-row gap-2'>
+                    <MaterialCommunityIcons name="map-marker" size={16} color="green" />
+                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">{pickupLocation?.title}</Text>
+                  </View>
+                  <View className='flex-row gap-2'>
+                    <MaterialCommunityIcons name="map-marker" size={16} color="red" />
+                  <Text numberOfLines={1} className="text-sm font-bold text-foreground">{destination?.title}</Text>
+                  </View>
+                  <View className='flex-row justify-between items-center'>
+                    <Text className="text-sm font-semibold text-muted-foreground">
+                      {distanceFormat(selectedRoute?.distance.value ?? 0)}
+                    </Text>
+                    <Text className="text-lg font-extrabold tracking-wider text-green-400">
+                      {formatFare(selectedDriver.fare)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Confirm button pinned to bottom */}
+          <Button onPress={handleConfirmRide} className="mt-4">
+            <Text className="text-lg font-bold text-secondary">Confirm Ride</Text>
+          </Button>
         </View>
       </BottomSheet>
     </GestureHandlerRootView>
