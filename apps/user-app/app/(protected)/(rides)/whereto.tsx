@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import BottomSheet, { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Location from 'expo-location';
+// import * as Location from 'expo-location';
 import { useColorScheme } from 'nativewind';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { mapStyle } from '@/constants/mapStyles';
@@ -30,18 +30,26 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useToast } from '@/components/CustomToast';
 import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
-import {
-  VERIFICATION_CONFIG,
-} from '@/constants/colors';
+import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import { useRouter } from 'expo-router';
-import { cn, formatFare } from '@/lib/utils';
+import { cn, distanceFormat, formatFare } from '@/lib/utils';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useAuth } from '@clerk/expo';
-import { Avatar, AvatarFallback, AvatarImage, Text, Button, Switch } from '@tutem/ui';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Text,
+  Button,
+  Switch,
+  GenderAge,
+  Rating,
+} from '@tutem/ui';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useLocation } from '@/hooks/useCurrentLocation';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -49,6 +57,8 @@ const VEHICLE_ICONS = {
   Bike: 'bike',
   Auto: 'rickshaw',
 } as const;
+
+type Cords = { latitude: number; longitude: number };
 
 type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
@@ -122,7 +132,7 @@ function NearbyDriversPanel({
   isSearchingDrivers,
 }: NearbyDriversPanelProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
-  console.log("DRIVERS", drivers)
+  console.log('DRIVERS', drivers);
 
   return (
     <View className="mb-6 px-4 pt-2">
@@ -163,14 +173,17 @@ function NearbyDriversPanel({
             );
           }}
         />
-        <View className='flex-row gap-2 items-center'>
-          <Text className='text-xs'> Gender{"\n"}Matching</Text>
-          <Switch checked={genderMatch} onCheckedChange={setGenderMatch}/>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-xs"> Gender{'\n'}Matching</Text>
+          <Switch checked={genderMatch} onCheckedChange={setGenderMatch} />
         </View>
       </View>
 
       {!hasSearchedDrivers ? (
-        <Button onPress={onFindDriver} className="mt-auto h-14 rounded-xl" disabled={isSearchingDrivers}>
+        <Button
+          onPress={onFindDriver}
+          className="mt-auto h-14 rounded-xl"
+          disabled={isSearchingDrivers}>
           {isSearchingDrivers ? (
             <ActivityIndicator color="white" />
           ) : (
@@ -207,40 +220,60 @@ function NearbyDriversPanel({
                     key={driver.driver._id}
                     onPress={() => onSelect(driver.driver._id)}
                     activeOpacity={0.85}
-                    style={{ minWidth: 160 }}
                     className={cn(
-                      'flex-row items-center gap-3 rounded-2xl border px-3 py-2.5',
-                      isSelected
-                        ? 'border-foreground bg-foreground/10'
-                        : 'border-transparent bg-muted/20'
+                      'flex-1 flex-row items-center justify-between gap-3 rounded-2xl border border-primary/50 px-1 py-2.5',
+                      isSelected ? 'bg-primary/15' : 'bg-primary/0'
                     )}>
-                    {/* Avatar */}
-                    <Avatar alt="Profile pic" className="h-9 w-9">
-                      <AvatarImage
-                        source={
-                          driver.driver.userDetails.profilePictureKey?.trim()
-                            ? { uri: driver.driver.userDetails.profilePictureKey }
-                            : require('@/assets/images/avatar.jpg')
-                        }
+                    {/* Avatar and gender */}
+                    <View className="items-center justify-center gap-1.5">
+                      <Avatar alt="Profile pic" className="h-14 w-14">
+                        <AvatarImage
+                          source={
+                            driver.driver.userDetails.profilePictureKey?.trim()
+                              ? { uri: driver.driver.userDetails?.profilePictureKey }
+                              : require('@/assets/images/avatar.jpg')
+                          }
+                        />
+                        <AvatarFallback className="bg-white/20">
+                          <Text className="text-xs font-bold text-primary">
+                            {driver.driver.userDetails?.firstName?.[0]}
+                            {driver.driver.userDetails?.lastName?.[0]}
+                          </Text>
+                        </AvatarFallback>
+                      </Avatar>
+                      <GenderAge
+                        gender={driver.driver.userDetails?.gender}
+                        dob={driver.driver.userDetails?.dob}
                       />
-                      <AvatarFallback className="bg-white/20">
-                        <Text className="text-xs font-bold text-primary">
-                          {driver.driver.userDetails.firstName?.[0]}
-                          {driver.driver.userDetails?.lastName?.[0]}
-                        </Text>
-                      </AvatarFallback>
-                    </Avatar>
+                    </View>
 
                     {/* Middle Content */}
-                    <View className="flex-1">
+                    <View className="min-w-0 flex-1">
                       {/* Name + Verified */}
-                      <View className="flex-row items-center gap-1.5">
-                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
-                          {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
-                        </Text>
+                      <Text className="font-semibold text-primary">
+                        {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
+                      </Text>
+
+                      <Text className="text-xs font-medium">Organization Name Dummy</Text>
+
+                      <View className="flex-row items-center justify-start">
+                        <MaterialCommunityIcons
+                          name={VEHICLE_ICONS[driver.vehicle.class]}
+                          size={16}
+                          color={colors.primary}
+                        />
+                        <Text className="ml-2 text-lg text-primary">•</Text>
+                        <Text className="text-sm text-slate-600">{driver.vehicle.color}</Text>
+                        <Text className="ml-2 text-lg text-primary">•</Text>
+                        <Text className="text-sm text-slate-600">{driver.vehicle.model}</Text>
+                      </View>
+
+                      {/* vehicle and driver rating and verification */}
+                      <View className="mt-0.5 flex-row items-center gap-2">
+                        <Rating rating={driver.driver.rating} />
 
                         {/* Verified Badge (inline, not floating) */}
-                        <View className="flex-row items-center gap-1">
+                        {driver.driver.isLicenseVerified === "Verified" && <View className="flex-row items-center gap-1">
                           <Feather
                             name={licenseVerification.icon as any}
                             size={12}
@@ -251,47 +284,12 @@ function NearbyDriversPanel({
                             className="text-[10px] font-semibold">
                             {licenseVerification.label}
                           </Text>
-                        </View>
-                      </View>
-
-                      {/* Gender + Vehicle */}
-                      <View className="mt-0.5 flex-row items-center gap-2">
-                        {driver.driver.averageRating && (
-                          <>
-                            <Ionicons name="star" size={12} color="orange" />
-                            <Text className="text-xs text-muted-foreground">
-                              {driver.driver.averageRating}
-                            </Text>
-                            <Text className="text-xs text-muted-foreground">•</Text>
-                          </>
-                        )}
-                        {/* dot separator */}
-
-                        <Text className="text-xs text-muted-foreground">{driver.vehicle.class}</Text>
-
-                        <Text className="text-xs text-muted-foreground">•</Text>
-                        
-                        <View className="flex-row items-center gap-0.5">
-                          <MaterialIcons
-                            name={
-                              driver.driver.userDetails.gender === 'Male'
-                                ? 'male'
-                                : driver.driver.userDetails.gender === 'Female'
-                                  ? 'female'
-                                  : 'transgender'
-                            }
-                            size={13}
-                            color="rgba(255,255,255,0.5)"
-                          />
-                          <Text className="text-xs text-muted-foreground">
-                            {driver.driver.userDetails.gender || 'N/A'}
-                          </Text>
-                        </View>
+                        </View>}
                       </View>
                     </View>
 
                     {/* Fare */}
-                    <Text className="text-base font-bold text-foreground">₹{driver.fare}</Text>
+                    <Text className="px-1 text-base font-bold text-foreground">₹{driver.fare}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -317,22 +315,22 @@ export default function WhereTo() {
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor} = useThemeColors();
+  const { location: currentLocation, refreshLocation } = useLocation();
+  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
+    useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
   const pickupRef = useRef<any>(null);
   const destinationRef = useRef<any>(null);
 
-  const snapPoints = useMemo(() => ['40%', '80%'], []);
+  const snapPoints = useMemo(() => ['45%', '85%'], []);
   const [sheetIndex, setSheetIndex] = useState(1);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
 
   const [filters, setFilters] = useState<VehicleClass[]>([]);
 
   const [genderMatch, setGenderMatch] = useState(false);
-
-
 
   const [pickupLocation, setPickupLocation] = useState<{
     title: string;
@@ -386,7 +384,15 @@ export default function WhereTo() {
 
   // Discovery logic using Action
   useEffect(() => {
-    if (bothSelected && showDrivers && hasSearchedDrivers && selectedRoute && rider && rider.riderDetails && pickupLocation) {
+    if (
+      bothSelected &&
+      showDrivers &&
+      hasSearchedDrivers &&
+      selectedRoute &&
+      rider &&
+      rider.riderDetails &&
+      pickupLocation
+    ) {
       const riderId = rider.riderDetails._id;
       const pickupLat = pickupLocation.coords.latitude;
       const pickupLon = pickupLocation.coords.longitude;
@@ -410,7 +416,7 @@ export default function WhereTo() {
           });
           setNearbyDrivers(drivers);
         } catch (error) {
-          console.error("Discovery error:", error);
+          console.error('Discovery error:', error);
           setNearbyDrivers([]);
         } finally {
           setIsSearchingDrivers(false);
@@ -425,52 +431,48 @@ export default function WhereTo() {
       setNearbyDrivers([]);
     }
   }, [
-    bothSelected, 
-    showDrivers, 
+    bothSelected,
+    showDrivers,
     hasSearchedDrivers,
-    selectedRoute?.distance.value, 
-    rider?.riderDetails?._id, 
-    genderMatch, 
-    filters
+    selectedRoute?.distance.value,
+    rider?.riderDetails?._id,
+    genderMatch,
+    filters,
   ]);
+
+  const fitMap = useCallback(
+    (cords: Cords = currentLocation, duration: number = 1000) => {
+      const newRegion = {
+        ...cords,
+        latitudeDelta: 0.015,
+        longitudeDelta: 0.015,
+      };
+      mapRef.current?.animateToRegion(newRegion, duration);
+    },
+    [currentLocation]
+  );
 
   async function getCurrentLocation() {
     setIsPickupSearching(true);
-    const { status } = await Location.requestForegroundPermissionsAsync();
 
-    if (status !== 'granted') {
-      showToast({ title: 'Location permissions denied', type: 'error' });
-      setIsPickupSearching(false);
-      return;
-    }
-
-    const location = await Location.getCurrentPositionAsync({});
-    const newRegion = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.015,
-      longitudeDelta: 0.015,
-    };
-
-    const title = await getAddressFromCoords(location.coords.latitude, location.coords.longitude);
+    const title = await getAddressFromCoords(currentLocation.latitude, currentLocation.longitude);
     pickupRef.current?.setAddressText(title);
     setPickupLocation({
       title,
-      coords: { latitude: location.coords.latitude, longitude: location.coords.longitude },
+      coords: { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
     });
 
-    mapRef.current?.animateToRegion(newRegion, 1000);
     setIsPickupSearching(false);
   }
 
   useEffect(() => {
+    fitMap();
     getCurrentLocation();
-  }, []);
+  }, [currentLocation]);
 
   useEffect(() => {
-    if(rider && rider.riderDetails)
-      setGenderMatch(rider.riderDetails.genderMatching)
-  }, [rider])
+    if (rider && rider.riderDetails) setGenderMatch(rider.riderDetails.genderMatching);
+  }, [rider]);
 
   const handlePickupSelect = async (data: any, details: any = null) => {
     if (details?.geometry?.location) {
@@ -482,10 +484,8 @@ export default function WhereTo() {
         title: data.description || data.structured_formatting?.main_text || 'Selected Location',
         coords,
       });
-      mapRef.current?.animateToRegion(
-        { ...coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-        1000
-      );
+      fitMap(coords);
+
       setMapSelectionMode(null);
 
       if (destination) {
@@ -507,10 +507,8 @@ export default function WhereTo() {
         title: data.description || data.structured_formatting?.main_text || 'Selected Destination',
         coords: dropoffCoords,
       });
-      mapRef.current?.animateToRegion(
-        { ...dropoffCoords, latitudeDelta: 0.01, longitudeDelta: 0.01 },
-        1000
-      );
+
+      fitMap(dropoffCoords);
 
       // If pickup location is null, set it to current location
       if (!pickupLocation && !isPickupSetAutomatically) {
@@ -545,7 +543,7 @@ export default function WhereTo() {
 
     const { title, latitude, longitude } = tempLocation;
     let isBoth = false;
-    
+
     if (mapSelectionMode === 'pickup') {
       setPickupLocation({ title, coords: { latitude, longitude } });
       pickupRef.current?.setAddressText(title);
@@ -558,19 +556,19 @@ export default function WhereTo() {
     } else if (mapSelectionMode === 'destination') {
       setDestination({ title, coords: { latitude, longitude } });
       destinationRef.current?.setAddressText(title);
-      
+
       if (pickupLocation) {
         setShowDrivers(true);
         setHasSearchedDrivers(false);
         isBoth = true;
       } else {
-        // Also show drivers if destination is set, wait no, only if both. 
+        // Also show drivers if destination is set, wait no, only if both.
         // But the existing code did setShowDrivers(true) here unconditionally.
         setShowDrivers(true);
         setHasSearchedDrivers(false);
       }
     }
-    
+
     setTempLocation(null);
     setSheetIndex(isBoth || (mapSelectionMode === 'destination' && pickupLocation) ? 0 : 1);
     setMapSelectionMode(null);
@@ -619,42 +617,18 @@ export default function WhereTo() {
   };
 
   const handleLocatePress = async () => {
-
-    const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        console.log('Permission denied');
-        return;
-      }
-
-      // Get current location
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-    mapRef.current?.animateToRegion(
-      {
-        latitude: currentLocation.coords.latitude || 28.5367,
-        longitude: currentLocation.coords.longitude || 77.1178,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      },
-      1000
-    );
+    await refreshLocation();
+    fitMap();
   };
 
-  const getCurrentMapCenter = async () => {
+  const fitCurrentMapToCenter = async () => {
     if (mapRef.current) {
       const camera = await mapRef.current.getCamera();
-      return { latitude: camera.center.latitude, longitude: camera.center.longitude };
+      const cords = { latitude: camera.center.latitude, longitude: camera.center.longitude };
+      fitMap(cords, 500);
     }
     return null;
   };
-
-  // useEffect(() => {
-  //   if(showDrivers === false) return;
-  //   const route =
-  // }, [showDrivers])
 
   useEffect(() => {
     if (!!pickupLocation) pickupRef.current?.setAddressText(pickupLocation.title);
@@ -685,6 +659,11 @@ export default function WhereTo() {
   // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (selectedDriverId) {
+        setSelectedDriverId(null);
+        setSheetIndex(1);
+        return true;
+      }
       if (showDrivers) {
         // Go back to planning mode instead of exiting
         handleBackToPlanning();
@@ -694,7 +673,7 @@ export default function WhereTo() {
     });
 
     return () => backHandler.remove();
-  }, [showDrivers, handleBackToPlanning]);
+  }, [showDrivers, selectedDriverId, handleBackToPlanning]);
 
   const rotationStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }],
@@ -704,50 +683,49 @@ export default function WhereTo() {
     setSheetIndex(index);
     if (index === 0) Keyboard.dismiss();
   }, []);
-  
+
   const selectedDriver = nearbyDrivers?.find(
     (nearbyDriver) => nearbyDriver.driver._id === selectedDriverId
   );
 
   const handleConfirmRide = async () => {
-    if(rider?._id === undefined || rider.riderDetails === null) return;
-    
+    if (rider?._id === undefined || rider.riderDetails === null) return;
+
     try {
-      if(selectedDriver === undefined) throw new Error("Please select a driver");
-      if(pickupLocation === null ) throw new Error("Please select pickup location");
-      if(destination === null ) throw new Error("Please select destination");
+      if (selectedDriver === undefined) throw new Error('Please select a driver');
+      if (pickupLocation === null) throw new Error('Please select pickup location');
+      if (destination === null) throw new Error('Please select destination');
 
       const rideId = await bookRide({
         riderId: rider.riderDetails._id,
         driverId: selectedDriver.driver._id,
         pickup: {
           address: pickupLocation.title,
-          ...pickupLocation.coords
+          ...pickupLocation.coords,
         },
         destination: {
           address: destination.title,
-          ...destination.coords
+          ...destination.coords,
         },
         distance: selectedRoute?.distance.value ?? 0,
         expectedDuration: selectedRoute?.duration,
-        fare: selectedDriver.fare
+        fare: selectedDriver.fare,
       });
       showToast({
-        title: "Ride booked successfully",
-        type: "success"
+        title: 'Ride booked successfully',
+        type: 'success',
       });
-      if(router.canDismiss()) router.dismissAll();
-      router.push({pathname: "/rideRequest", params: {id: rideId}})
-
+      if (router.canDismiss()) router.dismissAll();
+      router.push({ pathname: '/rideRequest', params: { id: rideId } });
     } catch (error: any) {
-      console.log(`error ${error}`)
+      console.log(`error ${error}`);
       showToast({
-        title: "Error",
-        description: error.data ?? "Failed to book ride",
-        type: "error"
-      })
+        title: 'Error',
+        description: error.data ?? 'Failed to book ride',
+        type: 'error',
+      });
     }
-  }
+  };
 
   const verificationStatus = selectedDriver?.driver?.isLicenseVerified;
 
@@ -772,8 +750,7 @@ export default function WhereTo() {
           customMapStyle={isDark ? mapStyle.dark : []}
           onRegionChangeComplete={onRegionChangeComplete}
           initialRegion={{
-            latitude: 34.5367,
-            longitude: 74.1178,
+            ...currentLocation,
             latitudeDelta: 0.3,
             longitudeDelta: 0.3,
           }}>
@@ -823,7 +800,6 @@ export default function WhereTo() {
           </TouchableOpacity>
         )}
 
-
         <TouchableOpacity
           className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
           style={{ elevation: 5 }}
@@ -839,11 +815,7 @@ export default function WhereTo() {
         {sheetState === 'COLLAPSED' && mapSelectionMode !== null && (
           <View className="pointer-events-none absolute inset-0 items-center justify-center">
             {isPickupSearching || isDestinationSearching ? (
-              <ActivityIndicator
-                size="large"
-                color={'black'}
-                className="-mt-8"
-              />
+              <ActivityIndicator size="large" color={'black'} className="-mt-8" />
             ) : (
               <View className="-mt-8 items-center justify-center">
                 <View className="h-6 w-6 items-center justify-center rounded-full bg-foreground shadow-sm">
@@ -882,7 +854,7 @@ export default function WhereTo() {
           ──────────────────────────────────────────────────────────────────── */}
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* LAYER 1: Both locations set — show nearby drivers */}
-            {bothSelected && showDrivers && (
+            {bothSelected && showDrivers && !selectedDriver && (
               <SheetLayer animatedIndex={animatedIndex} visibleFrom={0.5}>
                 <View style={{ paddingVertical: 0 }}>
                   {/* Header with back option to re-plan */}
@@ -928,8 +900,8 @@ export default function WhereTo() {
                     drivers={nearbyDrivers ?? []}
                     selectedDriver={selectedDriverId}
                     onSelect={(id) => {
-                      setSheetIndex(0);
                       setSelectedDriverId(id);
+                      setSheetIndex(1);
                     }}
                     sheetState={sheetState}
                     isDark={isDark}
@@ -984,7 +956,10 @@ export default function WhereTo() {
                             }
                             fetchDetails={true}
                             onPress={handlePickupSelect}
-                            textInputProps={{ onFocus: () => setMapSelectionMode('pickup'), placeholderTextColor: isDark ? "#9ca3af" : "#6b7280" }}
+                            textInputProps={{
+                              onFocus: () => setMapSelectionMode('pickup'),
+                              placeholderTextColor: isDark ? '#9ca3af' : '#6b7280',
+                            }}
                             query={{
                               key: apiKey,
                               language: 'en',
@@ -1038,7 +1013,10 @@ export default function WhereTo() {
                             placeholder="Where to?"
                             fetchDetails={true}
                             onPress={handleDestinationSelect}
-                            textInputProps={{ onFocus: () => setMapSelectionMode('destination'), placeholderTextColor: isDark ? "#9ca3af" : "#6b7280" }}
+                            textInputProps={{
+                              onFocus: () => setMapSelectionMode('destination'),
+                              placeholderTextColor: isDark ? '#9ca3af' : '#6b7280',
+                            }}
                             query={{
                               key: apiKey,
                               language: 'en',
@@ -1087,11 +1065,7 @@ export default function WhereTo() {
                       onPress={() => setIsSetLocationExpanded(!isSetLocationExpanded)}
                       className="flex-row items-center py-2">
                       <View className="mr-3 w-10 items-center justify-center">
-                        <MaterialIcons
-                          name="location-pin"
-                          size={20}
-                          color={'black'}
-                        />
+                        <MaterialIcons name="location-pin" size={20} color={'black'} />
                       </View>
                       <Text className="flex-1 text-base font-bold text-foreground">
                         Set location on map
@@ -1110,22 +1084,9 @@ export default function WhereTo() {
                             setMapSelectionMode('pickup');
                             setSheetIndex(0);
                             if (pickupLocation?.coords) {
-                              mapRef.current?.animateToRegion(
-                                {
-                                  ...pickupLocation.coords,
-                                  latitudeDelta: 0.015,
-                                  longitudeDelta: 0.015,
-                                },
-                                500
-                              );
+                              fitMap(pickupLocation.coords, 500);
                             } else {
-                              const center = await getCurrentMapCenter();
-                              if (center) {
-                                mapRef.current?.animateToRegion(
-                                  { ...center, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-                                  500
-                                );
-                              }
+                              fitCurrentMapToCenter();
                             }
                             setTimeout(() => Keyboard.dismiss(), 100);
                           }}>
@@ -1140,22 +1101,9 @@ export default function WhereTo() {
                             setMapSelectionMode('destination');
                             setSheetIndex(0);
                             if (destination?.coords) {
-                              mapRef.current?.animateToRegion(
-                                {
-                                  ...destination.coords,
-                                  latitudeDelta: 0.015,
-                                  longitudeDelta: 0.015,
-                                },
-                                500
-                              );
+                              fitMap(destination.coords, 500);
                             } else {
-                              const center = await getCurrentMapCenter();
-                              if (center) {
-                                mapRef.current?.animateToRegion(
-                                  { ...center, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-                                  500
-                                );
-                              }
+                              fitCurrentMapToCenter();
                             }
                             setTimeout(() => Keyboard.dismiss(), 100);
                           }}>
@@ -1172,17 +1120,21 @@ export default function WhereTo() {
             {/* LAYER 3: Collapsed — map pin selection (always present) */}
 
             {(bothSelected || showDrivers) && selectedDriver && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
-                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
-                  <View className="mb-1 items-center">
-                    <Text className="text-xl font-extrabold text-foreground">Your ride</Text>
+              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0}>
+                <View className="px-6">
+                  <View className="mb-2 flex-row items-center">
+                    <TouchableOpacity onPress={() => { setSelectedDriverId(null); setSheetIndex(1); }} className="-ml-2 px-2">
+                      <Ionicons name="arrow-back" size={24} color={'black'} />
+                    </TouchableOpacity>
+                    <Text className="mr-6 flex-1 text-center text-xl font-extrabold text-foreground">
+                      Confirmation
+                    </Text>
                   </View>
 
-                  <View className="mb-3 gap-2 rounded-2xl bg-background p-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1 flex-row items-center gap-3">
-                        {/* Avatar */}
-                        <Avatar alt="Profile pic" className="h-9 w-9">
+                  <View className="mb-3 gap-2">
+                    <View className="flex-row items-center justify-between gap-3">
+                      <View className="items-center justify-center gap-1.5">
+                        <Avatar alt="Profile pic" className="h-14 w-14">
                           <AvatarImage
                             source={
                               selectedDriver.driver.userDetails.profilePictureKey?.trim()
@@ -1197,59 +1149,53 @@ export default function WhereTo() {
                             </Text>
                           </AvatarFallback>
                         </Avatar>
+                        <GenderAge
+                          gender={selectedDriver.driver.userDetails.gender}
+                          dob={selectedDriver.driver.userDetails.dob}
+                        />
+                        </View>
+                        <View className="min-w-0 flex-1 gap-0.5">
+                          {/* Name + Verified */}
+                          <Text className="font-semibold text-primary">
+                            {selectedDriver.driver.userDetails.firstName}{' '}
+                            {selectedDriver.driver.userDetails.lastName}
+                          </Text>
 
-                        <View>
-                          <Text className="text-base font-semibold text-foreground">
-                            {selectedDriver.driver.userDetails.firstName} {selectedDriver.driver.userDetails.lastName}
-                          </Text>
-                          <Text className="text-sm font-semibold text-foreground">
-                            {selectedDriver.vehicle.registrationNumber} -{' '}
-                            {selectedDriver.vehicle.class}
-                          </Text>
-                          <View className="mt-0.5 flex-row items-center gap-1">
-                            {selectedDriver.driver.averageRating && (
-                              <>
-                                <Ionicons name="star" size={14} color="orange" />
-                                <Text className="text-sm text-muted-foreground">
-                                  {selectedDriver.driver.averageRating}
-                                </Text>
-                              </>
-                            )}
-                            {/* Gender badge */}
-                            <View className="flex-row items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1">
-                              <MaterialIcons
-                                name={
-                                  selectedDriver.driver.userDetails.gender === 'Male'
-                                    ? 'male'
-                                    : selectedDriver.driver.userDetails.gender === 'Female'
-                                      ? 'female'
-                                      : 'transgender'
-                                }
-                                size={13}
-                                color="rgba(255,255,255,0.8)"
-                              />
-                              <Text className="text-xs font-medium text-white">
-                                {selectedDriver.driver.userDetails.gender}
-                              </Text>
-                            </View>
-                            {/* Verified badge */}
-                            <View
-                              style={{ backgroundColor: licenseVerification.color + '30' }}
-                              className="flex-row items-center gap-1 self-start rounded-full px-2.5 py-1">
+                          <Text className="text-xs font-medium">Organization Name Dummy</Text>
+
+                          <View className="flex-row items-center justify-start">
+                            <MaterialCommunityIcons
+                              name={VEHICLE_ICONS[selectedDriver.vehicle.class]}
+                              size={18}
+                              color="black"
+                            />
+                            <Text className="text-sm text-slate-600">
+                              {' •'}{selectedDriver.vehicle.model} {'•'}
+                              {selectedDriver.vehicle.registrationNumber} {'•'}
+                              {selectedDriver.vehicle.color}
+                            </Text>
+                          </View>
+
+                          {/* vehicle and driver rating and verification */}
+                          <View className="mt-0.5 flex-row items-center gap-2">
+                            <Rating rating={selectedDriver.driver.rating} />
+
+                            {/* Verified Badge (inline, not floating) */}
+                            <View className="flex-row items-center gap-1">
                               <Feather
                                 name={licenseVerification.icon as any}
-                                size={11}
+                                size={12}
                                 color={licenseVerification.color}
                               />
                               <Text
                                 style={{ color: licenseVerification.color }}
-                                className="text-xs font-semibold">
+                                className="text-sm font-semibold">
                                 {licenseVerification.label}
                               </Text>
                             </View>
                           </View>
                         </View>
-                      </View>
+                      
                     </View>
 
                     <View className="h-[1px] bg-border" />
@@ -1259,13 +1205,17 @@ export default function WhereTo() {
                         <Text className="text-muted-foreground">Arriving in</Text>
                         <Text className="text-lg font-bold text-foreground">7 min</Text>
                       </View> */}
-                      <View className="items-end">
-                        <Text className="text-lg font-bold text-foreground">
-                          {formatFare(selectedDriver.fare)}
-                        </Text>
-                        <Text className="text-sm text-muted-foreground">
-                          {selectedRoute?.distance.text}
-                        </Text>
+                      <View className="w-full flex-row justify-between gap-1.5">
+                        <View>
+                          <Text numberOfLines={1} className="text-sm font-bold truncate">Pickup: {pickupLocation?.title}</Text>
+                          <Text numberOfLines={1} className="text-sm font-bold truncate">Destination: {destination?.title}</Text>
+                          <Text className="text-sm font-bold">
+                            Distance: {distanceFormat(selectedRoute?.distance.value ?? 0)}
+                          </Text> 
+                          <Text className="text-sm font-bold">
+                            Expected Fare: {formatFare(selectedDriver.fare)}
+                          </Text>                       
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -1280,41 +1230,29 @@ export default function WhereTo() {
 
             {(bothSelected || showDrivers) && !selectedDriver && (
               <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
-                <View style={{ paddingHorizontal: 24, paddingVertical: 10 }}>
-                  <View className="mb-2 items-center">
-                    <Text className="text-xl font-extrabold text-foreground">Your route</Text>
-                  </View>
+                <View className="px-6 py-2">
+                  <Text className="text-center text-xl font-extrabold">Your Plan</Text>
 
-                  <View className="mb-4 gap-3">
+                  <View className="mb-3 w-full gap-2 p-2">
                     <TouchableOpacity
-                      activeOpacity={0.75}
-                      style={{ minWidth: 130 }}
-                      className={cn(
-                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
-                      )}>
-                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
-                        <MaterialCommunityIcons name="map-marker" size={24} color="green" />
-                      </View>
+                      onPress={() => fitMap(pickupLocation?.coords)}
+                      className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
+                      <MaterialCommunityIcons name="map-marker" size={24} color="green" />
 
                       <View className="flex-1">
-                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                        <Text className="text-sm font-semibold text-foreground">
                           {pickupLocation?.title}
                         </Text>
                         <Text className="text-xs text-muted-foreground">Pickup</Text>
                       </View>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      activeOpacity={0.75}
-                      style={{ minWidth: 130 }}
-                      className={cn(
-                        'flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20 px-3 py-2'
-                      )}>
-                      <View className={cn('h-9 w-9 items-center justify-center rounded-full')}>
-                        <MaterialCommunityIcons name="map-marker" size={24} color="red" />
-                      </View>
+                      onPress={() => fitMap(destination?.coords)}
+                      className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
+                      <MaterialCommunityIcons name="map-marker" size={24} color="red" />
 
                       <View className="flex-1">
-                        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                        <Text className="text-sm font-semibold text-foreground">
                           {destination?.title}
                         </Text>
                         <Text className="text-xs text-muted-foreground">Destination</Text>
@@ -1323,12 +1261,14 @@ export default function WhereTo() {
                   </View>
 
                   {/* Confirm button */}
-                  <Button onPress={() => {
-                    setSheetIndex(1);
-                    if (!hasSearchedDrivers) {
-                      setHasSearchedDrivers(true);
-                    }
-                  }} className="h-14 rounded-xl">
+                  <Button
+                    onPress={() => {
+                      setSheetIndex(1);
+                      if (!hasSearchedDrivers) {
+                        setHasSearchedDrivers(true);
+                      }
+                    }}
+                    >
                     <Text className="text-lg font-bold text-secondary">
                       {hasSearchedDrivers ? 'Choose driver' : 'Find My Driver'}
                     </Text>
@@ -1352,16 +1292,7 @@ export default function WhereTo() {
                     <TouchableOpacity
                       onPress={() => {
                         setMapSelectionMode('pickup');
-                        if (pickupLocation?.coords) {
-                          mapRef.current?.animateToRegion(
-                            {
-                              ...pickupLocation.coords,
-                              latitudeDelta: 0.015,
-                              longitudeDelta: 0.015,
-                            },
-                            500
-                          );
-                        }
+                        if (pickupLocation?.coords) fitMap(pickupLocation.coords, 500);
                       }}
                       className={cn('flex-1 items-center rounded-lg py-2', {
                         'bg-background': mapSelectionMode === 'pickup',
@@ -1376,12 +1307,7 @@ export default function WhereTo() {
                     <TouchableOpacity
                       onPress={() => {
                         setMapSelectionMode('destination');
-                        if (destination?.coords) {
-                          mapRef.current?.animateToRegion(
-                            { ...destination.coords, latitudeDelta: 0.015, longitudeDelta: 0.015 },
-                            500
-                          );
-                        }
+                        if (destination?.coords) fitMap(destination.coords, 500);
                       }}
                       className={cn('flex-1 items-center rounded-lg py-2', {
                         'bg-background': mapSelectionMode !== 'pickup',
@@ -1431,7 +1357,7 @@ export default function WhereTo() {
                             ? pickupLocation?.title || 'Set pickup'
                             : destination?.title || 'Where to?'}
                     </Text>
-                    <Feather name="search" size={20} color={"black"} />
+                    <Feather name="search" size={20} color={'black'} />
                   </Button>
 
                   {/* Confirm button */}

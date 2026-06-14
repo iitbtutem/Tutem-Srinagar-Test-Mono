@@ -3,7 +3,7 @@ import { Text } from '@tutem/ui';
 
 
 
-export default function StarRating({ rating }: { rating: { average: number | null; totalRatings: number } }) {
+function Rating({ rating }: { rating: { average: number | null; totalRatings: number } }) {
   if (rating.average === null) return null;
 
   const averageRating = Math.round(rating.average * 10) / 10;
@@ -15,3 +15,5 @@ export default function StarRating({ rating }: { rating: { average: number | nul
     </View>
   );
 }
+
+export { Rating }

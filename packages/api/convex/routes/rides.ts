@@ -10,8 +10,10 @@ import { internal } from "../_generated/api";
 export type NearbyDriverResult = {
   driver: Doc<"driver"> & {
     userDetails: Doc<"user"> & { profilePictureKey?: string };
-    averageRating: number | null;
-    totalRatings: number;
+    rating: {
+      average: number | null;
+      totalRatings: number;
+    }
   };
   vehicle: Doc<"vehicle">;
   fare: number;
@@ -83,15 +85,15 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
         if (args.filters.length > 0 && !args.filters.includes(vehicle.class)) { return null }
 
-        const ratings = await ctx.db
+        const driverRatings = await ctx.db
           .query("ratings")
           .withIndex("by_driver", (q) => q.eq("driverId", driverDetails._id))
           .filter((q) => q.eq(q.field("raterType"), "Rider"))
           .collect();
 
-        const averageRating = ratings.length === 0
-            ? null
-            : ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
+        const averageRating = driverRatings.length === 0
+          ? null
+          : driverRatings.reduce((sum, r) => sum + r.score, 0) / driverRatings.length;
 
 
         const organizationRate = await ctx.db
@@ -114,8 +116,10 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
                 ...userDetails,
                 profilePictureKey: profilePictureUri,
               },
-              averageRating,
-              totalRatings: ratings.length,
+              rating: {
+                average: averageRating,
+                totalRatings: driverRatings.length,
+              },
             },
             vehicle: vehicle,
             fare: Math.round(fare),

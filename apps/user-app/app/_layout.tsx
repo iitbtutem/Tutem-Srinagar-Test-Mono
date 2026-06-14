@@ -19,6 +19,7 @@ import { Text } from '@tutem/ui';
 import Offline from '@/components/offline';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { useLocation } from '@/hooks/useCurrentLocation';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,7 +50,12 @@ export default function RootLayout() {
   const [launchedOffline, setLaunchedOffline] = useState(false);
   
   const { isOnline, checked } = useInternet();
+  const { refreshLocation } = useLocation();
 
+  useEffect(() => {
+    refreshLocation();
+  }, []);
+  
   useEffect(() => {
     if (checked) {
       setLaunchedOffline(!isOnline);
