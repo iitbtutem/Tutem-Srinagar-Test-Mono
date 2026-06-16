@@ -1,11 +1,12 @@
 import { View, Text } from "react-native";
-import { cn } from "@/lib/utils";
-import PulseDot from "./PulseDot";
-import LiveTimer from "./LiveTimer";
 import { FunctionReturnType } from "convex/server";
 import { api } from "@tutem/api";
+import { useEffect, useState } from "react";
+import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
+import { cn } from "@tutem/ui";
 
-type CurrentRide = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverCurrentRideByDriverId>>;
+type CurrentRideByDriverId = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverCurrentRideByDriverId>>;
+type CurrentRideByRiderId = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideByRiderId>>;
 
 type PulseConfig = {
   kind: "pulse";
@@ -30,9 +31,11 @@ type StaticConfig = {
   timestamp: number | undefined;
 };
 
+type RideDetails = CurrentRideByDriverId | CurrentRideByRiderId;
+
 type StatusConfig = PulseConfig | StaticConfig;
 
-function getStatusConfig(ride: CurrentRide): StatusConfig | null {
+function getStatusConfig(ride: RideDetails): StatusConfig | null {
   const { status, requestStatus } = ride;
 
   if (status === "Open" && requestStatus === "Pending") {
@@ -42,8 +45,21 @@ function getStatusConfig(ride: CurrentRide): StatusConfig | null {
       border: "border-yellow-500/30",
       bg: "bg-yellow-500/10",
       text: "text-yellow-400",
-      label: "Searching",
+      label: "Requested",
       sub: "Waiting for driver response",
+      timestamp: ride.requestedAt,
+    };
+  }
+
+  if (status === "Open" && requestStatus === "No Response") {
+    return {
+      kind: "pulse",
+      dot: "bg-orange-400",
+      border: "border-orange-500/30",
+      bg: "bg-orange-500/10",
+      text: "text-orange-400",
+      label: "No Response",
+      sub: "Driver didn't accept the ride",
       timestamp: ride.requestedAt,
     };
   }
@@ -56,7 +72,7 @@ function getStatusConfig(ride: CurrentRide): StatusConfig | null {
       bg: "bg-amber-500/10",
       text: "text-amber-400",
       label: "Accepted",
-      sub: "Driver heading to pickup",
+      sub: "Driver is on the way",
       timestamp: ride.acceptedAt,
     };
   }
@@ -69,7 +85,7 @@ function getStatusConfig(ride: CurrentRide): StatusConfig | null {
       bg: "bg-purple-500/10",
       text: "text-purple-400",
       label: "Driver Arrived",
-      sub: "Driver is waiting at pickup location",
+      sub: "Driver is waiting for you to board",
       timestamp: ride.arrivedAt,
     };
   }
@@ -82,8 +98,8 @@ function getStatusConfig(ride: CurrentRide): StatusConfig | null {
       bg: "bg-green-500/10",
       text: "text-green-400",
       label: "Ride in Progress",
-      sub: "Rider is in the vehicle",
-      timestamp: ride.startedAt ?? ride.updatedAt,
+      sub: "Heading towards destination",
+      timestamp: ride.startedAt,
     };
   }
 
@@ -143,11 +159,12 @@ function formatDate(ts: number | undefined) {
 }
 
 interface Props {
-  ride: CurrentRide;
+  ride: RideDetails;
   className?: string;
 }
 
-export function RideStatusBanner({ ride, className }: Props) {
+function RideStatusBanner({ ride, className }: Props) {
+
   const config = getStatusConfig(ride);
 
   if (!config) return null;
@@ -155,7 +172,7 @@ export function RideStatusBanner({ ride, className }: Props) {
   return (
     <View
       className={cn(
-        "mb-4 flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+        "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
         config.border,
         config.bg,
         className
@@ -189,4 +206,47 @@ export function RideStatusBanner({ ride, className }: Props) {
       )}
     </View>
   );
-}
+};
+
+function formatElapsed(startTimestamp: number | undefined): string {
+  if(startTimestamp === undefined) return "--";
+  const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+
+function LiveTimer({ startTimestamp }: { startTimestamp: number | undefined }) {
+  const [display, setDisplay] = useState(() => formatElapsed(startTimestamp));
+  useEffect(() => {
+    const id = setInterval(() => setDisplay(formatElapsed(startTimestamp)), 1000);
+    return () => clearInterval(id);
+  }, [startTimestamp]);
+  return (
+    <Text className="text-emerald-400 text-xl font-extrabold tracking-tight tabular-nums">
+      {display}
+    </Text>
+  );
+};
+
+function PulseDot({ color = 'bg-emerald-400' }: { color?: string }) {
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 1400 }), -1, false);
+  }, []);
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 0.6, 1], [0.65, 0.15, 0], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 2.4], Extrapolation.CLAMP) }],
+  }));
+  return (
+    <View className="items-center justify-center w-5 h-5">
+      <Animated.View style={ringStyle} className={`absolute w-5 h-5 rounded-full ${color}`} />
+      <View className={`w-3 h-3 rounded-full ${color} border-2 border-slate-950`} />
+    </View>
+  );
+};
+
+export { RideStatusBanner, LiveTimer, PulseDot }

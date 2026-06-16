@@ -8,43 +8,83 @@ import {
   ImageBackground,
   Linking,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from 'convex/react';
-import { api } from '@tutem/api';
+import { api, Id } from '@tutem/api';
 import { useAuth } from '@clerk/expo';
 
-import { Card, CardContent } from '@tutem/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  Separator,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@tutem/ui';
 import { distanceFormat, formatFare } from '@/lib/utils';
 import { HomeScreenHeader } from '@/components/CustomHeader';
+import { RideStatusBanner } from '@/components/RideStatusBanner';
+import { colors } from '@/constants/colors';
+import { FunctionReturnType } from 'convex/server';
+import { useState } from 'react';
+
+type CurrentRide = FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideByRiderId>;
+
+// Vehicle Icons
+const VEHICLE_ICONS = {
+  Cab: 'car',
+  Bike: 'bike',
+  Auto: 'rickshaw',
+} as const;
 
 const services = [
-  { id: 'ride_request', name: 'Ride Request', image: require('@/assets/images/ride_request.png'), href: '/whereto' },
-  { id: 'ride_pooling', name: 'Ride Pooling', image: require('@/assets/images/ride_pooling.png'), href: '/' },
-  { id: 'walk_mode', name: 'Walk Mode', image: require('@/assets/images/walk_mode.png'), href: '/' },
+  {
+    id: 'ride_request',
+    name: 'Ride Request',
+    image: require('@/assets/images/ride_request.png'),
+    href: '/whereto',
+  },
+  {
+    id: 'ride_pooling',
+    name: 'Ride Pooling',
+    image: require('@/assets/images/ride_pooling.png'),
+    href: '/',
+  },
+  {
+    id: 'walk_mode',
+    name: 'Walk Mode',
+    image: require('@/assets/images/walk_mode.png'),
+    href: '/',
+  },
 ] as const;
 
 const youtubeVideos = [
-  { id: 'theytLvdnaE', title: "Ride Booking", subtitle: "Watch quick ride booking insights" },
-  { id: '6e7vblkc4eM', title: "SOS", subtitle: "Watch quick SOS insights" },
-  { id: 'bpDMl2VgqJw', title: "User Pairing", subtitle: "Watch quick user pairing insights" },
+  { id: 'theytLvdnaE', title: 'Ride Booking', subtitle: 'Watch quick ride booking insights' },
+  { id: '6e7vblkc4eM', title: 'SOS', subtitle: 'Watch quick SOS insights' },
+  { id: 'bpDMl2VgqJw', title: 'User Pairing', subtitle: 'Watch quick user pairing insights' },
 ];
-
-const getYoutubeThumbnail = (url: string) => {
-  const match = url.match(
-    /(?:youtu\.be\/|youtube\.com\/watch\?v=)([^?&]+)/
-  );
-
-  const videoId = match?.[1];
-
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-};
 
 export default function HomeScreen() {
   const { userId } = useAuth();
   const router = useRouter();
 
-  const user = useQuery(api.routes.rider.getRider, userId && userId !== '' ? { clerkId: userId } : 'skip');
+  const [showRideDialog, setShowRideDialog] = useState(false);
+
+  const user = useQuery(
+    api.routes.rider.getRider,
+    userId && userId !== '' ? { clerkId: userId } : 'skip'
+  );
+
+  const currentRide = useQuery(
+    api.routes.rides.getRiderCurrentRideByRiderId,
+    user && user.riderDetails ? { riderId: user.riderDetails._id } : 'skip'
+  );
 
   const openVideo = async (videoId: string) => {
     const appUrl = `youtube://watch?v=${videoId}`;
@@ -57,40 +97,51 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-
       {user && <HomeScreenHeader user={user} />}
+      {currentRide && (
+        <ActiveRideDialog
+          rideId={currentRide._id}
+          open={showRideDialog}
+          setOpen={(state: boolean) => {
+            setShowRideDialog(state);
+          }}
+        />
+      )}
 
-      <ScrollView showsVerticalScrollIndicator={false} className='bg-background'>
-        <Text className="mx-6 mb-3 text-xl font-bold">Ride Services</Text>
+      <ScrollView showsVerticalScrollIndicator={false} className="bg-background">
+        <Text className="mx-4 mb-3 text-xl font-bold">Ride Services</Text>
         {/*  Ride Services  */}
         <View className="flex-row gap-2 px-4">
           {services.map((service) => (
             <TouchableOpacity
               key={service.id}
               activeOpacity={0.8}
-              onPress={() => router.push(service.href)}
-              className="aspect-square items-center justify-center flex-1 bg-primary/10 rounded-xl px-2">
+              onPress={() => {
+                if (currentRide) return setShowRideDialog(true);
+                router.push(service.href);
+              }}
+              className="aspect-square flex-1 items-center justify-center rounded-xl bg-primary/10 px-2">
               {/* Icon container */}
               <Image
                 source={service.image}
-                style={{ width: "100%", height: 70 }}
+                style={{ width: '100%', height: 70 }}
                 resizeMode="cover"
               />
 
-            {/* Label with fixed min-height to prevent layout shift */}
-            <View className="justify-center">
-              <Text className="text-center text-xs font-bold text-foreground">
-                {service.name}
-              </Text>
-            </View>
+              {/* Label with fixed min-height to prevent layout shift */}
+              <View className="justify-center">
+                <Text className="text-center text-xs font-bold text-foreground">
+                  {service.name}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
 
-        <ActiveRideCard />
+        {currentRide && <ActiveRideCard currentRide={currentRide} />}
 
         {/* Insights */}
-        <Text className="mx-6 mt-4 mb-3 text-xl font-bold">Insights</Text>
+        <Text className="mx-6 mb-3 text-xl font-bold">Insights</Text>
 
         <FlatList
           data={youtubeVideos}
@@ -101,14 +152,14 @@ export default function HomeScreen() {
             paddingHorizontal: 24,
             gap: 14,
           }}
-          renderItem={({item}) => (
+          renderItem={({ item }) => (
             <View className="h-52 w-72 overflow-hidden rounded-2xl bg-primary/10">
               {/* Thumbnail */}
-              <ImageBackground 
-                className="flex-1 items-center justify-center" 
+              <ImageBackground
+                className="flex-1 items-center justify-center"
                 source={{
-                uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`}}
-              >
+                  uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
+                }}>
                 <TouchableOpacity onPress={() => openVideo(item.id)}>
                   <MaterialIcons name="play-circle" size={48} color="#fff" />
                 </TouchableOpacity>
@@ -124,12 +175,14 @@ export default function HomeScreen() {
         />
 
         <View className="my-2">
-          <Text className="text-lg font-bold text-center tracking-wide -mb-2">Developed for public convenience</Text>
-          <Text className="text-lg font-bold text-center tracking-wide">No commission charged</Text>
+          <Text className="-mb-2 text-center text-lg font-bold tracking-wide">
+            Developed for public convenience
+          </Text>
+          <Text className="text-center text-lg font-bold tracking-wide">No commission charged</Text>
         </View>
         <Image
-          source={require("@/assets/images/footer.png")}
-          style={{ width: "100%", height: 130 }}
+          source={require('@/assets/images/footer.png')}
+          style={{ width: '100%', height: 130 }}
           resizeMode="cover"
         />
       </ScrollView>
@@ -137,93 +190,122 @@ export default function HomeScreen() {
   );
 }
 
-export function ActiveRideCard() {
-  const router = useRouter();
-
-  const { userId } = useAuth();
-
-  const user = useQuery(api.routes.rider.getRider, userId ? { clerkId: userId } : 'skip');
-
-  const currentRide = useQuery(
-    api.routes.rides.getRiderCurrentRideByRiderId,
-    user && user.riderDetails ? { riderId: user.riderDetails._id } : 'skip'
-  );
-  if (!currentRide) return null;
-
-  const { rider, vehicle, distance, otp, status, pickup, destination, fare } = currentRide;
-
-  const statusColor: Record<string, string> = {
-    accepted: 'bg-blue-100 text-blue-700',
-    arrived: 'bg-amber-100 text-amber-700',
-    started: 'bg-green-100 text-green-700',
-    completed: 'bg-gray-100 text-gray-600',
-  };
+export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<CurrentRide> }) {
+  const { vehicle, distance, pickup, destination, fare } = currentRide;
 
   return (
-    <View className='p-6'>
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: '/rideRequest',
-            params: { id: currentRide._id },
-          })
-        }
-        activeOpacity={0.85}>
-        <Card className="rounded-2xl border border-border bg-card shadow-sm">
-          <CardContent className="gap-3 p-4">
-            {/* Header: Status + OTP */}
-            <View className="flex-row items-center justify-between">
-              <View
-                className={`rounded-full px-3 py-1 ${statusColor[status] ?? 'bg-muted dark:bg-gray-300 text-muted-foreground'}`}>
-                <Text className="text-xs font-medium capitalize">{status}</Text>
-              </View>
-              {otp && <View className="items-end">
-                <Text className="text-xs text-muted-foreground">OTP</Text>
-                <Text className="text-lg font-bold tracking-widest text-foreground">{otp}</Text>
-              </View>}
+    <View className="p-4">
+      <Text className="mb-3 text-xl font-bold">Active Ride</Text>
+      <Card className="rounded-2xl border-2 border-green-500 bg-card shadow-xl">
+        <CardContent className="gap-3 p-4">
+          {/* Header: Status + OTP */}
+          <RideStatusBanner ride={currentRide} className="-m-4 mb-1 rounded-b-none border-0 py-2" />
+
+          {/* Route */}
+          <View className="gap-1">
+            <View className="flex-row items-center gap-2">
+              <MaterialCommunityIcons name="map-marker" size={16} color="green" />
+              <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                {pickup.address}
+              </Text>
             </View>
-
-            {/* Route */}
-            <View className="gap-1">
-              <View className="flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full bg-green-500" />
-                <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
-                  {pickup?.address ?? 'Pickup'}
-                </Text>
-              </View>
-              <View className="ml-[3px] h-4 w-px self-start bg-border" />
-              <View className="flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full bg-red-500" />
-                <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
-                  {destination?.address ?? 'Dropoff'}
-                </Text>
-              </View>
+            <View className="ml-2 h-4 w-px self-start bg-black/10" />
+            <View className="flex-row items-center gap-2">
+              <MaterialCommunityIcons name="map-marker" size={16} color="red" />
+              <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                {destination.address}
+              </Text>
             </View>
+          </View>
 
-            {/* Divider */}
-            <View className="h-px bg-border" />
+          <Separator />
 
-            {/* Vehicle + Distance + Fare */}
-            <View className="flex-row items-center justify-between">
-              <View className="gap-0.5">
+          {/* Vehicle + Distance + Fare */}
+          <View className="flex-row items-center justify-between gap-1">
+            <View className="flex-1 flex-row items-center gap-2">
+              {vehicle && (
+                <View className="rounded-full bg-primary/15 p-1">
+                  <MaterialCommunityIcons
+                    name={VEHICLE_ICONS[vehicle.class]}
+                    size={24}
+                    color={colors.primary}
+                  />
+                </View>
+              )}
+
+              <View className="flex-1 gap-0.5">
+                <Text className="font-semibold text-primary">
+                  {currentRide.driver.userDetails.firstName}{' '}
+                  {currentRide.driver.userDetails.lastName}
+                </Text>
+
                 {vehicle && (
-                  <Text className="text-sm font-medium text-foreground">
-                    {vehicle.model}{' '}
-                    <Text className="font-normal text-muted-foreground">· {vehicle.color}</Text>
+                  <Text className="text-sm text-slate-600" ellipsizeMode="tail">
+                    {vehicle.model} • {vehicle.color} • {vehicle.registrationNumber}
                   </Text>
                 )}
-                <Text className="text-xs text-muted-foreground">
-                  {vehicle?.registrationNumber ?? '—'}
-                </Text>
-              </View>
-              <View className="items-end gap-0.5">
-                <Text className="text-sm font-semibold text-foreground">{formatFare(fare)}</Text>
-                <Text className="text-xs text-muted-foreground">{distanceFormat(distance)}</Text>
               </View>
             </View>
-          </CardContent>
-        </Card>
-      </TouchableOpacity>
+
+            <View className="shrink-0 items-end gap-0.5">
+              <Text className="text-lg font-extrabold tracking-wider text-green-400">
+                {formatFare(fare)}
+              </Text>
+              <Text className="text-xs text-muted-foreground">{distanceFormat(distance)}</Text>
+            </View>
+          </View>
+        </CardContent>
+        <Separator />
+        <Link
+          href={{
+            pathname: '/rideRequest',
+            params: { id: currentRide._id },
+          }}
+          className="rounded-b-2xl bg-primary/10 p-3">
+          <Text className="text-center text-sm tracking-wide text-primary">View Details →</Text>
+        </Link>
+      </Card>
     </View>
+  );
+}
+
+function ActiveRideDialog({
+  rideId,
+  open,
+  setOpen,
+}: {
+  rideId: Id<'ride'>;
+  open: boolean;
+  setOpen: (state: boolean) => void;
+}) {
+  const router = useRouter();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-center font-bold tracking-wider">Ride request</DialogTitle>
+          <Separator />
+          <DialogDescription className="py-0.5 text-center">
+            There's already a ride request active. You can't create another ride request until your
+            current ride is completed.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">
+              <Text className="font-bold tracking-wider">Close</Text>
+            </Button>
+          </DialogClose>
+          <Button
+            className="mb-2"
+            onPress={() => {
+              router.push({ pathname: '/rideRequest', params: { id: rideId } });
+            }}>
+            <Text className="font-bold tracking-wider text-white">View Details</Text>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

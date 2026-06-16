@@ -12,9 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Text,
 } from '@tutem/ui';
 import { useMutation } from 'convex/react';
@@ -24,15 +24,14 @@ import { colors } from '@/constants/colors';
 type User = FunctionReturnType<typeof api.routes.rider.getRider>;
 
 export function HomeScreenHeader({ user }: { user: User }) {
-
   if (!user) return null;
 
   return (
-    <View className='pb-2 rounded-br-2xl '>
+    <View className="rounded-br-2xl pb-2">
       <View
-        className="px-3 py-2 rounded-br-2xl bg-card self-start"
+        className="self-start rounded-br-2xl bg-card px-3 py-2"
         style={{
-          shadowColor: "#000",
+          shadowColor: '#000',
           shadowOffset: {
             width: 0,
             height: 2,
@@ -40,8 +39,7 @@ export function HomeScreenHeader({ user }: { user: User }) {
           shadowRadius: 3.84,
 
           elevation: 6,
-          }}
-      >
+        }}>
         <ProfileDropdown user={user} />
       </View>
     </View>
@@ -51,7 +49,7 @@ export function HomeScreenHeader({ user }: { user: User }) {
 function ProfileDropdown({ user }: { user: User }) {
   const { signOut } = useAuth();
   const logout = useMutation(api.routes.rider.logout);
-  
+
   const handleLogout = async () => {
     if (
       user === undefined ||
@@ -84,21 +82,21 @@ function ProfileDropdown({ user }: { user: User }) {
             </Avatar>
           </View>
           <View>
-            <Text className="text-sm text-title font-semibold">Hello</Text>
+            <Text className="text-title text-sm font-semibold">Hello</Text>
             <Text className="text-md text-title font-semibold">{`${user.firstName} ${user.lastName}`}</Text>
           </View>
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="native:w-64 elevation-lg shadow-lg/20 w-60 rounded-3xl bg-white/95 shadow-black backdrop-blur-xl">
+      <DropdownMenuContent className="native:w-64 elevation-md w-60 rounded-3xl bg-white/95">
         <Animated.View entering={FadeIn.duration(200)}>
           <View className="bg-primary/5 px-4 py-1">
-            <Text className="text-lg font-bold text-menu">Menu</Text>
+            <Text className="text-menu text-lg font-bold">Menu</Text>
           </View>
 
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem asChild closeOnPress className='py-1'>
+            <DropdownMenuItem asChild closeOnPress className="py-1">
               <Link href={'/profile'}>
                 <View className="flex-row items-center gap-3 px-2">
                   <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -130,25 +128,24 @@ function ProfileDropdown({ user }: { user: User }) {
 
 export function BasicHeader({ navigation, options, back }: NativeStackHeaderProps) {
   return (
-      <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-3">
-        
-        {back ? (
-          <TouchableOpacity className="mr-2 flex-row gap-2 items-center" onPress={() => navigation.goBack()}>
-            <MaterialIcons
-              name="keyboard-backspace"
-              size={24}
-              color={'#FFF'}
-            />
-            <Text className='font-semibold text-md text-white'>{options.headerBackTitle ?? "Back"}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View className="min-w-[72px]" />
-        )}
+    <View className="flex-row items-center justify-between gap-3 bg-primary px-4 pb-3">
+      {back ? (
+        <TouchableOpacity
+          className="mr-2 flex-row items-center gap-2"
+          onPress={() => navigation.goBack()}>
+          <MaterialIcons name="keyboard-backspace" size={24} color={'#FFF'} />
+          <Text className="text-md font-semibold text-white">
+            {options.headerBackTitle ?? 'Back'}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View className="min-w-[72px]" />
+      )}
 
-        <Text className="flex-1 font-semibold text-center text-base text-white">
-          {options.title ?? ''}
-        </Text>
-        <View className='w-1/4' />
-      </View>
+      <Text className="flex-1 text-center text-base font-semibold text-white">
+        {options.title ?? ''}
+      </Text>
+      <View className="w-1/4" />
+    </View>
   );
 }

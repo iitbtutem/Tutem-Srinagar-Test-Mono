@@ -47,6 +47,7 @@ import {
   Switch,
   GenderAge,
   Rating,
+  Separator,
 } from '@tutem/ui';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useLocation } from '@/hooks/useCurrentLocation';
@@ -1313,12 +1314,12 @@ export default function WhereTo() {
           </View>
 
           {/* Content */}
-          <View style={{ flex: 1 }}>
+          <View className='flex-1'>
             {selectedDriver && (
-              <View style={{ gap: 12 }}>
+              <View className='gap-3'>
                 {/* Driver card */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ alignItems: 'center', gap: 6 }}>
+                <View className='flex-row items-center gap-3'>
+                  <View className='justify-center items-center gap-1.5'>
                     <Avatar alt="Profile pic" className="h-14 w-14">
                       <AvatarImage
                         source={
@@ -1339,7 +1340,7 @@ export default function WhereTo() {
                       dob={selectedDriver.driver.userDetails.dob}
                     />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <View className='flex-1 min-w-0 gap-2'>
                     <Text className="font-semibold text-primary">
                       {selectedDriver.driver.userDetails.firstName}{' '}
                       {selectedDriver.driver.userDetails.lastName}
@@ -1356,10 +1357,10 @@ export default function WhereTo() {
                         {selectedDriver.vehicle.model} • {selectedDriver.vehicle.registrationNumber} • {selectedDriver.vehicle.color}
                       </Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                    <View className='flex-row items-center gap-2 mt-0.5'>
                       <Rating rating={selectedDriver.driver.rating} />
                       {licenseVerification && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View className='flex-row items-center gap-1'>
                           <Feather name={licenseVerification.icon as any} size={12} color={licenseVerification.color} />
                           <Text style={{ color: licenseVerification.color }} className="text-xs font-semibold">
                             {licenseVerification.label}
@@ -1370,7 +1371,7 @@ export default function WhereTo() {
                   </View>
                 </View>
 
-                <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)' }} />
+                <Separator />
 
                 {/* Trip details */}
                 <View className='rounded-2xl bg-primary/5 p-4'>
