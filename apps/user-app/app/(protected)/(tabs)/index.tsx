@@ -300,6 +300,7 @@ function ActiveRideDialog({
           <Button
             className="mb-2"
             onPress={() => {
+              setOpen(false);
               router.push({ pathname: '/rideRequest', params: { id: rideId } });
             }}>
             <Text className="font-bold tracking-wider text-white">View Details</Text>
