@@ -255,7 +255,7 @@ function NearbyDriversPanel({
                         {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
                       </Text>
 
-                      <Text className="text-xs font-medium">Organization Name Dummy</Text>
+                      <Text className="text-xs font-medium">{driver.driver.organization.name}</Text>
 
                       <View className="flex-row items-center justify-start">
                         <MaterialCommunityIcons
@@ -274,18 +274,20 @@ function NearbyDriversPanel({
                         <Rating rating={driver.driver.rating} />
 
                         {/* Verified Badge (inline, not floating) */}
-                        {driver.driver.isLicenseVerified === "Verified" && <View className="flex-row items-center gap-1">
-                          <Feather
-                            name={licenseVerification.icon as any}
-                            size={12}
-                            color={licenseVerification.color}
-                          />
-                          <Text
-                            style={{ color: licenseVerification.color }}
-                            className="text-[10px] font-semibold">
-                            {licenseVerification.label}
-                          </Text>
-                        </View>}
+                        {driver.driver.isLicenseVerified === 'Verified' && (
+                          <View className="flex-row items-center gap-1">
+                            <Feather
+                              name={licenseVerification.icon as any}
+                              size={12}
+                              color={licenseVerification.color}
+                            />
+                            <Text
+                              style={{ color: licenseVerification.color }}
+                              className="text-[10px] font-semibold">
+                              {licenseVerification.label}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
 
@@ -744,7 +746,7 @@ export default function WhereTo() {
         type: 'success',
       });
       if (router.canDismiss()) router.dismissAll();
-      router.push({ pathname: '/rideRequest', params: { id: rideId } });
+      router.push({ pathname: '/ride/rideRequest', params: { id: rideId } });
     } catch (error: any) {
       console.log(`error ${error}`);
       showToast({
@@ -800,12 +802,12 @@ export default function WhereTo() {
           ))}
           {pickupLocation?.coords && (
             <Marker coordinate={pickupLocation.coords} anchor={{ x: 0.5, y: 0.5 }}>
-              <MaterialCommunityIcons name="map-marker" size={30} color="green" />
+              <MaterialCommunityIcons name="map-marker" size={30} color={colors.pickup} />
             </Marker>
           )}
           {destination?.coords && (
             <Marker coordinate={destination.coords} anchor={{ x: 0.5, y: 1 }}>
-              <MaterialCommunityIcons name="map-marker" size={30} color="red" />
+              <MaterialCommunityIcons name="map-marker" size={30} color={colors.destination} />
             </Marker>
           )}
           {routeCoords.length > 0 && (
@@ -1115,7 +1117,10 @@ export default function WhereTo() {
                             }
                             setTimeout(() => Keyboard.dismiss(), 100);
                           }}>
-                          <View className="mr-2 h-2 w-2 rounded-full bg-green-500" />
+                          <View
+                            className="mr-2 h-2 w-2 rounded-full"
+                            style={{ backgroundColor: colors.pickup }}
+                          />
                           <Text className="font-semibold text-foreground">Pick up</Text>
                         </Button>
 
@@ -1132,7 +1137,10 @@ export default function WhereTo() {
                             }
                             setTimeout(() => Keyboard.dismiss(), 100);
                           }}>
-                          <View className="mr-2 h-2 w-2 rounded-full bg-red-500" />
+                          <View
+                            className="mr-2 h-2 w-2 rounded-full"
+                            style={{ backgroundColor: colors.destination }}
+                          />
                           <Text className="font-semibold text-foreground">Destination</Text>
                         </Button>
                       </View>
@@ -1153,7 +1161,7 @@ export default function WhereTo() {
                     <TouchableOpacity
                       onPress={() => fitMap(pickupLocation?.coords)}
                       className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
-                      <MaterialCommunityIcons name="map-marker" size={24} color="green" />
+                      <MaterialCommunityIcons name="map-marker" size={24} color={colors.pickup} />
 
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">
@@ -1165,7 +1173,11 @@ export default function WhereTo() {
                     <TouchableOpacity
                       onPress={() => fitMap(destination?.coords)}
                       className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
-                      <MaterialCommunityIcons name="map-marker" size={24} color="red" />
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={24}
+                        color={colors.destination}
+                      />
 
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">
@@ -1183,8 +1195,7 @@ export default function WhereTo() {
                       if (!hasSearchedDrivers) {
                         setHasSearchedDrivers(true);
                       }
-                    }}
-                    >
+                    }}>
                     <Text className="text-lg font-bold text-secondary">
                       {hasSearchedDrivers ? 'Choose driver' : 'Find My Driver'}
                     </Text>
@@ -1300,8 +1311,7 @@ export default function WhereTo() {
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 48, height: 4 }}
         animationConfigs={{ damping: 80, overshootClamping: true, stiffness: 500 }}
         enableHandlePanningGesture={false}
-        enableContentPanningGesture={false}
-      >
+        enableContentPanningGesture={false}>
         <View style={{ flex: 1, paddingHorizontal: 24, paddingBottom: insets.bottom + 16 }}>
           {/* Header */}
           <View className="mb-2 flex-row items-center">
@@ -1314,12 +1324,12 @@ export default function WhereTo() {
           </View>
 
           {/* Content */}
-          <View className='flex-1'>
+          <View className="flex-1">
             {selectedDriver && (
-              <View className='gap-3'>
+              <View className="gap-3">
                 {/* Driver card */}
-                <View className='flex-row items-center gap-3'>
-                  <View className='justify-center items-center gap-1.5'>
+                <View className="flex-row items-center gap-3">
+                  <View className="items-center justify-center gap-1.5">
                     <Avatar alt="Profile pic" className="h-14 w-14">
                       <AvatarImage
                         source={
@@ -1340,12 +1350,14 @@ export default function WhereTo() {
                       dob={selectedDriver.driver.userDetails.dob}
                     />
                   </View>
-                  <View className='flex-1 min-w-0 gap-2'>
+                  <View className="min-w-0 flex-1 gap-2">
                     <Text className="font-semibold text-primary">
                       {selectedDriver.driver.userDetails.firstName}{' '}
                       {selectedDriver.driver.userDetails.lastName}
                     </Text>
-                    <Text className="text-xs font-medium">Organization Name Dummy</Text>
+                    <Text className="text-xs font-medium">
+                      {selectedDriver.driver.organization.name}
+                    </Text>
 
                     <View className="flex-row items-center justify-start">
                       <MaterialCommunityIcons
@@ -1354,15 +1366,22 @@ export default function WhereTo() {
                         color={colors.primary}
                       />
                       <Text className="ml-1 text-sm text-slate-600">
-                        {selectedDriver.vehicle.model} • {selectedDriver.vehicle.registrationNumber} • {selectedDriver.vehicle.color}
+                        {selectedDriver.vehicle.model} • {selectedDriver.vehicle.registrationNumber}{' '}
+                        • {selectedDriver.vehicle.color}
                       </Text>
                     </View>
-                    <View className='flex-row items-center gap-2 mt-0.5'>
+                    <View className="mt-0.5 flex-row items-center gap-2">
                       <Rating rating={selectedDriver.driver.rating} />
                       {licenseVerification && (
-                        <View className='flex-row items-center gap-1'>
-                          <Feather name={licenseVerification.icon as any} size={12} color={licenseVerification.color} />
-                          <Text style={{ color: licenseVerification.color }} className="text-xs font-semibold">
+                        <View className="flex-row items-center gap-1">
+                          <Feather
+                            name={licenseVerification.icon as any}
+                            size={12}
+                            color={licenseVerification.color}
+                          />
+                          <Text
+                            style={{ color: licenseVerification.color }}
+                            className="text-xs font-semibold">
                             {licenseVerification.label}
                           </Text>
                         </View>
@@ -1374,16 +1393,24 @@ export default function WhereTo() {
                 <Separator />
 
                 {/* Trip details */}
-                <View className='rounded-2xl bg-primary/5 p-4'>
-                  <View className='flex-row gap-2'>
-                    <MaterialCommunityIcons name="map-marker" size={16} color="green" />
-                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">{pickupLocation?.title}</Text>
+                <View className="rounded-2xl bg-primary/5 p-4">
+                  <View className="flex-row gap-2">
+                    <MaterialCommunityIcons name="map-marker" size={16} color={colors.pickup} />
+                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">
+                      {pickupLocation?.title}
+                    </Text>
                   </View>
-                  <View className='flex-row gap-2'>
-                    <MaterialCommunityIcons name="map-marker" size={16} color="red" />
-                  <Text numberOfLines={1} className="text-sm font-bold text-foreground">{destination?.title}</Text>
+                  <View className="flex-row gap-2">
+                    <MaterialCommunityIcons
+                      name="map-marker"
+                      size={16}
+                      color={colors.destination}
+                    />
+                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">
+                      {destination?.title}
+                    </Text>
                   </View>
-                  <View className='flex-row justify-between items-center'>
+                  <View className="flex-row items-center justify-between">
                     <Text className="text-sm font-semibold text-muted-foreground">
                       {distanceFormat(selectedRoute?.distance.value ?? 0)}
                     </Text>

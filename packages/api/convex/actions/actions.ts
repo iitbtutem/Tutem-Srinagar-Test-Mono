@@ -1,4 +1,4 @@
-"use node"
+"use node";
 
 import { v } from "convex/values";
 import { action } from "../_generated/server";
@@ -45,20 +45,23 @@ export const getNearbyDrivers = action({
       v.union(v.literal("Bike"), v.literal("Cab"), v.literal("Auto")),
     ),
   },
-  handler: async (ctx, args) : Promise<ReturnValue> => {
-    const ABLY_API_KEY = process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;
+  handler: async (ctx, args): Promise<ReturnValue> => {
+    const ABLY_API_KEY =
+      process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;
     if (!ABLY_API_KEY) {
       throw new Error("ABLY_API_KEY not configured in Convex environment");
     }
 
     try {
-      const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+      const settings = await ctx.runQuery(
+        internal.routes.settings.rideSettingsInternal,
+      );
       const NearByRadius = settings.nearbyRadius / METERS_IN_KM;
 
       const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
       const response = await fetch(
         "https://rest.ably.io/channels/global:active-drivers/presence",
-        { headers: { Authorization: authHeader } }
+        { headers: { Authorization: authHeader } },
       );
 
       if (!response.ok) {
@@ -69,7 +72,7 @@ export const getNearbyDrivers = action({
       const presenceSet: any[] = await response.json();
       console.log("Raw Presence Set from Ably:", presenceSet);
 
-      if(presenceSet.length === 0) {
+      if (presenceSet.length === 0) {
         console.log("Raw Presence is empty");
         return [];
       }
@@ -90,8 +93,16 @@ export const getNearbyDrivers = action({
         })
         .filter((m) => {
           if (!m) return false;
-          const hasData = m.parsedData && m.parsedData.latitude !== undefined && m.parsedData.longitude !== undefined;
-          if (!hasData) console.log("Member filtered out (no lat/lng):", m.clientId, m.data);
+          const hasData =
+            m.parsedData &&
+            m.parsedData.latitude !== undefined &&
+            m.parsedData.longitude !== undefined;
+          if (!hasData)
+            console.log(
+              "Member filtered out (no lat/lng):",
+              m.clientId,
+              m.data,
+            );
           return hasData;
         })
         .map((m) => ({
@@ -99,34 +110,36 @@ export const getNearbyDrivers = action({
           latitude: Number(m!.parsedData.latitude),
           longitude: Number(m!.parsedData.longitude),
         }))
-      .filter((driver) => {
-        const dist = haversineDistance(
-          Number(args.pickup.latitude),
-          Number(args.pickup.longitude),
-          driver.latitude,
-          driver.longitude
-        );
-        const isNearby = dist <= NearByRadius;
-        console.log(`Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`);
-        return isNearby;
-      });
-
+        .filter((driver) => {
+          const dist = haversineDistance(
+            Number(args.pickup.latitude),
+            Number(args.pickup.longitude),
+            driver.latitude,
+            driver.longitude,
+          );
+          const isNearby = dist <= NearByRadius;
+          console.log(
+            `Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`,
+          );
+          return isNearby;
+        });
 
       console.log("Final nearbyDrivers list:", nearbyDriversInfo);
 
-
-      console.log("nearbyDrivers info",nearbyDriversInfo);
+      console.log("nearbyDrivers info", nearbyDriversInfo);
 
       if (nearbyDriversInfo.length === 0) return [];
 
-      const result = await ctx.runQuery(internal.routes.rides.getNearbyDriversQueryResultInternal, {
-        driversInfo: nearbyDriversInfo,
-        genderMatch: args.genderMatch,
-        filters: args.filters,
-        distance: args.distance,
-        riderId: args.riderId,
-      }
-    );
+      const result = await ctx.runQuery(
+        internal.routes.rides.getNearbyDriversQueryResultInternal,
+        {
+          driversInfo: nearbyDriversInfo,
+          genderMatch: args.genderMatch,
+          filters: args.filters,
+          distance: args.distance,
+          riderId: args.riderId,
+        },
+      );
 
       return result;
     } catch (error) {

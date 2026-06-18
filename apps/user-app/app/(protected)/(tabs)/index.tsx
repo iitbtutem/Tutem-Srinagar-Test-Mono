@@ -48,7 +48,7 @@ const services = [
     id: 'ride_request',
     name: 'Ride Request',
     image: require('@/assets/images/ride_request.png'),
-    href: '/whereto',
+    href: '/ride/createRequest',
   },
   {
     id: 'ride_pooling',
@@ -258,7 +258,7 @@ export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<Curre
         <Separator />
         <Link
           href={{
-            pathname: '/rideRequest',
+            pathname: '/ride/rideRequest',
             params: { id: currentRide._id },
           }}
           className="rounded-b-2xl bg-primary/10 p-3">
@@ -301,7 +301,7 @@ function ActiveRideDialog({
             className="mb-2"
             onPress={() => {
               setOpen(false);
-              router.push({ pathname: '/rideRequest', params: { id: rideId } });
+              router.push({ pathname: '/ride/rideRequest', params: { id: rideId } });
             }}>
             <Text className="font-bold tracking-wider text-white">View Details</Text>
           </Button>
