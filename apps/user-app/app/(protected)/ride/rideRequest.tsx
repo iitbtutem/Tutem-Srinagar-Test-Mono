@@ -382,7 +382,7 @@ export default function RideRequest() {
 
       <ScrollView
         className={cn('flex-1 px-3', { 'pointer-events-none': sheetIndex !== -1 })}
-        contentContainerStyle={{ gap: 16 }}
+        contentContainerStyle={{ gap: 16, paddingBottom: 50 }}
         showsVerticalScrollIndicator={false}>
         {/* Live Tracking Map */}
         <View
@@ -532,61 +532,56 @@ export default function RideRequest() {
 
           {/* driver details */}
           <View className="flex-row justify-between gap-2">
-            <View className="flex-1 flex-row items-center gap-3">
-              {/* Avatar with red ring on rejection */}
-
-              <View className="flex-row items-start gap-3">
-                <View
-                  className={cn('items-center justify-center gap-1.5', {
-                    'border-2 border-red-500':
-                      ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
-                  })}>
-                  <Avatar alt="Profile pic" className="h-[45px] w-[45px]">
-                    <AvatarImage
-                      source={
-                        ride.driver.userDetails.profilePictureKey?.trim()
-                          ? { uri: ride.driver.userDetails.profilePictureKey }
-                          : require('@/assets/images/avatar.jpg')
-                      }
-                    />
-                    <AvatarFallback className="bg-white/20">
-                      <Text className="text-xs font-bold text-primary">
-                        {ride.driver.userDetails.firstName?.[0]}
-                        {ride.driver.userDetails?.lastName?.[0]}
-                      </Text>
-                    </AvatarFallback>
-                  </Avatar>
-                </View>
-                <View className="min-w-0 flex-1 gap-0.5">
-                  <Text
-                    className={cn('px-px text-base font-bold', {
-                      'text-gray-400': ride.requestStatus === 'Rejected',
-                      'text-gray-900 dark:text-gray-100': ride.requestStatus !== 'Rejected',
-                    })}>
-                    {`${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails.lastName ?? ''}`.trim() ||
-                      'Driver'}
+            <View
+              className={cn('items-center justify-center gap-1.5', {
+                'border-2 border-red-500':
+                  ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
+              })}>
+              <Avatar alt="Profile pic" className="h-[45px] w-[45px]">
+                <AvatarImage
+                  source={
+                    ride.driver.userDetails.profilePictureKey?.trim()
+                      ? { uri: ride.driver.userDetails.profilePictureKey }
+                      : require('@/assets/images/avatar.jpg')
+                  }
+                />
+                <AvatarFallback className="bg-white/20">
+                  <Text className="text-xs font-bold text-primary">
+                    {ride.driver.userDetails.firstName?.[0]}
+                    {ride.driver.userDetails?.lastName?.[0]}
                   </Text>
-                  <GenderAge
-                    gender={ride.driver.userDetails.gender}
-                    dob={ride.driver.userDetails.dob}
-                  />
-                  <View className="mt-0.5 flex-row items-center gap-2">
-                    <Rating rating={ride.driver.rating} />
-                    {ride.driver.isLicenseVerified !== 'Verified' && (
-                      <View className="flex-row items-center gap-1">
-                        <Feather name="check" size={12} color="green" />
-                        <Text style={{ color: 'green' }} className="text-xs font-semibold">
-                          Verified
-                        </Text>
-                      </View>
-                    )}
+                </AvatarFallback>
+              </Avatar>
+            </View>
+
+            <View className="flex-1 gap-0.5">
+              <Text
+                className={cn('my-0 px-px py-0 text-base font-bold', {
+                  'text-gray-400':
+                    ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
+                })}>
+                {`${ride.driver.userDetails.firstName} ${ride.driver.userDetails.lastName ?? ''}`.trim() ||
+                  'Driver'}
+              </Text>
+              <GenderAge
+                gender={ride.driver.userDetails.gender}
+                dob={ride.driver.userDetails.dob}
+              />
+              <View className="mt-0.5 flex-row items-center gap-2">
+                <Rating rating={ride.driver.rating} />
+                {ride.driver.isLicenseVerified !== 'Verified' && (
+                  <View className="flex-row items-center gap-1">
+                    <Feather name="check" size={12} color="green" />
+                    <Text style={{ color: 'green' }} className="text-xs font-semibold">
+                      Verified
+                    </Text>
                   </View>
-                </View>
+                )}
               </View>
             </View>
 
             {/* Edit button — highlighted on rejection */}
-            {ride.status === 'Open' && (
+            {(ride.status === 'Open' || ride.status === 'Driver Arrived') && (
               <TouchableOpacity
                 onPress={handleShowNearbyDrivers}
                 className={cn(
@@ -709,23 +704,17 @@ export default function RideRequest() {
         </>
 
         {/* Cancel button */}
-        {ride.status === 'Open' && (
+        {(ride.status === 'Open' || ride.status === 'Driver Arrived') && (
           <Button
             onPress={handleCancel}
             variant={'destructive'}
-            disabled={cancelling || ride.status !== 'Open'}
+            disabled={cancelling}
             className={cn(
-              'my-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50',
+              'mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50',
               { 'pointer-events-none': sheetIndex !== -1 }
             )}>
-            {cancelling ? (
-              <ActivityIndicator size="small" color="#dc2626" />
-            ) : (
-              <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
-            )}
-            <Text className="text-sm font-semibold text-red-600">
-              {cancelling ? 'Cancelling…' : 'Cancel Ride Request'}
-            </Text>
+            <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
+            <Text className="text-sm font-semibold text-red-600">Cancel Ride Request</Text>
           </Button>
         )}
 
