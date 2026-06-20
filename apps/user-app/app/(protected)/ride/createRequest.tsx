@@ -329,7 +329,7 @@ export default function WhereTo() {
   const destinationRef = useRef<any>(null);
 
   const snapPoints = useMemo(() => ['45%', '85%'], []);
-  const confirmSnapPoints = useMemo(() => ['50%'], []);
+  const confirmSnapPoints = useMemo(() => ['55%'], []);
   const [sheetIndex, setSheetIndex] = useState(1);
   const [confirmSheetOpen, setConfirmSheetOpen] = useState(false);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
@@ -1410,11 +1410,11 @@ export default function WhereTo() {
                       {destination?.title}
                     </Text>
                   </View>
-                  <View className="flex-row items-center justify-between">
+                  <View className="mt-3 flex-row items-center justify-between rounded-xl bg-primary/10 px-4 py-1">
                     <Text className="text-sm font-semibold text-muted-foreground">
                       {distanceFormat(selectedRoute?.distance.value ?? 0)}
                     </Text>
-                    <Text className="text-lg font-extrabold tracking-wider text-green-400">
+                    <Text className="text-lg font-extrabold tracking-wider text-green-600">
                       {formatFare(selectedDriver.fare)}
                     </Text>
                   </View>
@@ -1424,7 +1424,7 @@ export default function WhereTo() {
           </View>
 
           {/* Confirm button pinned to bottom */}
-          <Button onPress={handleConfirmRide} className="mt-4">
+          <Button onPress={handleConfirmRide} className="mt-2">
             <Text className="text-lg font-bold text-secondary">Confirm Ride</Text>
           </Button>
         </View>

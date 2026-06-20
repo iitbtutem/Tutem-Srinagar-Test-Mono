@@ -134,7 +134,7 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
       iconBg: 'bg-red-500/20',
       icon: '✕',
       label: 'Canceled',
-      sub: 'Ride was canceled',
+      sub: 'You canceled the ride',
       timestamp: ride.updatedAt,
     };
   }

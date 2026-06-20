@@ -23,7 +23,7 @@ export const acceptRideAction = action({
     );
 
     if (!riderExpoPushToken) return;
-    
+
     await sendNotification({
       pushTokens: [riderExpoPushToken],
       title: "Ride Accepted 🚗",
@@ -51,18 +51,15 @@ export const bookRide = action({
     expectedDuration: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"ride">> => {
-    const ride = await ctx.runMutation(
-      internal.routes.rides.bookRideInternal,
-      {
-        riderId: args.riderId,
-        driverId: args.driverId,
-        fare: args.fare,
-        pickup: args.pickup,
-        destination: args.destination,
-        distance: args.distance,
-        expectedDuration: args.expectedDuration,
-      },
-    );
+    const ride = await ctx.runMutation(internal.routes.rides.bookRideInternal, {
+      riderId: args.riderId,
+      driverId: args.driverId,
+      fare: args.fare,
+      pickup: args.pickup,
+      destination: args.destination,
+      distance: args.distance,
+      expectedDuration: args.expectedDuration,
+    });
 
     if (ride.driverExpoPushToken)
       await sendNotification({
@@ -82,18 +79,18 @@ export const changeDriver = action({
   },
   handler: async (ctx, args) => {
     const ride = await ctx.runMutation(
-      internal.routes.rides.changeDriverInternal, 
+      internal.routes.rides.changeDriverInternal,
       {
         rideId: args.rideId,
         riderId: args.riderId,
-      }
+      },
     );
 
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
       {
         id: args.driverId,
-      }
+      },
     );
 
     if (driver.expoPushToken && ride.requestStatus === "Accepted")
@@ -102,7 +99,7 @@ export const changeDriver = action({
         title: "Ride Canceled 🚖",
         body: "Your current ride has been canceled by rider. You can now a accept new ride request.",
       });
-  }
+  },
 });
 
 export const cancelRide = action({
@@ -125,8 +122,199 @@ export const cancelRide = action({
     await sendNotification({
       pushTokens: [driverExpoPushToken],
       title: "Ride Cancelled ❌",
-      body: "The passenger has cancelled the ride. You are now available for new requests."
+      body: "The passenger has cancelled the ride. You are now available for new requests.",
     });
+  },
+});
+
+export const calculateRiderCancelRideCharges = action({
+  args: {
+    rideId: v.id("ride"),
+    riderLocation: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    }),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    calculatedFare: number;
+    baseDistance: number;
+    basePrice: number;
+    ratePerKm: number;
+    chargableDistance: number;
+    remainingDistance: number;
+    penaltyAmount: number;
+    hasReachedDestionation: boolean;
+  }> => {
+    const { organizationRate: orgRate, ride } = await ctx.runQuery(
+      internal.routes.rides.rideOrganizationRateInternal,
+      { id: args.rideId },
+    );
+
+    const { address, ...destCords } = ride.destination;
+    const route = await fetchRoute(args.riderLocation, destCords);
+    const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
+
+    const settings = await ctx.runQuery(
+      internal.routes.settings.rideSettingsInternal,
+    );
+    const penaltyAmount = settings.cancellationPenalty ?? 50;
+
+    // chargableDistance = distanceCovered (no arrivedRadius threshold for rider)
+    const chargableDistanceInMts = Math.max(
+      0,
+      ride.distance - remainingDistanceInMts,
+    );
+
+    let calculatedFare: number;
+
+    if (!ride.hasReachedDestionation) {
+      // Rider aborted before reaching destination — apply penalty
+      if (chargableDistanceInMts < orgRate.baseDistance) {
+        // Less than base distance covered: base fare + penalty
+        calculatedFare = orgRate.baseDistanceRate + penaltyAmount;
+      } else {
+        // Beyond base distance: base fare + extra distance rate + penalty
+        const extraDistanceKm =
+          (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM;
+        calculatedFare =
+          orgRate.baseDistanceRate +
+          extraDistanceKm * orgRate.ratePerKm +
+          penaltyAmount;
+      }
+    } else {
+      // Rider has reached destination — normal fare, no penalty
+      if (chargableDistanceInMts < orgRate.baseDistance) {
+        calculatedFare = orgRate.baseDistanceRate;
+      } else {
+        const extraDistanceKm =
+          (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM;
+        calculatedFare =
+          orgRate.baseDistanceRate + extraDistanceKm * orgRate.ratePerKm;
+      }
+    }
+
+    return {
+      calculatedFare: Math.max(0, Math.round(calculatedFare)),
+      baseDistance: orgRate.baseDistance,
+      basePrice: orgRate.baseDistanceRate,
+      ratePerKm: orgRate.ratePerKm,
+      chargableDistance: chargableDistanceInMts,
+      remainingDistance: remainingDistanceInMts,
+      penaltyAmount,
+      hasReachedDestionation: ride.hasReachedDestionation,
+    };
+  },
+});
+
+export const riderCancelRide = action({
+  args: {
+    rideId: v.id("ride"),
+    riderId: v.id("rider"),
+    reason: v.string(),
+    riderLocation: v.optional(
+      v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
+      id: args.rideId,
+    });
+
+    if (ride.status === "Active") {
+      // Abort — recalculate fare from current location for integrity
+      if (!args.riderLocation)
+        throw new ConvexError("Location required to abort active ride");
+
+      const { organizationRate: orgRate } = await ctx.runQuery(
+        internal.routes.rides.rideOrganizationRateInternal,
+        { id: args.rideId },
+      );
+
+      const { address, ...destCords } = ride.destination;
+      const route = await fetchRoute(args.riderLocation, destCords);
+      const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
+
+      const dropOffAddress = await getAddressFromCoords(args.riderLocation);
+
+      const settings = await ctx.runQuery(
+        internal.routes.settings.rideSettingsInternal,
+      );
+      const penaltyAmount = settings.cancellationPenalty ?? 50;
+
+      const chargableDistanceInMts = Math.max(
+        0,
+        ride.distance - remainingDistanceInMts,
+      );
+
+      let fare: number;
+      if (!ride.hasReachedDestionation) {
+        if (chargableDistanceInMts < orgRate.baseDistance) {
+          fare = orgRate.baseDistanceRate + penaltyAmount;
+        } else {
+          const extraDistanceKm =
+            (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM;
+          fare =
+            orgRate.baseDistanceRate +
+            extraDistanceKm * orgRate.ratePerKm +
+            penaltyAmount;
+        }
+      } else {
+        if (chargableDistanceInMts < orgRate.baseDistance) {
+          fare = orgRate.baseDistanceRate;
+        } else {
+          const extraDistanceKm =
+            (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM;
+          fare = orgRate.baseDistanceRate + extraDistanceKm * orgRate.ratePerKm;
+        }
+      }
+
+      const driverExpoPushToken = await ctx.runMutation(
+        internal.routes.rides.riderAbortRideInternal,
+        {
+          rideId: args.rideId,
+          riderId: args.riderId,
+          reason: args.reason,
+          calculatedFare: Math.max(0, Math.round(fare)),
+          distance: chargableDistanceInMts,
+          dropOff: {
+            ...args.riderLocation,
+            address: dropOffAddress,
+          },
+        },
+      );
+
+      if (driverExpoPushToken) {
+        await sendNotification({
+          pushTokens: [driverExpoPushToken],
+          title: "Ride Aborted by Rider 🚫",
+          body: "The rider has aborted the ride. Please review the trip summary.",
+        });
+      }
+    } else {
+      // Cancel (Open or Driver Arrived) — no charges
+      const driverExpoPushToken = await ctx.runMutation(
+        internal.routes.rides.cancelRideInternal,
+        {
+          riderId: args.riderId,
+          rideId: args.rideId,
+          reason: args.reason,
+        },
+      );
+
+      if (driverExpoPushToken) {
+        await sendNotification({
+          pushTokens: [driverExpoPushToken],
+          title: "Ride Cancelled ❌",
+          body: "The passenger has cancelled the ride. You are now available for new requests.",
+        });
+      }
+    }
   },
 });
 
@@ -135,29 +323,53 @@ export const calculateDriverCancelRideCharges = action({
     id: v.id("ride"),
     driverLocation: v.object({
       latitude: v.number(),
-      longitude: v.number()
-    })
+      longitude: v.number(),
+    }),
   },
-  handler: async (ctx, args): Promise<{ calculatedFare: number; baseDistance: number; basePrice: number; ratePerKm: number; chargableDistance: number;  remainingDistance: number }> => {
-    const rideDetails = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.id });
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    calculatedFare: number;
+    baseDistance: number;
+    basePrice: number;
+    ratePerKm: number;
+    chargableDistance: number;
+    remainingDistance: number;
+  }> => {
+    const rideDetails = await ctx.runQuery(
+      internal.routes.rides.getDetailsInternal,
+      { id: args.id },
+    );
 
     const { address, ...cords } = rideDetails.destination;
     const route = await fetchRoute(args.driverLocation, cords);
     const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
-    
-    const { organizationRate: orgRate, ride } = await ctx.runQuery(internal.routes.rides.rideOrganizationRateInternal, { id: rideDetails._id });
-    
-    const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+
+    const { organizationRate: orgRate, ride } = await ctx.runQuery(
+      internal.routes.rides.rideOrganizationRateInternal,
+      { id: rideDetails._id },
+    );
+
+    const settings = await ctx.runQuery(
+      internal.routes.settings.rideSettingsInternal,
+    );
     const arrivedRadiusInMts = settings.arrivedDistance;
 
-    const distanceCoveredInMts = Math.max(0, ride.distance - remainingDistanceInMts) ;
-    const chargableDistanceInMts = distanceCoveredInMts <= arrivedRadiusInMts ? 0 : distanceCoveredInMts;
-    
-    const calculatedFare = chargableDistanceInMts < orgRate.baseDistance
-      ? (chargableDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm
-      : orgRate.baseDistanceRate + 
-      (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM * orgRate.ratePerKm;
-    
+    const distanceCoveredInMts = Math.max(
+      0,
+      ride.distance - remainingDistanceInMts,
+    );
+    const chargableDistanceInMts =
+      distanceCoveredInMts <= arrivedRadiusInMts ? 0 : distanceCoveredInMts;
+
+    const calculatedFare =
+      chargableDistanceInMts < orgRate.baseDistance
+        ? (chargableDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm
+        : orgRate.baseDistanceRate +
+          ((chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM) *
+            orgRate.ratePerKm;
+
     return {
       calculatedFare: Math.max(0, Math.round(calculatedFare)),
       baseDistance: orgRate.baseDistance,
@@ -165,8 +377,8 @@ export const calculateDriverCancelRideCharges = action({
       ratePerKm: orgRate.ratePerKm,
       chargableDistance: chargableDistanceInMts,
       remainingDistance: remainingDistanceInMts,
-    }
-  }
+    };
+  },
 });
 
 export const driverCancelRide = action({
@@ -177,51 +389,67 @@ export const driverCancelRide = action({
     driverLocation: v.object({
       latitude: v.number(),
       longitude: v.number(),
-    })
+    }),
   },
   handler: async (ctx, args) => {
-    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.rideId });
+    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
+      id: args.rideId,
+    });
 
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
       {
         id: ride.driverId,
-      }
+      },
     );
 
     let fare: number = ride.fare;
     let chargableDistanceInMts: number = ride.distance;
     let dropOffAddress: string | null = null;
 
-    if(ride.status === "Active"){
+    if (ride.status === "Active") {
       const organizationRates = await ctx.runQuery(
         internal.routes.organizations.getOrganizationRatesInternal,
         {
-          organizationId: driver.organizationId
-        }
+          organizationId: driver.organizationId,
+        },
       );
 
-      const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+      const settings = await ctx.runQuery(
+        internal.routes.settings.rideSettingsInternal,
+      );
       const arrivedRadiusInMts = settings.arrivedDistance;
 
-      const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
-      if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
+      const orgRate = organizationRates.find(
+        (rate) => rate.vehicleClass === driver.vehicle?.class,
+      );
+      if (orgRate === undefined)
+        throw new ConvexError("Driver doesn't belong to any organization");
 
       const { address, ...cords } = ride.destination;
       const route = await fetchRoute(args.driverLocation, cords);
       const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
-      
-      dropOffAddress = remainingDistanceInMts > arrivedRadiusInMts ? await getAddressFromCoords(args.driverLocation) : null;
 
-      const distanceCoveredInMts = Math.max(0, ride.distance - remainingDistanceInMts);
-      chargableDistanceInMts = distanceCoveredInMts <= arrivedRadiusInMts ? 0 : distanceCoveredInMts
+      dropOffAddress =
+        remainingDistanceInMts > arrivedRadiusInMts
+          ? await getAddressFromCoords(args.driverLocation)
+          : null;
 
-      fare = chargableDistanceInMts < orgRate.baseDistance
-        ? (chargableDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm
-        : orgRate.baseDistanceRate + 
-        (chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM * orgRate.ratePerKm;
-    };
-    
+      const distanceCoveredInMts = Math.max(
+        0,
+        ride.distance - remainingDistanceInMts,
+      );
+      chargableDistanceInMts =
+        distanceCoveredInMts <= arrivedRadiusInMts ? 0 : distanceCoveredInMts;
+
+      fare =
+        chargableDistanceInMts < orgRate.baseDistance
+          ? (chargableDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm
+          : orgRate.baseDistanceRate +
+            ((chargableDistanceInMts - orgRate.baseDistance) / METERS_IN_KM) *
+              orgRate.ratePerKm;
+    }
+
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.driverCancelRideInternal,
       {
@@ -230,13 +458,15 @@ export const driverCancelRide = action({
         reason: args.reason,
         calculatedFare: Math.round(fare),
         distance: chargableDistanceInMts,
-        ...(chargableDistanceInMts > 0 && dropOffAddress) ? {
-          dropOff: {
-          ...args.driverLocation,
-          address: dropOffAddress,
-        }
-        } : undefined,
-      }
+        ...(chargableDistanceInMts > 0 && dropOffAddress
+          ? {
+              dropOff: {
+                ...args.driverLocation,
+                address: dropOffAddress,
+              },
+            }
+          : undefined),
+      },
     );
     if (!riderExpoPushToken) return;
 
@@ -246,7 +476,7 @@ export const driverCancelRide = action({
       title: "Ride Aborted 🚫",
       body: "The driver aborted your ride. Please book a new ride or change your driver if possible.",
     });
-  }
+  },
 });
 
 export const rejectRide = action({
@@ -282,12 +512,15 @@ export const driverArrived = action({
   handler: async (ctx, args) => {
     const crypto = require("crypto");
     const otp = crypto.randomInt(1000, 10000);
-    
-    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.driverArrivedInternal, {
-      driverId: args.driverId,
-      rideId: args.rideId,
-      otp
-    });
+
+    const riderExpoPushToken = await ctx.runMutation(
+      internal.routes.rides.driverArrivedInternal,
+      {
+        driverId: args.driverId,
+        rideId: args.rideId,
+        otp,
+      },
+    );
 
     if (!riderExpoPushToken) return;
 
@@ -295,9 +528,9 @@ export const driverArrived = action({
     await sendNotification({
       pushTokens: [riderExpoPushToken],
       title: "Driver Arrived 🚗",
-      body: "Your driver has reached the pickup point. Please provide the OTP from ride details to start the ride."
+      body: "Your driver has reached the pickup point. Please provide the OTP from ride details to start the ride.",
     });
-  }
+  },
 });
 
 export const generateRideOtp = action({
@@ -307,11 +540,14 @@ export const generateRideOtp = action({
   handler: async (ctx, args) => {
     const crypto = require("crypto");
     const otp = crypto.randomInt(1000, 10000);
-    
-    const riderExpoPushToken = await ctx.runMutation(internal.routes.rides.generateRideOtpInternal, {
-      id: args.rideId,
-      otp
-    });
+
+    const riderExpoPushToken = await ctx.runMutation(
+      internal.routes.rides.generateRideOtpInternal,
+      {
+        id: args.rideId,
+        otp,
+      },
+    );
 
     if (!riderExpoPushToken) return;
 
@@ -321,7 +557,7 @@ export const generateRideOtp = action({
       title: "OTP generated",
       body: "New Ride OTP has been generated. Please share the OTP from ride details to begin the ride.",
     });
-  }
+  },
 });
 
 export const startRide = action({
@@ -358,44 +594,57 @@ export const completeRide = action({
     driverLocation: v.object({
       latitude: v.number(),
       longitude: v.number(),
-    })
+    }),
   },
   handler: async (ctx, args) => {
-
-    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, { id: args.rideId });
+    const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
+      id: args.rideId,
+    });
 
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
       {
         id: ride.driverId,
-      }
+      },
     );
 
     const organizationRates = await ctx.runQuery(
       internal.routes.organizations.getOrganizationRatesInternal,
       {
-        organizationId: driver.organizationId
-      }
+        organizationId: driver.organizationId,
+      },
     );
 
-    const settings = await ctx.runQuery(internal.routes.settings.rideSettingsInternal);
+    const settings = await ctx.runQuery(
+      internal.routes.settings.rideSettingsInternal,
+    );
     const arrivedRadiusInMts = settings.arrivedDistance;
 
-    const orgRate = organizationRates.find(rate => rate.vehicleClass === driver.vehicle?.class);
-    if(orgRate === undefined) throw new ConvexError("Driver doesn't belong to any organization");
+    const orgRate = organizationRates.find(
+      (rate) => rate.vehicleClass === driver.vehicle?.class,
+    );
+    if (orgRate === undefined)
+      throw new ConvexError("Driver doesn't belong to any organization");
 
     const { address, ...cords } = ride.destination;
     const route = await fetchRoute(args.driverLocation, cords);
-    
-    const extraDistanceInMts = (route && route.distance.value > arrivedRadiusInMts) ? route.distance.value : 0;
-    
-    const dropOffAddress = extraDistanceInMts > 0 ? await getAddressFromCoords(args.driverLocation) : null;
+
+    const extraDistanceInMts =
+      route && route.distance.value > arrivedRadiusInMts
+        ? route.distance.value
+        : 0;
+
+    const dropOffAddress =
+      extraDistanceInMts > 0
+        ? await getAddressFromCoords(args.driverLocation)
+        : null;
 
     const rideDistance = ride.distance + extraDistanceInMts;
-    const fare = extraDistanceInMts > 0 
-      ? (ride.fare + ((extraDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm))
-      : ride.fare;
-    
+    const fare =
+      extraDistanceInMts > 0
+        ? ride.fare + (extraDistanceInMts / METERS_IN_KM) * orgRate.ratePerKm
+        : ride.fare;
+
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.completeRideInternal,
       {
@@ -403,16 +652,18 @@ export const completeRide = action({
         rideId: args.rideId,
         calculatedFare: Math.round(fare),
         distance: rideDistance,
-        ...(extraDistanceInMts > 0 && dropOffAddress) ? {
-          dropOff: {
-          ...args.driverLocation,
-          address: dropOffAddress,
-        }
-        } : undefined,
+        ...(extraDistanceInMts > 0 && dropOffAddress
+          ? {
+              dropOff: {
+                ...args.driverLocation,
+                address: dropOffAddress,
+              },
+            }
+          : undefined),
       },
     );
-    
-    if (riderExpoPushToken){
+
+    if (riderExpoPushToken) {
       await sendNotification({
         pushTokens: [riderExpoPushToken],
         title: "Ride Completed 🎉",

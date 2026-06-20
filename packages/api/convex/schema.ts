@@ -168,6 +168,7 @@ export default defineSchema({
     arrivedDistance: v.number(),
     driverResponseTime: v.number(),
     maxDriverRideRequests: v.optional(v.number()),
+    cancellationPenalty: v.optional(v.number()),
   })
 
 });

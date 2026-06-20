@@ -52,9 +52,11 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     const settings = await ctx.db.query("rideSettings").first();
     const MaxRideRequest = settings?.maxDriverRideRequests ?? 3;
 
+    const allDrivers = await ctx.db.query("driver").collect();
+
     const drivers = await Promise.all(
-      driversInfo.map(async (driver) => {
-        const driverDetails = await ctx.db.get(driver.driverId);
+      allDrivers.map(async (driver) => {
+        const driverDetails = await ctx.db.get(driver._id);
 
         if (
           driverDetails === null ||
@@ -99,7 +101,7 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
         const vehicle = await ctx.db
           .query("vehicle")
-          .withIndex("by_owner", (q) => q.eq("ownerId", driver.driverId))
+          .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
           .first();
         if (vehicle === null) return null;
         console.log("vehicle is", vehicle);
@@ -122,6 +124,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
         const organization = await ctx.db.get(driverDetails.organizationId);
         if (organization === null) return null;
+
+        console.log("i m inside nearby query ...");
 
         const organizationRate = await ctx.db
           .query("organizationsRate")
@@ -159,8 +163,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
           vehicle: vehicle,
           fare: Math.round(fare),
           cords: {
-            latitude: driver.latitude,
-            longitude: driver.longitude,
+            latitude: 101,
+            longitude: 101,
           },
         };
       }),
@@ -313,6 +317,7 @@ export const cancelRideInternal = internalMutation({
   args: {
     riderId: v.id("rider"),
     rideId: v.id("ride"),
+    reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
@@ -323,8 +328,8 @@ export const cancelRideInternal = internalMutation({
     if (ride === null || ride.riderId !== rider._id)
       throw new ConvexError("Ride not found");
 
-    if (ride.status !== "Open")
-      throw new ConvexError("Ride cannot cancelled at this stage");
+    if (ride.status !== "Open" && ride.status !== "Driver Arrived")
+      throw new ConvexError("Ride cannot be cancelled at this stage");
 
     const driver = await ctx.db.get(ride.driverId);
     if (driver === null) throw new ConvexError("Invalid user");
@@ -333,6 +338,14 @@ export const cancelRideInternal = internalMutation({
       status: "Canceled",
       updatedAt: Date.now(),
     });
+
+    if (args.reason) {
+      await ctx.db.insert("rideReasons", {
+        rideId: ride._id,
+        reason: args.reason,
+        // driverId omitted — indicates this is the rider's reason
+      });
+    }
 
     if (
       driver.isAvailableForRide === false &&
@@ -344,6 +357,51 @@ export const cancelRideInternal = internalMutation({
     }
 
     return ride.requestStatus === "Accepted" ? driver.expoPushToken : undefined;
+  },
+});
+
+export const riderAbortRideInternal = internalMutation({
+  args: {
+    rideId: v.id("ride"),
+    riderId: v.id("rider"),
+    reason: v.string(),
+    calculatedFare: v.number(),
+    distance: v.number(),
+    dropOff: v.optional(
+      v.object({
+        address: v.string(),
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const rider = await ctx.db.get(args.riderId);
+    if (rider === null) throw new ConvexError("Invalid user");
+
+    const ride = await ctx.db.get(args.rideId);
+    if (ride === null || ride.riderId !== rider._id)
+      throw new ConvexError("Ride not found");
+
+    if (ride.status !== "Active")
+      throw new ConvexError("Can only abort an active ride");
+
+    await ctx.db.patch(ride._id, {
+      status: "Abort",
+      distance: args.distance,
+      fare: args.calculatedFare,
+      dropOff: args.dropOff,
+      updatedAt: Date.now(),
+    });
+
+    // driverId is omitted to mark this as the rider's reason
+    await ctx.db.insert("rideReasons", {
+      rideId: ride._id,
+      reason: args.reason,
+    });
+
+    const driver = await ctx.db.get(ride.driverId);
+    return driver?.expoPushToken;
   },
 });
 
@@ -605,7 +663,6 @@ export const getRiderCurrentRideById = query({
         ? null
         : riderRatings.reduce((sum, r) => sum + r.score, 0) /
           riderRatings.length;
-    const riderTotalRating = riderRatings.length;
 
     const driverProfilePictureUri = driverDetails.profilePictureKey
       ? await getSignedUrl(
@@ -628,9 +685,15 @@ export const getRiderCurrentRideById = query({
           { expiresIn: 300 },
         )
       : undefined;
+    const rideReasons = await ctx.db
+      .query("rideReasons")
+      .withIndex("by_ride", (q) => q.eq("rideId", ride._id))
+      .collect();
+
     return {
       ...ride,
       otp: ride.status === "Driver Arrived" ? ride.otp : null,
+      rideReasons,
       rider: {
         ...rider,
         rating: {
