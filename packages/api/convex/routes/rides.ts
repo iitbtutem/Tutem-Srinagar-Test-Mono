@@ -275,6 +275,7 @@ export const changeDriverInternal = internalMutation({
   args: {
     rideId: v.id("ride"),
     riderId: v.id("rider"),
+    driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
     const ride = await ctx.db.get(args.rideId);
@@ -282,6 +283,19 @@ export const changeDriverInternal = internalMutation({
       throw new ConvexError("Ride not found");
 
     const driver = await ctx.db.get(ride.driverId);
+    if (driver === null) throw new ConvexError("Driver not found");
+
+    const newDriver = await ctx.db.get(args.driverId);
+    if (
+      newDriver === null ||
+      newDriver.isAvailableForRide === false ||
+      newDriver.isOnline === false
+    )
+      throw new ConvexError(
+        newDriver === null
+          ? "Driver not found"
+          : "Driver not available for ride",
+      );
 
     if (
       driver &&
@@ -296,7 +310,7 @@ export const changeDriverInternal = internalMutation({
     await ctx.db.patch(ride._id, {
       updatedAt: Date.now(),
       requestedAt: Date.now(),
-      driverId: ride.driverId,
+      driverId: args.driverId,
       requestStatus: "Pending",
     });
 

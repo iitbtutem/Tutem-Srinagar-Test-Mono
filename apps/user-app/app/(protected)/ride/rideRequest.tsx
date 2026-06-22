@@ -127,11 +127,9 @@ function formatActualDuration(startedAt?: number, endedAt?: number): string {
 export default function RideRequest() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
   const router = useRouter();
-  const { colorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
-    useThemeColors();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
   const riderCancelRide = useAction(api.actions.ride.riderCancelRide);
@@ -167,6 +165,7 @@ export default function RideRequest() {
   const [route, setRoute] = useState<Route | null>(null);
   const [selectedDriver, setSelectedDriver] = useState<NearbyDriver | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
+  const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
 
   const [filters, setFilters] = useState<VehicleClass[]>([]);
   const [genderMatch, setGenderMatch] = useState(false);
@@ -183,13 +182,12 @@ export default function RideRequest() {
 
   const animatedIndex = useSharedValue(1);
 
-  const isDark = colorScheme === 'dark';
-
   const getNearbyDriversAction = useAction(api.actions.actions.getNearbyDrivers);
   const changeDriver = useAction(api.actions.ride.changeDriver);
 
   const fetchDrivers = async () => {
     if (!ride) return;
+    setIsSearchingDrivers(true);
     try {
       const drivers = await getNearbyDriversAction({
         pickup: {
@@ -209,6 +207,8 @@ export default function RideRequest() {
     } catch (error) {
       console.error('Discovery error:', error);
       setNearbyDrivers([]);
+    } finally {
+      setIsSearchingDrivers(false);
     }
   };
 
@@ -226,9 +226,9 @@ export default function RideRequest() {
       const result =
         ride.status !== 'Active'
           ? null
-          : riderLocation === null
+          : driverLocation === null
             ? null
-            : await calculateRiderCancelRideCharges({ rideId: id, riderLocation });
+            : await calculateRiderCancelRideCharges({ rideId: id, driverLocation });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error: any) {
@@ -243,7 +243,6 @@ export default function RideRequest() {
   };
 
   const handleConfirmCancel = async () => {
-    console.log('Rider location : ', riderLocation);
     if (!ride || selectedReason === null) return;
     setCancelling(true);
     try {
@@ -251,7 +250,7 @@ export default function RideRequest() {
         rideId: id,
         riderId: ride.riderId,
         reason: selectedReason,
-        ...(riderLocation ? { riderLocation } : {}),
+        ...(driverLocation ? { driverLocation } : {}),
       });
       setCancelStep(null);
       setSelectedReason(null);
@@ -500,7 +499,7 @@ export default function RideRequest() {
         className={cn('flex-1 px-3', { 'pointer-events-none': isSheetOpen })}
         contentContainerStyle={{ gap: 16, paddingBottom: 50 }}
         showsVerticalScrollIndicator={false}>
-        {/* Live Tracking Map */}
+        {/* map */}
         <View
           className={cn('-mx-3 h-56', {
             'pointer-events-none': isSheetOpen,
@@ -526,8 +525,8 @@ export default function RideRequest() {
             {/* Driver Marker */}
             {driverLocation && (
               <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} flat>
-                <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-blue-500 bg-slate-900 shadow-lg">
-                  <MaterialCommunityIcons name="car-side" size={24} color="#3b82f6" />
+                <View className="absolute items-center justify-center rounded-full border border-blue-500 bg-yellow-300 shadow-lg">
+                  <MaterialCommunityIcons name="car-side" size={24} color={colors.primary} />
                 </View>
               </Marker>
             )}
@@ -771,7 +770,7 @@ export default function RideRequest() {
               </View>
 
               <View className="items-center gap-0.5">
-                <Ionicons name="people-outline" size={14} color={isDark ? '#f9fafb' : '#27272a'} />
+                <Ionicons name="people-outline" size={14} color="#27272a" />
                 <Text className="text-xs font-semibold text-gray-600">
                   {vehicle.seatingCapacity}
                 </Text>
@@ -939,13 +938,16 @@ export default function RideRequest() {
         )}
       </ScrollView>
 
-      {/* TODO: need to replace it with the ui simillar to createRequest.tsx */}
+      {/* change driver */}
       <BottomSheet
         ref={bottomSheetRef}
         index={sheetIndex}
         animatedIndex={animatedIndex}
-        onChange={setSheetIndex}
-        snapPoints={['45%', '80%']}
+        onChange={(index) => {
+          setSheetIndex(index);
+          if (index === -1) setSelectedDriver(null);
+        }}
+        snapPoints={['50%', '80%']}
         enableDynamicSizing={false}
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
@@ -958,7 +960,7 @@ export default function RideRequest() {
                 {/* Header with back option to re-plan */}
                 <View className="flex-row items-center px-4 py-2">
                   <TouchableOpacity onPress={() => bottomSheetRef.current?.close()} className="p-2">
-                    <Ionicons name="arrow-back" size={24} color={isDark ? 'white' : 'black'} />
+                    <Ionicons name="arrow-back" size={24} color={'black'} />
                   </TouchableOpacity>
                   <Text className="mr-8 flex-1 text-center text-lg font-bold text-foreground">
                     Choose a driver
@@ -972,12 +974,12 @@ export default function RideRequest() {
                     setSheetIndex(0);
                     setSelectedDriver(driver);
                   }}
-                  isDark={isDark}
                   filters={filters}
                   setFilters={setFilters}
                   genderMatch={genderMatch}
                   setGenderMatch={setGenderMatch}
-                  riderGender={ride.rider.userDetails.gender} // REMINDER GET IT CHECKED OUT, TO SEE IF IM GETTING THE USER THE RIGHT WAY
+                  riderGender={ride.rider.userDetails.gender}
+                  isSearchingDrivers={isSearchingDrivers}
                 />
               </View>
             </SheetLayer>
@@ -1073,23 +1075,19 @@ export default function RideRequest() {
 
                     <View className="h-[1px] bg-border" />
 
-                    <View className="flex-row items-center justify-between rounded-xl bg-muted/30 px-3">
-                      <View>
-                        <Text className="text-sm text-muted-foreground">
-                          {distanceFormat(ride.distance) ?? '-'}
-                        </Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className="text-lg font-bold text-foreground">
-                          {formatFare(selectedDriver.fare)}
-                        </Text>
-                      </View>
+                    <View className="mt-3 flex-row items-center justify-between rounded-xl bg-primary/10 px-4 py-1">
+                      <Text className="text-sm text-muted-foreground">
+                        {distanceFormat(ride.distance) ?? '-'}
+                      </Text>
+                      <Text className="text-lg font-extrabold tracking-wider text-green-600">
+                        {formatFare(selectedDriver.fare)}
+                      </Text>
                     </View>
                   </View>
 
                   {/* Confirm button */}
                   <Button onPress={handleChangeDriver} className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">Confirm Driver</Text>
+                    <Text className="text-lg font-bold text-secondary">Confirm</Text>
                   </Button>
                 </View>
               </SheetLayer>
@@ -1418,6 +1416,9 @@ export default function RideRequest() {
       </BottomSheet>
 
       {rideAborted && !!driverAbortReason && <RideAborted abortReason={driverAbortReason} />}
+      {(isSearchingDrivers || changingDriver) && (
+        <Loader subtitle={changingDriver ? 'Changing driver' : 'Searching drivers'} />
+      )}
     </View>
   );
 }

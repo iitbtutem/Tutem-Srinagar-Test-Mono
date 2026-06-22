@@ -83,6 +83,7 @@ export const changeDriver = action({
       {
         rideId: args.rideId,
         riderId: args.riderId,
+        driverId: args.driverId,
       },
     );
 
@@ -130,7 +131,7 @@ export const cancelRide = action({
 export const calculateRiderCancelRideCharges = action({
   args: {
     rideId: v.id("ride"),
-    riderLocation: v.object({
+    driverLocation: v.object({
       latitude: v.number(),
       longitude: v.number(),
     }),
@@ -154,7 +155,7 @@ export const calculateRiderCancelRideCharges = action({
     );
 
     const { address, ...destCords } = ride.destination;
-    const route = await fetchRoute(args.riderLocation, destCords);
+    const route = await fetchRoute(args.driverLocation, destCords);
     const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
 
     const settings = await ctx.runQuery(
@@ -214,7 +215,7 @@ export const riderCancelRide = action({
     rideId: v.id("ride"),
     riderId: v.id("rider"),
     reason: v.string(),
-    riderLocation: v.optional(
+    driverLocation: v.optional(
       v.object({
         latitude: v.number(),
         longitude: v.number(),
@@ -228,7 +229,7 @@ export const riderCancelRide = action({
 
     if (ride.status === "Active") {
       // Abort — recalculate fare from current location for integrity
-      if (!args.riderLocation)
+      if (!args.driverLocation)
         throw new ConvexError("Location required to abort active ride");
 
       const { organizationRate: orgRate } = await ctx.runQuery(
@@ -237,10 +238,10 @@ export const riderCancelRide = action({
       );
 
       const { address, ...destCords } = ride.destination;
-      const route = await fetchRoute(args.riderLocation, destCords);
+      const route = await fetchRoute(args.driverLocation, destCords);
       const remainingDistanceInMts = Number(route?.distance.value) ?? 0;
 
-      const dropOffAddress = await getAddressFromCoords(args.riderLocation);
+      const dropOffAddress = await getAddressFromCoords(args.driverLocation);
 
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
@@ -283,7 +284,7 @@ export const riderCancelRide = action({
           calculatedFare: Math.max(0, Math.round(fare)),
           distance: chargableDistanceInMts,
           dropOff: {
-            ...args.riderLocation,
+            ...args.driverLocation,
             address: dropOffAddress,
           },
         },
