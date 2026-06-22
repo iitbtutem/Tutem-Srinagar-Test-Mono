@@ -5,6 +5,9 @@ import StarRating from "./StarRating";
 import { distanceFormat, formatFare } from "@/lib/utils";
 import { FunctionReturnType } from "convex/server";
 import { api } from "@tutem/api";
+import { colors } from "@/constants/colors";
+import { Feather } from "@expo/vector-icons";
+import { format } from "date-fns";
 
 
 type RideRequest = NonNullable<
@@ -86,6 +89,8 @@ export function RideRequestCard({
   );
 }
 
+
+
 export function RideHistoryCard({
   ride,
   onPress,
@@ -107,15 +112,14 @@ export function RideHistoryCard({
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 40 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 30 }); }}
         onPress={() => onPress(ride)}
-        className="rounded-2xl border p-4 overflow-hidden bg-background border-violet-500/50"
+        className="rounded-2xl border overflow-hidden bg-background border-violet-500/50"
       >
         {/* Header */}
-        <View className="flex-row justify-between items-start mb-3">
+        <View className="flex-row justify-between items-start mx-4 my-3">
           <View className="flex-1">
-            <Text className="text-primary text-base font-bold mb-1">
+            <Text className="text-title text-base font-bold mb-1">
               {`${ride.driver?.userDetails?.firstName ?? ''} ${ride.driver?.userDetails?.lastName ?? ''}`.trim() || 'Passenger'}
             </Text>
-            {ride.driver && <StarRating rating={ride.driver.rating} />}
           </View>
           <Text className="text-emerald-400 text-xl font-extrabold tracking-tight">
             {formatFare(ride.fare)}
@@ -123,11 +127,11 @@ export function RideHistoryCard({
         </View>
 
         {/* Route timeline */}
-        <View className="flex-row items-stretch mb-3 pl-0.5">
+        <View className="flex-row items-stretch mx-4 mb-3 pl-0.5">
           <View className="items-center w-4">
-            <View className="w-2 h-2 rounded-full bg-teal-500 mt-[3px]" />
-            <View className="w-px flex-1 bg-slate-700 my-1" />
-            <View className="w-2 h-2 rounded-full bg-violet-500" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
+            <View className="w-px flex-1 bg-slate-700" />
+            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
           </View>
           <View className="flex-1 ml-3 gap-2.5">
             <Text className="text-slate-400 text-[13px] font-medium" numberOfLines={1}>
@@ -138,15 +142,15 @@ export function RideHistoryCard({
             </Text>
           </View>
         </View>
-
-        {/* Footer */}
-        <View className="flex-row gap-3">
-          <Text className="text-slate-400 text-xs font-semibold">📍 {distanceFormat(ride.distance)}</Text>
-          {/* {ride.expectedDuration && (
-            <Text className="text-slate-400 text-xs font-semibold">⏱ {ride.expectedDuration}</Text>
-          )} */}
-        </View>
+        {ride.startedAt && <View className="flex-row justify-end items-center border-t border-gray-100 bg-primary/5 px-4 py-2">
+          <View className="flex-row items-center">
+            <Feather name="calendar" size={14} color="#9CA3AF" />
+            <Text className="text-gray-500 text-xs ml-1.5">
+              {format(new Date(ride.startedAt), 'dd MMM yyyy')}
+            </Text>
+          </View>
+        </View>}
       </TouchableOpacity>
     </Animated.View>
   );
-}
+};

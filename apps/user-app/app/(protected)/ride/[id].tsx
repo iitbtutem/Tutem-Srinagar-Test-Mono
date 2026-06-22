@@ -1,15 +1,15 @@
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from 'convex/react';
-import { ScrollView, View, Text, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-native';
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage, cn, Loader, Separator } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Loader, Separator } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import GenderAge from '@/components/GenderAge';
+import { GenderAge } from '@tutem/ui';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
 
@@ -63,12 +63,14 @@ function SectionHeader({ title }: { title: string }) {
 
 // person card
 
-function RiderCard({ rider }: { rider: Ride['rider'] }) {
-  const { details, ratings } = rider;
+function RiderCard({ driver, extra }: { driver: Ride['driver']; extra?: React.ReactNode }) {
+  const { details, ratings } = driver;
   const fullName = [details.firstName, details.lastName].filter(Boolean).join(' ');
   return (
     <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <Text className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Rider</Text>
+      <Text className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+        Driver
+      </Text>
       <View className="flex-row items-center gap-3">
         <Avatar alt="Profile pic" className="h-12 w-12">
           <AvatarImage
@@ -87,7 +89,7 @@ function RiderCard({ rider }: { rider: Ride['rider'] }) {
         </Avatar>
         <View className="flex-1">
           <Text className="text-base font-semibold text-slate-900">{fullName}</Text>
-          <View className="mt-0.5 flex-row flex-wrap items-center gap-2">
+          <View className="mt-0.5">
             <GenderAge gender={details.gender} dob={details.dob} />
           </View>
         </View>
@@ -101,30 +103,7 @@ function RiderCard({ rider }: { rider: Ride['rider'] }) {
           </View>
         )}
       </View>
-      {/* {children} */}
-      <View className="mt-3 flex-row flex-wrap gap-2">
-        <View
-          className={`rounded-full px-2.5 py-1 ${
-            rider.isVerified === 'Verified'
-              ? 'bg-green-100'
-              : rider.isVerified === 'Rejected'
-                ? 'bg-red-100'
-                : 'bg-yellow-100'
-          }`}>
-          <Text
-            className={`text-xs font-semibold ${
-              rider.isVerified === 'Verified'
-                ? 'text-green-700'
-                : rider.isVerified === 'Rejected'
-                  ? 'text-red-700'
-                  : 'text-yellow-700'
-            }`}>
-            {rider.isVerified === 'Verified'
-              ? 'Verified Rider'
-              : `Verification: ${rider.isVerified}`}
-          </Text>
-        </View>
-      </View>
+      {extra}
     </View>
   );
 }
@@ -162,11 +141,11 @@ function RouteCard({ ride }: { ride: Ride }) {
             />
           </View>
           <View className="flex-1">
-            <Text className="mb-0.5 text-xs" style={{ color: "#f97316" }}>
+            <Text className="mb-0.5 text-xs" style={{ color: '#f97316' }}>
               Drop Off
             </Text>
             <Text className="text-sm font-medium leading-snug text-slate-800">
-              {ride.dropOff.address}
+              {ride.destination.address}
             </Text>
           </View>
         </View>
@@ -175,17 +154,17 @@ function RouteCard({ ride }: { ride: Ride }) {
       {/* Destination */}
       <View className="flex-row items-start gap-3">
         <View className="items-center" style={{ width: 22 }}>
-          <MapPin size={14} color={ride.status === "Abort" ? "#9CA3AF" : colors.destination  } strokeWidth={2.2} />
+          <MapPin
+            size={14}
+            color={ride.status === 'Abort' ? '#9CA3AF' : colors.destination}
+            strokeWidth={2.2}
+          />
         </View>
         <View className="flex-1">
           <Text className="mb-0.5 text-xs" style={{ color: colors.destination }}>
             Destination
           </Text>
-          <Text
-            className={cn(
-              `text-sm font-medium leading-snug text-slate-800`,
-              ride.status === 'Abort' ? 'text-gray-500' : null
-            )}>
+          <Text className="text-sm font-medium leading-snug text-slate-800">
             {ride.destination.address}
           </Text>
         </View>
@@ -415,8 +394,36 @@ export default function RideDetailScreen() {
 
         {/* rider */}
         <Animated.View entering={FadeInDown.delay(180).duration(400).springify()}>
-          <RiderCard rider={ride.rider} />
+          <RiderCard
+            driver={ride.driver}
+            extra={
+              <View className="mt-3 flex-row flex-wrap gap-2">
+                <View
+                  className={`rounded-full px-2.5 py-1 ${
+                    ride.rider.isVerified === 'Verified'
+                      ? 'bg-green-100'
+                      : ride.rider.isVerified === 'Rejected'
+                        ? 'bg-red-100'
+                        : 'bg-yellow-100'
+                  }`}>
+                  <Text
+                    className={`text-xs font-semibold ${
+                      ride.rider.isVerified === 'Verified'
+                        ? 'text-green-700'
+                        : ride.rider.isVerified === 'Rejected'
+                          ? 'text-red-700'
+                          : 'text-yellow-700'
+                    }`}>
+                    {ride.rider.isVerified === 'Verified'
+                      ? 'Verified Rider'
+                      : `Verification: ${ride.rider.isVerified}`}
+                  </Text>
+                </View>
+              </View>
+            }
+          />
         </Animated.View>
+
         {/*  timeline  */}
         <Animated.View entering={FadeInDown.delay(240).duration(400).springify()}>
           <Timeline ride={ride} />

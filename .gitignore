@@ -12,6 +12,7 @@ dist/
 out/
 build/
 .turbo/
+.vscode/
 
 # Convex generated
 convex/_generated/

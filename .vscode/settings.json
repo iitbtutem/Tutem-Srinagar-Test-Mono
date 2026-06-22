@@ -6,5 +6,8 @@
   },
   "editor.quickSuggestions": {
     "strings": true
-  }
+  },
+  "secondaryExplorer.paths": [
+    "${workspaceFolders[0]}\\apps\\driver-app"
+  ]
 }
