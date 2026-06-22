@@ -108,7 +108,6 @@ type NearbyDriversPanelProps = {
   selectedDriver: string | null;
   onSelect: (id: string) => void;
   sheetState: 'FULL' | 'COLLAPSED';
-  isDark: boolean;
   filters: ('Bike' | 'Auto' | 'Cab')[];
   setFilters: React.Dispatch<React.SetStateAction<('Bike' | 'Auto' | 'Cab')[]>>;
   riderGender: 'Male' | 'Female' | 'Other';
@@ -123,7 +122,6 @@ function NearbyDriversPanel({
   drivers,
   selectedDriver,
   onSelect,
-  isDark,
   filters,
   setFilters,
   genderMatch,
@@ -161,7 +159,7 @@ function NearbyDriversPanel({
                 <MaterialCommunityIcons
                   name={VEHICLE_ICONS[item]}
                   size={13}
-                  color={isDark ? (isSelected ? 'black' : 'white') : isSelected ? 'white' : 'black'}
+                  color={isSelected ? 'white' : 'black'}
                 />
                 <Text
                   className={cn(
@@ -814,8 +812,8 @@ export default function WhereTo() {
             <Polyline
               coordinates={routeCoords}
               strokeWidth={4}
-              strokeColor={isDark ? '#60a5fa' : '#1a1a2e'}
-              fillColor={isDark ? '#cb97f7' : '#7800e0'}
+              strokeColor="#1a1a2e"
+              fillColor="#7800e0"
               lineCap="round"
               lineJoin="round"
             />
@@ -835,11 +833,7 @@ export default function WhereTo() {
           style={{ elevation: 5 }}
           onPress={handleLocatePress}
           activeOpacity={0.8}>
-          <MaterialCommunityIcons
-            name="crosshairs-gps"
-            size={24}
-            color={isDark ? '#60a5fa' : '#1a73e8'}
-          />
+          <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#1a73e8" />
         </TouchableOpacity>
 
         {sheetState === 'COLLAPSED' && mapSelectionMode !== null && (
@@ -931,7 +925,6 @@ export default function WhereTo() {
                     selectedDriver={selectedDriverId}
                     onSelect={handleDriverSelect}
                     sheetState={sheetState}
-                    isDark={isDark}
                     filters={filters}
                     setFilters={setFilters}
                     genderMatch={genderMatch}
@@ -985,7 +978,7 @@ export default function WhereTo() {
                             onPress={handlePickupSelect}
                             textInputProps={{
                               onFocus: () => setMapSelectionMode('pickup'),
-                              placeholderTextColor: isDark ? '#9ca3af' : '#6b7280',
+                              placeholderTextColor: '#6b7280',
                             }}
                             query={{
                               key: apiKey,
@@ -1016,11 +1009,11 @@ export default function WhereTo() {
                               listView: {
                                 position: 'absolute',
                                 top: 50,
-                                backgroundColor: isDark ? 'white' : 'white',
+                                backgroundColor: 'white',
                                 maxHeight: 250,
                               },
-                              row: { padding: 12, backgroundColor: isDark ? 'white' : 'white' },
-                              description: { color: isDark ? 'black' : 'black' },
+                              row: { padding: 12, backgroundColor: 'white' },
+                              description: { color: 'black' },
                             }}
                           />
                         )}
@@ -1042,7 +1035,7 @@ export default function WhereTo() {
                             onPress={handleDestinationSelect}
                             textInputProps={{
                               onFocus: () => setMapSelectionMode('destination'),
-                              placeholderTextColor: isDark ? '#9ca3af' : '#6b7280',
+                              placeholderTextColor: '#6b7280',
                             }}
                             query={{
                               key: apiKey,
@@ -1073,12 +1066,12 @@ export default function WhereTo() {
                               listView: {
                                 position: 'absolute',
                                 top: 50,
-                                backgroundColor: isDark ? 'white' : 'white',
+                                backgroundColor: 'white',
                                 zIndex: 3001,
                                 maxHeight: 250,
                               },
-                              row: { padding: 12, backgroundColor: isDark ? 'white' : 'white' },
-                              description: { color: isDark ? 'black' : 'black' },
+                              row: { padding: 12, backgroundColor: 'white' },
+                              description: { color: 'black' },
                             }}
                           />
                         )}

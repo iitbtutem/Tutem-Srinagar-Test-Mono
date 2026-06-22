@@ -1,14 +1,12 @@
-import { View } from "react-native";
-import { VEHICLE_CLASS } from "../../../packages/api/convex/CONSTANTS";
-import { BottomSheetFlatList, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { TouchableOpacity } from "react-native";
-import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { FunctionReturnType } from "convex/server";
-import { api, Id } from "@tutem/api";
-import { cn, formatFare } from "@/lib/utils";
-import { Text, Switch } from '@tutem/ui';
-import { VERIFICATION_CONFIG } from "@/constants/colors";
-import { Avatar, AvatarFallback, AvatarImage } from '@tutem/ui';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { VEHICLE_CLASS } from '../../../packages/api/convex/CONSTANTS';
+import { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { FunctionReturnType } from 'convex/server';
+import { api, Id } from '@tutem/api';
+import { cn, formatFare } from '@/lib/utils';
+import { Text, Switch, Avatar, AvatarFallback, AvatarImage, GenderAge, Rating } from '@tutem/ui';
+import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -24,25 +22,25 @@ type NearbyDriver = NonNullable<
 
 type NearbyDriversProps = {
   drivers: NearbyDriver[];
-  selectedDriver: Id<"driver"> | null;
+  selectedDriver: Id<'driver'> | null;
   onSelect: (driver: NearbyDriver) => void;
-  isDark: boolean;
   filters: ('Bike' | 'Auto' | 'Cab')[];
   setFilters: React.Dispatch<React.SetStateAction<('Bike' | 'Auto' | 'Cab')[]>>;
   riderGender: 'Male' | 'Female' | 'Other';
   genderMatch: boolean;
   setGenderMatch: React.Dispatch<React.SetStateAction<boolean>>;
+  isSearchingDrivers?: boolean;
 };
 
 export default function NearbyDrivers({
   drivers,
   selectedDriver,
   onSelect,
-  isDark,
   filters,
   setFilters,
   genderMatch,
   setGenderMatch,
+  isSearchingDrivers = false,
 }: NearbyDriversProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
@@ -72,7 +70,7 @@ export default function NearbyDrivers({
                 <MaterialCommunityIcons
                   name={VEHICLE_ICONS[item]}
                   size={13}
-                  color={isDark ? (isSelected ? 'black' : 'white') : isSelected ? 'white' : 'black'}
+                  color={isSelected ? 'white' : 'black'}
                 />
                 <Text
                   className={cn(
@@ -85,15 +83,19 @@ export default function NearbyDrivers({
             );
           }}
         />
-        <View className='flex-row gap-2 items-center'>
-          <Text className='text-xs'> Gender{"\n"}Matching</Text>
-          <Switch checked={genderMatch} onCheckedChange={setGenderMatch}/>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-xs"> Gender{'\n'}Matching</Text>
+          <Switch checked={genderMatch} onCheckedChange={setGenderMatch} />
         </View>
       </View>
 
       <View className="mb-3 flex-row items-center justify-between">
         <Text className="text-lg font-bold text-foreground">Nearby drivers</Text>
-        <Text className="text-xs text-muted-foreground">{drivers.length} available</Text>
+        {isSearchingDrivers ? (
+          <ActivityIndicator size="small" />
+        ) : (
+          <Text className="text-xs text-muted-foreground">{drivers.length} available</Text>
+        )}
       </View>
 
       {/* Driver list */}
@@ -115,97 +117,86 @@ export default function NearbyDrivers({
                 key={driver.driver._id}
                 onPress={() => onSelect(driver)}
                 activeOpacity={0.85}
-                style={{ minWidth: 160 }}
                 className={cn(
-                  'flex-row items-center gap-3 rounded-2xl border px-3 py-2.5',
-                  isSelected
-                    ? 'border-foreground bg-foreground/10'
-                    : 'border-transparent bg-muted/20'
+                  'flex-1 flex-row items-center justify-between gap-3 rounded-2xl border border-primary/50 px-1 py-2.5',
+                  isSelected ? 'bg-primary/15' : 'bg-primary/0'
                 )}>
-                {/* Avatar */}
-                <Avatar alt="Profile pic" className="h-9 w-9">
-                  <AvatarImage
-                    source={
-                      driver.driver.userDetails.profilePictureKey?.trim()
-                        ? { uri: driver.driver.userDetails.profilePictureKey }
-                        : require('@/assets/images/avatar.jpg')
-                    }
+                {/* Avatar and gender */}
+                <View className="items-center justify-center gap-1.5">
+                  <Avatar alt="Profile pic" className="h-14 w-14">
+                    <AvatarImage
+                      source={
+                        driver.driver.userDetails.profilePictureKey?.trim()
+                          ? { uri: driver.driver.userDetails?.profilePictureKey }
+                          : require('@/assets/images/avatar.jpg')
+                      }
+                    />
+                    <AvatarFallback className="bg-white/20">
+                      <Text className="text-xs font-bold text-primary">
+                        {driver.driver.userDetails?.firstName?.[0]}
+                        {driver.driver.userDetails?.lastName?.[0]}
+                      </Text>
+                    </AvatarFallback>
+                  </Avatar>
+                  <GenderAge
+                    gender={driver.driver.userDetails?.gender}
+                    dob={driver.driver.userDetails?.dob}
                   />
-                  <AvatarFallback className="bg-white/20">
-                    <Text className="text-xs font-bold text-primary">
-                      {driver.driver.userDetails.firstName?.[0]}
-                      {driver.driver.userDetails?.lastName?.[0]}
-                    </Text>
-                  </AvatarFallback>
-                </Avatar>
+                </View>
 
                 {/* Middle Content */}
-                <View className="flex-1">
+                <View className="min-w-0 flex-1">
                   {/* Name + Verified */}
-                  <View className="flex-row items-center gap-1.5">
-                    <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
-                      {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
-                    </Text>
+                  <Text className="font-semibold text-primary">
+                    {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
+                  </Text>
 
-                    {/* Verified Badge (inline, not floating) */}
-                    <View className="flex-row items-center gap-1">
-                      <Feather
-                        name={licenseVerification.icon as any}
-                        size={12}
-                        color={licenseVerification.color}
-                      />
-                      <Text
-                        style={{ color: licenseVerification.color }}
-                        className="text-[10px] font-semibold">
-                        {licenseVerification.label}
-                      </Text>
-                    </View>
+                  <Text className="text-xs font-medium">{driver.driver.organization.name}</Text>
+
+                  <View className="flex-row items-center justify-start">
+                    <MaterialCommunityIcons
+                      name={VEHICLE_ICONS[driver.vehicle.class]}
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text className="ml-2 text-lg text-primary">•</Text>
+                    <Text className="text-sm text-slate-600">{driver.vehicle.color}</Text>
+                    <Text className="ml-2 text-lg text-primary">•</Text>
+                    <Text className="text-sm text-slate-600">{driver.vehicle.model}</Text>
                   </View>
 
-                  {/* Gender + Vehicle */}
+                  {/* vehicle and driver rating and verification */}
                   <View className="mt-0.5 flex-row items-center gap-2">
-                    {driver.driver.averageRating && (
-                      <>
-                        <Ionicons name="star" size={12} color="orange" />
-                        <Text className="text-xs text-muted-foreground">
-                          {driver.driver.averageRating}
+                    <Rating rating={driver.driver.rating} />
+
+                    {/* Verified Badge (inline, not floating) */}
+                    {driver.driver.isLicenseVerified === 'Verified' && (
+                      <View className="flex-row items-center gap-1">
+                        <Feather
+                          name={licenseVerification.icon as any}
+                          size={12}
+                          color={licenseVerification.color}
+                        />
+                        <Text
+                          style={{ color: licenseVerification.color }}
+                          className="text-[10px] font-semibold">
+                          {licenseVerification.label}
                         </Text>
-                        <Text className="text-xs text-muted-foreground">•</Text>
-                      </>
+                      </View>
                     )}
-                    {/* dot separator */}
-
-                    <Text className="text-xs text-muted-foreground">{driver.vehicle.class}</Text>
-
-                    <Text className="text-xs text-muted-foreground">•</Text>
-                    
-                    <View className="flex-row items-center gap-0.5">
-                      <MaterialIcons
-                        name={
-                          driver.driver.userDetails.gender === 'Male'
-                            ? 'male'
-                            : driver.driver.userDetails.gender === 'Female'
-                              ? 'female'
-                              : 'transgender'
-                        }
-                        size={13}
-                        color="rgba(255,255,255,0.5)"
-                      />
-                      <Text className="text-xs text-muted-foreground">
-                        {driver.driver.userDetails.gender || 'N/A'}
-                      </Text>
-                    </View>
                   </View>
                 </View>
 
                 {/* Fare */}
-                <Text className="text-base font-bold text-foreground">{formatFare(driver.fare)}</Text>
+                <Text className="px-1 text-base font-bold text-foreground">
+                  {formatFare(driver.fare)}
+                </Text>
               </TouchableOpacity>
             );
           })}
         </BottomSheetScrollView>
       ) : (
-        <Text>No nearby drivers.</Text>
+        <Text>{isSearchingDrivers ? 'Searching for drivers...' : 'No nearby drivers.'}</Text>
       )}
     </View>
   );
