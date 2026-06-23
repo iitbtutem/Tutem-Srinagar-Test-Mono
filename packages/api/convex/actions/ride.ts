@@ -5,7 +5,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { fetchRoute, getAddressFromCoords } from "../helpers/maps";
-import { METERS_IN_KM } from "../CONSTANTS";
+import { METERS_IN_KM, RIDE_OTP_SIZE } from "../CONSTANTS";
 import { sendNotification } from "../helpers/pushNotifications";
 
 export const acceptRideAction = action({
@@ -512,7 +512,9 @@ export const driverArrived = action({
   },
   handler: async (ctx, args) => {
     const crypto = require("crypto");
-    const otp = crypto.randomInt(1000, 10000);
+    const min = Math.pow(10, RIDE_OTP_SIZE - 1);
+    const max = Math.pow(10, RIDE_OTP_SIZE);
+    const otp = crypto.randomInt(min, max);
 
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.driverArrivedInternal,

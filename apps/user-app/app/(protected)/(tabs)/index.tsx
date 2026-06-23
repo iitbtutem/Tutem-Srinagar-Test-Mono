@@ -12,7 +12,7 @@ import { Link, useRouter } from 'expo-router';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from 'convex/react';
 import { api, Id } from '@tutem/api';
-import { useAuth } from '@clerk/expo';
+import { useRider } from '@/hooks/useRider';
 
 import {
   Button,
@@ -71,15 +71,10 @@ const youtubeVideos = [
 ];
 
 export default function HomeScreen() {
-  const { userId } = useAuth();
+  const { rider: user } = useRider();
   const router = useRouter();
 
   const [showRideDialog, setShowRideDialog] = useState(false);
-
-  const user = useQuery(
-    api.routes.rider.getRider,
-    userId && userId !== '' ? { clerkId: userId } : 'skip'
-  );
 
   const currentRide = useQuery(
     api.routes.rides.getRiderCurrentRideByRiderId,

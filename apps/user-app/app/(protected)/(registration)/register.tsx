@@ -17,12 +17,13 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useRider } from '@/hooks/useRider';
 import { Feather } from '@expo/vector-icons';
 import { useNotification } from '@/context/NotificationContext';
 
@@ -33,26 +34,21 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  phoneNumber: z.string()
-    .min(1, 'Phone number is required')
-    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
-    .length(10, "Phone number must be exactly 10 digits"),
 });
 
 export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId, phoneNumber } = useAuthUser();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const lastNameRef = useRef<TextInput>(null);
-  const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
 
   const addUser = useMutation(api.routes.rider.addRider);
   const registerExpoPushToken = useMutation(api.routes.rider.registerExpoPushToken);
-  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
+  const { rider } = useRider();
 
   const {
     handleSubmit,
@@ -65,9 +61,14 @@ export default function Register() {
       lastName: '',
       dob: undefined,
       gender: undefined,
-      phoneNumber: '',
     },
   });
+
+  const displayPhone = phoneNumber
+    ? phoneNumber.startsWith('+91')
+      ? phoneNumber.slice(3)
+      : phoneNumber
+    : '';
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
@@ -81,6 +82,7 @@ export default function Register() {
       await addUser({
         ...data,
         dob: String(data.dob),
+        phoneNumber: displayPhone,
         clerkId: userId,
         expoPushToken: expoPushToken ?? undefined,
       });
@@ -109,7 +111,7 @@ export default function Register() {
     <ScrollView className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: false }} />
       {isSubmitting && <Loader subtitle="Submitting..." />}
-      
+
       <Text className="my-4 mb-2 px-3 text-lg font-semibold">Fill in your details</Text>
       <View className="gap-3 px-3 pb-20 pt-2">
         {/* First name */}
@@ -155,7 +157,7 @@ export default function Register() {
                 onChangeText={onChange}
                 value={value}
                 returnKeyType="next"
-                onSubmitEditing={() => phoneRef.current?.focus()}
+                onSubmitEditing={() => dobRef.current?.open()}
               />
             )}
           />
@@ -164,38 +166,24 @@ export default function Register() {
           )}
         </View>
 
-        {/* Phone number */}
+        {/* Phone number — pre-filled from auth, read-only */}
         <View>
           <View className="mb-1 flex-row items-center gap-1.5">
             <Feather name="phone" size={14} color="gray" />
             <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
           </View>
-          <Controller
-            name="phoneNumber"
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <View className="relative">
-                <Input
-                  ref={phoneRef}
-                  inputMode="tel"
-                  placeholder="9876543210"
-                  maxLength={10}
-                  onChangeText={onChange}
-                  className="pl-14"
-                  value={value}
-                  returnKeyType="next"
-                  onSubmitEditing={() => dobRef.current?.open()}
-                />
-                <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  +91
-                </Text>
-              </View>
-            )}
-          />
-          {errors.phoneNumber && (
-            <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
-          )}
+          <View className="relative">
+            <Input
+              inputMode="tel"
+              value={displayPhone}
+              editable={false}
+              className="pl-14 opacity-60"
+            />
+            <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">+91</Text>
+          </View>
+          <Text className="mt-1 text-xs text-muted-foreground">
+            Phone number verified at sign-in
+          </Text>
         </View>
 
         {/* DOB */}
@@ -257,7 +245,7 @@ export default function Register() {
           )}
         </View>
 
-        <Button onPress={onSubmit} className='my-4'>
+        <Button onPress={onSubmit} className="my-4">
           <Text>Submit</Text>
         </Button>
       </View>

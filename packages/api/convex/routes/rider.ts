@@ -11,12 +11,12 @@ export const registerExpoPushToken = mutation({
   },
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
-    if(rider === null) return;
+    if (rider === null) return;
 
     await ctx.db.patch(rider._id, {
-      expoPushToken: args.expoPushToken
+      expoPushToken: args.expoPushToken,
     });
-  }
+  },
 });
 
 export const logout = mutation({
@@ -25,12 +25,12 @@ export const logout = mutation({
   },
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
-    if(rider === null) return;
-    
+    if (rider === null) return;
+
     await ctx.db.patch(rider._id, {
-      expoPushToken: undefined
+      expoPushToken: undefined,
     });
-  }
+  },
 });
 
 export const addRider = mutation({
@@ -41,7 +41,7 @@ export const addRider = mutation({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
-    expoPushToken: v.optional(v.string())
+    expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
@@ -56,8 +56,16 @@ export const addRider = mutation({
     const { expoPushToken, ...userInput } = args;
 
     const userId = await ctx.db.insert("user", { ...userInput });
-    await ctx.db.insert("rider", { isVerified: "Pending", userId, expoPushToken, genderMatching: false });
-    await ctx.db.insert("userPermission", { userId: userId, permission: 'Rider' })
+    await ctx.db.insert("rider", {
+      isVerified: "Pending",
+      userId,
+      expoPushToken,
+      genderMatching: false,
+    });
+    await ctx.db.insert("userPermission", {
+      userId: userId,
+      permission: "Rider",
+    });
 
     return userId;
   },
@@ -75,26 +83,36 @@ export const registerAsRider = mutation({
       .first();
     if (user === null) {
       throw new ConvexError("User not found");
-    };
+    }
 
-    const existingRider = await ctx.db.query("rider")
+    const existingRider = await ctx.db
+      .query("rider")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
-    if (existingRider !== null) throw new ConvexError("Rider profile already exists");
+    if (existingRider !== null)
+      throw new ConvexError("Rider profile already exists");
 
-    await ctx.db.insert("rider", { isVerified: "Pending", userId: user._id, expoPushToken: args.expoPushToken, genderMatching: false });
-    await ctx.db.insert("userPermission", { userId: user._id, permission: 'Rider' });
-  }
-})
+    await ctx.db.insert("rider", {
+      isVerified: "Pending",
+      userId: user._id,
+      expoPushToken: args.expoPushToken,
+      genderMatching: false,
+    });
+    await ctx.db.insert("userPermission", {
+      userId: user._id,
+      permission: "Rider",
+    });
+  },
+});
 
 export const getRider = query({
   args: {
-    clerkId: v.string(),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
       .first();
 
     if (user === null) return null;
@@ -106,13 +124,13 @@ export const getRider = query({
 
     const profilePictureUri = user.profilePictureKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: user.profilePictureKey,
-        }),
-        { expiresIn: 300 }
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: user.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     return {
@@ -168,12 +186,11 @@ export const uploadProfilePicture = mutation({
 
     if (!user) {
       throw new ConvexError("User not found");
-    };
+    }
     await ctx.db.patch(user._id, {
-      profilePictureKey: args.profilePictureKey
+      profilePictureKey: args.profilePictureKey,
     });
-
-  }
+  },
 });
 
 export const removeProfilePictureKey = mutation({
@@ -196,14 +213,14 @@ export const removeProfilePictureKey = mutation({
 
 export const toggleGenderMatching = mutation({
   args: {
-    id: v.id("rider")
+    id: v.id("rider"),
   },
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.id);
-    if(rider === null) throw new ConvexError("Invalid user");
+    if (rider === null) throw new ConvexError("Invalid user");
 
     await ctx.db.patch(rider._id, {
-      genderMatching: !rider.genderMatching
-    })
-  }
-})
+      genderMatching: !rider.genderMatching,
+    });
+  },
+});

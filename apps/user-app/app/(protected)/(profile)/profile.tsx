@@ -1,9 +1,10 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { useAuth } from '@clerk/expo';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useRider } from '@/hooks/useRider';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -38,11 +39,11 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
-  const { userId, signOut } = useAuth();
+  const { userId, signOut } = useAuthUser();
   const router = useRouter();
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
-  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
+  const { rider } = useRider();
   const logout = useMutation(api.routes.rider.logout);
 
   const handleLogout = async (riderId: Id<'rider'> | undefined) => {
@@ -343,7 +344,7 @@ function ImagePickerDialog({
   scrollDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { userId } = useAuth();
+  const { userId } = useAuthUser();
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
   const { uploadFile } = useFileUpload();

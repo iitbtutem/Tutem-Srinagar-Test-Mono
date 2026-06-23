@@ -1,46 +1,29 @@
-import { useAuth } from '@clerk/expo';
+import { useRider } from '@/hooks/useRider';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '@/components/RideCard';
-import { FunctionReturnType } from 'convex/server';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useRef, useState } from 'react';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Avatar, AvatarFallback, AvatarImage, Text, Loader } from '@tutem/ui';
-import StarRating from '@/components/StarRating';
-import { formatFare } from '@/lib/utils';
-import useThemeColors from '@/hooks/useColorScheme';
+import { Text, Loader } from '@tutem/ui';
 import Rides from '@/assets/svgs/rides';
-import { distanceFormat } from '@/lib/utils';
 import { router } from 'expo-router';
 
-type RideHistory = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderHistory>[number]>;
-
 export default function History() {
-  const { userId } = useAuth();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
-    useThemeColors();
-
-  const [selectedRide, setSelectedRide] = useState<RideHistory | null>(null);
-
-  const user = useQuery(api.routes.rider.getRider, userId ? { clerkId: userId } : 'skip');
+  const { rider: user } = useRider();
   const rides = useQuery(
     api.routes.rides.getRiderHistory,
     user && user.riderDetails ? { riderId: user.riderDetails?._id } : 'skip'
   );
 
-  if (rides === undefined)
-    return <Loader subtitle='loading previous rides...' />;
+  if (rides === undefined) return <Loader subtitle="loading previous rides..." />;
 
   return (
     <View className="flex-1 bg-background">
       <FlatList
         data={rides}
         keyExtractor={(item) => item._id}
-        // renderItem={({ item }) => <RideCard ride={item} onPress={handleSelectRide} />}
-
-        renderItem={({ item }) => <RideCard ride={item} onPress={() => router.push(`/ride/${item._id}`)} />}
+        renderItem={({ item }) => (
+          <RideCard ride={item} onPress={() => router.push(`/ride/${item._id}`)} />
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 16,

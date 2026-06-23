@@ -13,6 +13,10 @@ export const PERMISSIONS = ["Driver", "Rider", "Admin"] as const;
 
 export const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-export const OTP_SIZE = 4;
+export const RIDE_OTP_SIZE = 4;
+export const OTP_SIZE = 6;
+export const OTP_ATTEMPTS = 5;
+export const OTP_EXPIRY_MS = 5;
+export const MAX_ATTEMPTS = 5;
 
 export const METERS_IN_KM = 1000;

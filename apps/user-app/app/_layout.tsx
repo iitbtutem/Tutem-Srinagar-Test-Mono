@@ -3,15 +3,12 @@ import '@/global.css';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ConvexReactClient } from 'convex/react';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { ClerkProvider, useAuth } from '@clerk/expo';
-import * as SecureStore from 'expo-secure-store';
+import { ConvexReactClient, ConvexProvider } from 'convex/react';
 import { ToastProvider } from '@/components/CustomToast';
-import { cn } from '@/lib/utils';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useInternet } from '@/hooks/useInternet';
 import { View } from 'react-native';
@@ -30,32 +27,16 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
 });
 
-// Secure token cache for Clerk
-const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      await SecureStore.setItemAsync(key, value);
-    } catch {}
-  },
-};
-
 export default function RootLayout() {
   const [launchedOffline, setLaunchedOffline] = useState(false);
-  
+
   const { isOnline, checked } = useInternet();
   const { refreshLocation } = useLocation();
 
   useEffect(() => {
     refreshLocation();
   }, []);
-  
+
   useEffect(() => {
     if (checked) {
       setLaunchedOffline(!isOnline);
@@ -73,7 +54,6 @@ export default function RootLayout() {
     });
   }, []);
 
-
   if (!checked) return null;
 
   if (launchedOffline && !isOnline) {
@@ -82,32 +62,29 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider
-        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-        tokenCache={tokenCache}>
-        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexProvider client={convex}>
+        <AuthProvider>
           <NotificationProvider>
             <ToastProvider>
               <SafeAreaView edges={['top']} className="bg-primary" />
               <StatusBar style="light" translucent backgroundColor={colors.primary} />
-                  
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                  }}
-                />
-                {!isOnline && (
-                  <View className="bg-red-500 py-2 px-3">
-                    <Text className="text-white text-center text-sm font-medium">
-                      You are offline
-                    </Text>
-                  </View>
-                )}
-                <PortalHost />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+              {!isOnline && (
+                <View className="bg-red-500 py-2 px-3">
+                  <Text className="text-white text-center text-sm font-medium">
+                    You are offline
+                  </Text>
+                </View>
+              )}
+              <PortalHost />
             </ToastProvider>
           </NotificationProvider>
-        </ConvexProviderWithClerk>
-      </ClerkProvider>
+        </AuthProvider>
+      </ConvexProvider>
     </GestureHandlerRootView>
   );
 }

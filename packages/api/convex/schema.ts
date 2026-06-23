@@ -1,6 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { FUEL_TYPE, PERMISSIONS, VEHICLE_CLASS, VEHICLE_TYPE } from "./CONSTANTS";
+import {
+  FUEL_TYPE,
+  PERMISSIONS,
+  VEHICLE_CLASS,
+  VEHICLE_TYPE,
+} from "./CONSTANTS";
 
 export default defineSchema({
   // Users
@@ -12,17 +17,19 @@ export default defineSchema({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     clerkId: v.string(),
-  })
-  .index("by_clerkId", ["clerkId"]),
+  }).index("by_clerkId", ["clerkId"]),
 
   //riders
   rider: defineTable({
-    isVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
+    isVerified: v.union(
+      v.literal("Pending"),
+      v.literal("Rejected"),
+      v.literal("Verified"),
+    ),
     userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
-  })
-  .index("by_user", ["userId"]),
+  }).index("by_user", ["userId"]),
 
   // Drivers
   driver: defineTable({
@@ -30,7 +37,11 @@ export default defineSchema({
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     paymentQrCodeKey: v.optional(v.string()),
-    isLicenseVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
+    isLicenseVerified: v.union(
+      v.literal("Pending"),
+      v.literal("Rejected"),
+      v.literal("Verified"),
+    ),
     isOnline: v.boolean(),
     isAvailableForRide: v.boolean(),
     organizationId: v.id("organization"),
@@ -38,8 +49,8 @@ export default defineSchema({
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
   })
-  .index("by_user", ["userId"])
-  .index("by_organizition", ["organizationId"]),
+    .index("by_user", ["userId"])
+    .index("by_organizition", ["organizationId"]),
 
   // Organizations
   organization: defineTable({
@@ -50,31 +61,37 @@ export default defineSchema({
     isVehicleInsuranceImageRequired: v.boolean(),
     canDriverEditLicesnse: v.boolean(),
     canDriverEditVehicle: v.boolean(),
-    polygon: v.optional(v.array(v.object({
-      latitude: v.number(),
-      longitude: v.number(),
-    }))),
-    boundingBox: v.optional(v.object({
-      north: v.object({
-        latitude: v.number(),
-        longitude: v.number(),
-      }),
+    polygon: v.optional(
+      v.array(
+        v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+      ),
+    ),
+    boundingBox: v.optional(
+      v.object({
+        north: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
 
-      south: v.object({
-        latitude: v.number(),
-        longitude: v.number(),
-      }),
+        south: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
 
-      east: v.object({
-        latitude: v.number(),
-        longitude: v.number(),
-      }),
+        east: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
 
-      west: v.object({
-        latitude: v.number(),
-        longitude: v.number(),
+        west: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
       }),
-    }))
+    ),
   }),
 
   //organization rates
@@ -89,7 +106,11 @@ export default defineSchema({
 
   //vehciles
   vehicle: defineTable({
-    isVerified: v.union(v.literal("Pending"), v.literal("Rejected"), v.literal("Verified")),
+    isVerified: v.union(
+      v.literal("Pending"),
+      v.literal("Rejected"),
+      v.literal("Verified"),
+    ),
     registrationNumber: v.string(),
     rcImageKey: v.optional(v.string()),
     insuranceImageKey: v.optional(v.string()),
@@ -101,13 +122,13 @@ export default defineSchema({
     seatingCapacity: v.number(),
     ownerId: v.id("driver"),
   })
-  .index("by_owner", ["ownerId"])
-  .index("by_registrationNumber", ["registrationNumber"]),
+    .index("by_owner", ["ownerId"])
+    .index("by_registrationNumber", ["registrationNumber"]),
 
   // permissions
   userPermission: defineTable({
-    permission: v.union(...PERMISSIONS.map(p => v.literal(p))),
-    userId: v.id("user")
+    permission: v.union(...PERMISSIONS.map((p) => v.literal(p))),
+    userId: v.id("user"),
   }).index("by_user", ["userId"]),
 
   ride: defineTable({
@@ -115,8 +136,20 @@ export default defineSchema({
     driverId: v.id("driver"),
     fare: v.number(),
     hasReachedDestionation: v.boolean(),
-    status: v.union(v.literal("Open"), v.literal("Active"), v.literal("Driver Arrived"), v.literal("Abort"), v.literal("Completed"), v.literal("Canceled")),
-    requestStatus: v.union(v.literal("Pending"), v.literal("Accepted"), v.literal("Rejected"), v.literal("No Response")),
+    status: v.union(
+      v.literal("Open"),
+      v.literal("Active"),
+      v.literal("Driver Arrived"),
+      v.literal("Abort"),
+      v.literal("Completed"),
+      v.literal("Canceled"),
+    ),
+    requestStatus: v.union(
+      v.literal("Pending"),
+      v.literal("Accepted"),
+      v.literal("Rejected"),
+      v.literal("No Response"),
+    ),
     pickup: v.object({
       address: v.string(),
       latitude: v.number(),
@@ -127,11 +160,13 @@ export default defineSchema({
       latitude: v.number(),
       longitude: v.number(),
     }),
-    dropOff: v.optional(v.object({
-      address: v.string(),
-      latitude: v.number(),
-      longitude: v.number(),
-    })),
+    dropOff: v.optional(
+      v.object({
+        address: v.string(),
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
     distance: v.number(),
     expectedDuration: v.optional(v.string()),
     otp: v.optional(v.number()),
@@ -142,8 +177,8 @@ export default defineSchema({
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
   })
-  .index("by_rider", ["riderId"])
-  .index("by_driver", ["driverId"]),
+    .index("by_rider", ["riderId"])
+    .index("by_driver", ["driverId"]),
 
   rideReasons: defineTable({
     rideId: v.id("ride"),
@@ -156,12 +191,12 @@ export default defineSchema({
     riderId: v.id("rider"),
     driverId: v.id("driver"),
     raterType: v.union(v.literal("Rider"), v.literal("Driver")),
-    score: v.number(),        // 1–5
+    score: v.number(), // 1–5
     comment: v.optional(v.string()),
   })
-  .index("by_ride", ["rideId"])
-  .index("by_rider", ["riderId"])
-  .index("by_driver", ["driverId"]),
+    .index("by_ride", ["rideId"])
+    .index("by_rider", ["riderId"])
+    .index("by_driver", ["driverId"]),
 
   rideSettings: defineTable({
     nearbyRadius: v.number(),
@@ -169,6 +204,12 @@ export default defineSchema({
     driverResponseTime: v.number(),
     maxDriverRideRequests: v.optional(v.number()),
     cancellationPenalty: v.optional(v.number()),
-  })
+  }),
 
+  otpSession: defineTable({
+    phoneNumber: v.string(),
+    hashedOtp: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+  }).index("by_phone", ["phoneNumber"]),
 });

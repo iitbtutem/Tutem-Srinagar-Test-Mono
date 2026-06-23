@@ -1,54 +1,53 @@
 import { useToast } from '@/components/CustomToast';
 import { Text, Button, Loader, Avatar, AvatarImage, AvatarFallback, GenderAge } from '@tutem/ui';
 import { useNotification } from '@/context/NotificationContext';
-import { useAuth } from '@clerk/expo';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useRider } from '@/hooks/useRider';
 import { api } from '@tutem/api';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { useState } from 'react';
 
 export default function RegisterAsRider() {
-  const { userId } = useAuth();
+  const { userId } = useAuthUser();
   const { showToast } = useToast();
-    const { expoPushToken } = useNotification();
+  const { expoPushToken } = useNotification();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
+  const { rider } = useRider();
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
   const handleRegisterAsRider = async () => {
-    if(expoPushToken !== null)
+    if (expoPushToken !== null)
       try {
         setIsSubmitting(true);
         await registerAsRider({ clerkId: userId ?? '', expoPushToken: expoPushToken });
         showToast({
-          type: "success",
-          title: "Registered",
-          description: "Registration done successfully"
-        })
+          type: 'success',
+          title: 'Registered',
+          description: 'Registration done successfully',
+        });
       } catch (error: any) {
         console.log(`error ${error}`);
         showToast({
-          type: "error",
-          title: "Failed",
-          description: error.data ?? "Failed to register"
-        })
+          type: 'error',
+          title: 'Failed',
+          description: error.data ?? 'Failed to register',
+        });
       } finally {
         setIsSubmitting(false);
       }
   };
 
   if (rider && rider.riderDetails) return <Redirect href="/" />;
-  if(rider === null) return <Redirect href="/register" />
-  if(rider == undefined) return <Loader subtitle='Loading account' />
+  if (rider === null) return <Redirect href="/register" />;
+  if (rider === undefined) return <Loader subtitle="Loading account" />;
 
   return (
     <View className="flex-1 bg-background p-6">
-      {isSubmitting && <Loader subtitle='Registering...' />}
+      {isSubmitting && <Loader subtitle="Registering..." />}
       <View>
-
         {/* Icon/Illustration */}
         <View className="mx-auto my-6 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
           <Text className="text-4xl">🚕</Text>
@@ -65,7 +64,7 @@ export default function RegisterAsRider() {
         </Text>
       </View>
 
-      <View className='flex-row items-center border border-primary rounded-2xl my-8 p-3 gap-2'>
+      <View className="flex-row items-center border border-primary rounded-2xl my-8 p-3 gap-2">
         <Avatar alt="Profile pic" className="h-16 w-16">
           <AvatarImage
             source={
@@ -83,7 +82,7 @@ export default function RegisterAsRider() {
         </Avatar>
 
         <View>
-          <Text className="text-lg font-semibold">{rider.firstName + rider?.lastName}</Text>
+          <Text className="text-lg font-semibold">{rider.firstName + (rider?.lastName ?? '')}</Text>
           <GenderAge dob={rider.dob} gender={rider.gender} />
           <Text className="text-[12px] font-medium">{rider.phoneNumber}</Text>
         </View>

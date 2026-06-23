@@ -33,11 +33,11 @@ import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { cn, distanceFormat, formatFare } from '@/lib/utils';
-import { useQuery, useAction } from 'convex/react';
+import { useAction } from 'convex/react';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
-import { useAuth } from '@clerk/expo';
+import { useRider } from '@/hooks/useRider';
 import {
   Avatar,
   AvatarFallback,
@@ -306,8 +306,7 @@ function NearbyDriversPanel({
 
 // ─── WhereTo ──────────────────────────────────────────────────────────────────
 export default function WhereTo() {
-  const { userId } = useAuth();
-  const rider = useQuery(api.routes.rider.getRider, { clerkId: userId ?? '' });
+  const { rider } = useRider();
   const bookRide = useAction(api.actions.ride.bookRide);
 
   const { colorScheme: currentTheme } = useColorScheme();
