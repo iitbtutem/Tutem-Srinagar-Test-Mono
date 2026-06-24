@@ -1,6 +1,6 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
 import { Image, TextInput, TouchableOpacity, View } from 'react-native';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -34,6 +34,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import useThemeColors from '@/hooks/useColorScheme';
 import { BasicHeader } from '@/components/CustomHeader';
 import { subYears } from 'date-fns';
+import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 
 const formSchema = z.object({
   firstName: z
@@ -59,8 +60,13 @@ export default function EditProfile() {
   const router = useRouter();
   const { showToast } = useToast();
   const { uploadFile } = useFileUpload();
-
+  const driverLocation = useDriverLiveLocation();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
+
+  const [initialLocationFetched, setInitialLocationFetched] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, userId } =
     useLocalSearchParams<{
@@ -80,8 +86,17 @@ export default function EditProfile() {
   const licenseRef = useRef<TextInput>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const organizations = useQuery(api.routes.organizations.getAllOrganizations);
+  const organizations = useQuery(
+    api.routes.organizations.getNearbyOrganization,
+    initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
+  );
   const updateDriver = useMutation(api.routes.driver.updateDriver);
+
+  useEffect(() => {
+    if (driverLocation && !initialLocationFetched) {
+      setInitialLocationFetched(driverLocation);
+    }
+  }, [driverLocation]);
 
   const {
     handleSubmit,

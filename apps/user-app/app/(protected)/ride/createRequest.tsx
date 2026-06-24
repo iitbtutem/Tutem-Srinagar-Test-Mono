@@ -261,10 +261,9 @@ function NearbyDriversPanel({
                           size={16}
                           color={colors.primary}
                         />
-                        <Text className="ml-2 text-lg text-primary">•</Text>
-                        <Text className="text-sm text-slate-600">{driver.vehicle.color}</Text>
-                        <Text className="ml-2 text-lg text-primary">•</Text>
-                        <Text className="text-sm text-slate-600">{driver.vehicle.model}</Text>
+                        <Text className="text-sm capitalize text-slate-600">
+                          {` | ${driver.vehicle.color} | ${driver.vehicle.model} `}
+                        </Text>
                       </View>
 
                       {/* vehicle and driver rating and verification */}
@@ -308,14 +307,11 @@ export default function WhereTo() {
   const { rider } = useRider();
   const bookRide = useAction(api.actions.ride.bookRide);
 
-  const { colorScheme: currentTheme } = useColorScheme();
-
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { location: currentLocation, refreshLocation } = useLocation();
-  const { iconColor, BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
-    useThemeColors();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const confirmSheetRef = useRef<BottomSheet>(null);
@@ -324,7 +320,6 @@ export default function WhereTo() {
   const destinationRef = useRef<any>(null);
 
   const snapPoints = useMemo(() => ['45%', '85%'], []);
-  const confirmSnapPoints = useMemo(() => ['55%'], []);
   const [sheetIndex, setSheetIndex] = useState(1);
   const [confirmSheetOpen, setConfirmSheetOpen] = useState(false);
   const sheetState = sheetIndex >= 1 ? 'FULL' : 'COLLAPSED';
@@ -1295,7 +1290,7 @@ export default function WhereTo() {
       <BottomSheet
         ref={confirmSheetRef}
         index={-1}
-        snapPoints={confirmSnapPoints}
+        snapPoints={['57%']}
         enablePanDownToClose={false}
         enableDynamicSizing={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
@@ -1315,13 +1310,13 @@ export default function WhereTo() {
           </View>
 
           {/* Content */}
-          <View className="flex-1">
+          <View>
             {selectedDriver && (
               <View className="gap-3">
                 {/* Driver card */}
-                <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center gap-2">
                   <View className="items-center justify-center gap-1.5">
-                    <Avatar alt="Profile pic" className="h-14 w-14">
+                    <Avatar alt="Profile pic" className="h-12 w-12">
                       <AvatarImage
                         source={
                           selectedDriver.driver.userDetails.profilePictureKey?.trim()
@@ -1356,9 +1351,9 @@ export default function WhereTo() {
                         size={18}
                         color={colors.primary}
                       />
-                      <Text className="ml-1 text-sm text-slate-600">
-                        {selectedDriver.vehicle.model} • {selectedDriver.vehicle.registrationNumber}{' '}
-                        • {selectedDriver.vehicle.color}
+                      <Text className="ml-1 text-sm capitalize text-slate-600">
+                        {selectedDriver.vehicle.model} | {selectedDriver.vehicle.registrationNumber}{' '}
+                        | {selectedDriver.vehicle.color}
                       </Text>
                     </View>
                     <View className="mt-0.5 flex-row items-center gap-2">
@@ -1384,11 +1379,11 @@ export default function WhereTo() {
                 <Separator />
 
                 {/* Trip details */}
-                <View className="rounded-2xl bg-primary/5 p-4">
+                <View className="overflow-hidden rounded-2xl bg-primary/5 p-4">
                   <View className="flex-row gap-2">
                     <MaterialCommunityIcons name="map-marker" size={16} color={colors.pickup} />
-                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">
-                      {pickupLocation?.title}
+                    <Text numberOfLines={1} className="truncate text-sm font-bold text-foreground">
+                      {pickupLocation?.title} and we are here
                     </Text>
                   </View>
                   <View className="flex-row gap-2">
@@ -1397,7 +1392,7 @@ export default function WhereTo() {
                       size={16}
                       color={colors.destination}
                     />
-                    <Text numberOfLines={1} className="text-sm font-bold text-foreground">
+                    <Text numberOfLines={1} className="truncate text-sm font-bold text-foreground">
                       {destination?.title}
                     </Text>
                   </View>

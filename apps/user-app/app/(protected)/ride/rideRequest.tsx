@@ -203,7 +203,8 @@ export default function RideRequest() {
         genderMatch: genderMatch,
         filters: filters,
       });
-      setNearbyDrivers(drivers);
+      const filteredDrivers = drivers.filter((d) => d.driver._id !== ride.driverId);
+      setNearbyDrivers(filteredDrivers);
     } catch (error) {
       console.error('Discovery error:', error);
       setNearbyDrivers([]);
@@ -1438,7 +1439,7 @@ function RideAborted({ abortReason }: { abortReason: Ride['rideReasons'][number]
             <Text className="text-sm text-muted-foreground">Reason:</Text>
             <View className="flex-row gap-1 rounded-xl bg-destructive/10 p-2">
               <Text className="min-w-0 flex-1 text-sm font-bold text-destructive">
-                {abortReason.reason} and here we are testing large text
+                {abortReason.reason}
               </Text>
             </View>
           </View>

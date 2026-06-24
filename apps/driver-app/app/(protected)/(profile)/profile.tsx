@@ -138,7 +138,7 @@ export default function Profile() {
     const translateX = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
-      [0, -75], // Shifted less to the right to balance with avatar
+      [0, 0], // Shifted less to the right to balance with avatar
       Extrapolation.CLAMP
     );
 

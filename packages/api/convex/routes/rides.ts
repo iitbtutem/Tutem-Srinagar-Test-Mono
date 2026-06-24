@@ -238,7 +238,7 @@ export const bookRideInternal = internalMutation({
     const responseTime = settings?.driverResponseTime ?? 1000;
 
     await ctx.scheduler.runAfter(
-      responseTime * 1000,
+      responseTime * 60 * 1000,
       internal.routes.rides.markNoResponseInternal,
       { rideId },
     );
@@ -835,6 +835,7 @@ export const getRiderHistory = query({
             : [
                 q.eq(q.field("status"), "Completed"),
                 q.eq(q.field("status"), "Canceled"),
+                q.eq(q.field("status"), "Abort"),
               ];
 
         return q.or(...statusConditions);
