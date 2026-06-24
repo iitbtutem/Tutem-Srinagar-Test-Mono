@@ -22,7 +22,7 @@ export default function RegisterAsRider() {
     if (expoPushToken !== null)
       try {
         setIsSubmitting(true);
-        await registerAsRider({ clerkId: userId ?? '', expoPushToken: expoPushToken });
+        await registerAsRider({ userId: userId ?? '', expoPushToken: expoPushToken });
         showToast({
           type: 'success',
           title: 'Registered',

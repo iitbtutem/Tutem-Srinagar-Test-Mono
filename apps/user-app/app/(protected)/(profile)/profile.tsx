@@ -22,12 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
-  Text, 
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Text,
   HorizontalRule,
   Loader,
+  cn,
+  Switch,
 } from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -39,12 +41,14 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
+  const [genderMatching, setGenderMatching] = useState<boolean>(false);
   const { userId, signOut } = useAuthUser();
   const router = useRouter();
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
   const { rider } = useRider();
   const logout = useMutation(api.routes.rider.logout);
+  const toggleGenderMatching = useMutation(api.routes.rider.toggleGenderMatching);
 
   const handleLogout = async (riderId: Id<'rider'> | undefined) => {
     if (riderId !== undefined) await logout({ riderId });
@@ -146,17 +150,28 @@ export default function Profile() {
   if (rider === undefined) return <Loader subtitle="Loading profile…" />;
   if (rider === null) return <ErrorScreen message="User not found" />;
 
-  return (
-    <View className="flex-1 bg-background">
+  const toggleGenderMatch = async () => {
+    if (rider.riderDetails === null) return;
+    setGenderMatching(true);
+    try {
+      await toggleGenderMatching({ id: rider.riderDetails._id });
+    } catch (error) {
+      console.log(`error ${error}`);
+    } finally {
+      setGenderMatching(false);
+    }
+  };
 
+  return (
+    <View className="flex-1 bg-secondary">
       {/* Hero Header */}
       <Animated.View
         style={[headerAnimatedStyle, { position: 'absolute', width: '100%' }]}
-        className='overflow-hidden bg-primary'>
+        className="overflow-hidden bg-primary">
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[actionButtonStyle, { position: 'absolute', top: 0, zIndex: 1 }]}
-          className="w-full flex-row items-center justify-between px-4 mt-2">
+          className="mt-2 w-full flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: iconBackgroundColor }}
@@ -177,7 +192,7 @@ export default function Profile() {
                     dob: rider.dob,
                     phoneNumber: rider.phoneNumber,
                     gender: rider.gender,
-                    clerkId: rider?.clerkId,
+                    userId: rider?.userId,
                   },
                 })
               }>
@@ -216,7 +231,7 @@ export default function Profile() {
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                clerkId={rider.clerkId}
+                userId={rider.userId}
                 profilePictureKey={rider.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
@@ -244,23 +259,21 @@ export default function Profile() {
         }}>
         <View className="gap-4">
           {/* Personal Info Card */}
-          <View className="overflow-hidden rounded-2xl bg-white shadow-md shadow-slate-200 dark:bg-zinc-900 dark:shadow-none">
-            <View className="border-b border-slate-100 px-6 py-4 dark:border-zinc-800">
-              <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+          <View className="overflow-hidden rounded-2xl bg-white shadow-md shadow-slate-200">
+            <View className="border-b border-slate-100 px-6 py-4">
+              <Text className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                 Personal Information
               </Text>
             </View>
 
             {/* DOB */}
             <View className="flex-row items-center gap-4 px-6 py-4">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-purple-50 dark:bg-purple-900/30">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-purple-50">
                 <MaterialIcons name="cake" size={20} color="#9333ea" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                  Date of Birth
-                </Text>
-                <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Date of Birth</Text>
+                <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {new Date(rider.dob).toLocaleDateString()}
                 </Text>
               </View>
@@ -270,14 +283,12 @@ export default function Profile() {
 
             {/* Gender */}
             <View className="flex-row items-center gap-4 px-6 py-4">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50 dark:bg-pink-900/30">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50">
                 <MaterialIcons name="wc" size={20} color="#ec4899" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                  Gender
-                </Text>
-                <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Gender</Text>
+                <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {rider.gender}
                 </Text>
               </View>
@@ -287,7 +298,7 @@ export default function Profile() {
             {/* Gender */}
 
             <View className="flex-row items-center gap-4 px-6 py-4">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50 dark:bg-pink-900/30">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-pink-50">
                 <MaterialIcons
                   name={rider.riderDetails?.genderMatching ? 'people' : 'public'}
                   size={20}
@@ -295,10 +306,19 @@ export default function Profile() {
                 />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                  Gender Preference
-                </Text>
-                <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                <View className="flex-row justify-between">
+                  <Text className="mb-0.5 text-xs font-medium text-slate-400">
+                    Gender Preference
+                  </Text>
+                  <Switch
+                    disabled={genderMatching}
+                    checked={rider.riderDetails?.genderMatching}
+                    onCheckedChange={toggleGenderMatch}
+                    id="airplane-mode"
+                    nativeID="airplane-mode"
+                  />
+                </View>
+                <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {rider.riderDetails?.genderMatching
                     ? 'Ride with Same Gender'
                     : 'No Preference (Any)'}
@@ -310,14 +330,12 @@ export default function Profile() {
 
             {/* Phone */}
             <View className="flex-row items-center gap-4 px-6 py-4">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-green-50">
                 <MaterialIcons name="phone" size={20} color="#16a34a" />
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                  Phone Number
-                </Text>
-                <Text className="text-sm font-semibold tracking-wide text-slate-800 dark:text-zinc-100">
+                <Text className="mb-0.5 text-xs font-medium text-slate-400">Phone Number</Text>
+                <Text className="text-sm font-semibold tracking-wide text-slate-800">
                   {rider.phoneNumber}
                 </Text>
               </View>
@@ -325,26 +343,24 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
-      
     </View>
   );
 }
 
 function ImagePickerDialog({
-  clerkId,
+  userId,
   profilePictureKey,
   setImageUri,
   scrollY,
   scrollDistance,
 }: {
-  clerkId: string;
+  userId: string;
   profilePictureKey: string | undefined;
   setImageUri: (uri: string) => void;
   scrollY: SharedValue<number>;
   scrollDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { userId } = useAuthUser();
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
   const { uploadFile } = useFileUpload();
@@ -354,13 +370,14 @@ function ImagePickerDialog({
     if (newImgUri === '') return;
     setImageUri(newImgUri);
     const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
-    await uploadProfilePicture({ clerkId, profilePictureKey });
+    await uploadProfilePicture({ userId, profilePictureKey });
   };
 
   const handleDelete = async () => {
     setIsOpen(false);
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ clerkId });
+    await removeProfilePictureKey({ userId });
+    setImageUri('');
   };
 
   const uploadBtnOpacity = useAnimatedStyle(() => {

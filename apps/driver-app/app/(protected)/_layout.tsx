@@ -1,13 +1,12 @@
 
-import { useAuth } from '@clerk/expo';
-import { api } from '@tutem/api';
-import { useQuery } from 'convex/react';
+import { useAuth } from '@/hooks/useAuth';
+import { useDriver } from '@/hooks/useDriver';
 import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProtectedLayout() {
   const { userId } = useAuth();
-  const user = useQuery(api.routes.driver.getUser, userId && userId !== '' ? { clerkId: userId } : 'skip');
+  const { driver: user } = useDriver();
 
   const protectedGuard = !!userId && !!user;
 

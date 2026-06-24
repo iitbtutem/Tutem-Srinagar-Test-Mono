@@ -48,7 +48,7 @@ export default function History() {
             <Rides width={302} height={400} />
             <Text className="text-titles mt-4 text-xl font-semibold">No rides found</Text>
             <Text className="mt-1 text-center text-sm text-gray-500">
-              There are currently no rides available.
+              There are no previous rides available.
             </Text>
           </View>
         )}

@@ -304,13 +304,11 @@ function NearbyDriversPanel({
   );
 }
 
-// ─── WhereTo ──────────────────────────────────────────────────────────────────
 export default function WhereTo() {
   const { rider } = useRider();
   const bookRide = useAction(api.actions.ride.bookRide);
 
   const { colorScheme: currentTheme } = useColorScheme();
-  const isDark = currentTheme === 'dark';
 
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -774,7 +772,6 @@ export default function WhereTo() {
           mapType="standard"
           userLocationUpdateInterval={5000}
           style={{ height: '100%', width: 'auto' }}
-          customMapStyle={isDark ? mapStyle.dark : []}
           onRegionChangeComplete={onRegionChangeComplete}
           initialRegion={{
             ...currentLocation,
@@ -821,19 +818,21 @@ export default function WhereTo() {
 
         {sheetState === 'COLLAPSED' && (
           <TouchableOpacity
-            className="absolute left-5 top-16 z-0 h-12 w-12 items-center justify-center rounded-full bg-muted shadow-lg"
+            className="absolute left-5 top-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-muted shadow-lg"
             onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={iconColor} />
+            <Ionicons name="arrow-back" size={24} color="#1a73e8" />
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          className="absolute bottom-16 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
-          style={{ elevation: 5 }}
-          onPress={handleLocatePress}
-          activeOpacity={0.8}>
-          <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#1a73e8" />
-        </TouchableOpacity>
+        {sheetState === 'COLLAPSED' && (
+          <TouchableOpacity
+            className="absolute bottom-28 right-5 z-0 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg"
+            style={{ elevation: 5 }}
+            onPress={handleLocatePress}
+            activeOpacity={0.8}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#1a73e8" />
+          </TouchableOpacity>
+        )}
 
         {sheetState === 'COLLAPSED' && mapSelectionMode !== null && (
           <View className="pointer-events-none absolute inset-0 items-center justify-center">

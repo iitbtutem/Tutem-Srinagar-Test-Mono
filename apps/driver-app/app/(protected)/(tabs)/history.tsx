@@ -1,34 +1,29 @@
 import { Loader, Text } from '@tutem/ui';
-import { useAuth } from '@clerk/expo';
+import { useDriver } from '@/hooks/useDriver';
 import { api } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard } from '../../../components/RideCard';
-import useThemeColors from '@/hooks/useColorScheme';
 import RideSvg from '@/assets/svgs/rides';
 import { router } from 'expo-router';
 
 export default function History() {
-  const { userId } = useAuth();
-  const { iconColor } = useThemeColors();
-
-  const user = useQuery(api.routes.driver.getUser, userId ? { clerkId: userId } : 'skip');
+  const { driver: user } = useDriver();
   const rides = useQuery(
     api.routes.rides.getDriverHistory,
     user && user.driverDetails ? { driverId: user.driverDetails?._id } : 'skip'
   );
 
-  if (rides === undefined)
-    return <View className="flex-1 bg-background">
-      <Loader subtitle='Loading previous rides...' />
-    </View>;
+  if (rides === undefined) return <Loader subtitle="Loading previous rides..." />;
 
   return (
     <View className="flex-1 bg-background">
       <FlatList
         data={rides}
         keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <RideCard ride={item} onPress={() => router.push(`/ride/${item._id}`)} />}
+        renderItem={({ item }) => (
+          <RideCard ride={item} onPress={() => router.push(`/ride/${item._id}`)} />
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -49,7 +44,7 @@ export default function History() {
             );
         }}
         ListEmptyComponent={() => (
-          <View className="flex-1 items-center justify-center py-20 mb-20">
+          <View className="mb-20 flex-1 items-center justify-center py-20">
             <RideSvg width={330} height={200} />
             <Text className="text-titles mt-4 text-xl font-semibold">No rides found</Text>
             <Text className="mt-1 text-center text-sm text-gray-500">

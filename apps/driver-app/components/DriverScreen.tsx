@@ -6,19 +6,15 @@ import * as SecureStore from 'expo-secure-store';
 import { MapPin, Navigation } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { BACKGROUND_LOCATION_TASK } from '@/lib/tasks';
-import { useAuth } from '@clerk/expo';
-import { useQuery } from 'convex/react';
-import { api } from '@tutem/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useDriver } from '@/hooks/useDriver';
 
 export function DriverScreen() {
   const [isOnline, setIsOnline] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { userId, getToken } = useAuth();
-  const driver = useQuery(
-    api.routes.driver.getUser,
-    userId ? { clerkId: userId } : 'skip'
-  );
+  const { getToken } = useAuth();
+  const { driver } = useDriver();
 
   const driverId = driver?.driverDetails?._id;
 

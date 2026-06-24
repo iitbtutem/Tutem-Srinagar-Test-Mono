@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/expo';
-import { useConvexAuth } from 'convex/react';
+import { useAuth } from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
 export default function RootScreen() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
   const { isSignedIn, isLoaded } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
@@ -21,13 +19,13 @@ export default function RootScreen() {
     checkOnboarding();
   }, []);
 
-  if (isLoading || !isLoaded || hasSeenOnboarding === null) return null;
+  if (!isLoaded || hasSeenOnboarding === null) return null;
 
   if (!hasSeenOnboarding) {
     return <Redirect href={'/onboarding'} />;
   }
 
-  if (isAuthenticated && isSignedIn) {
+  if (isSignedIn) {
     return <Redirect href={'/(protected)'} />;
   }
 

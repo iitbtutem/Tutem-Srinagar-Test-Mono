@@ -36,6 +36,7 @@ import { FunctionReturnType } from 'convex/server';
 import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
+import { useAuth } from '@/hooks/useAuth';
 
 // Types
 
@@ -153,6 +154,7 @@ export default function Ride() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
   const { colorScheme: currentTheme } = useColorScheme();
   const isDark = currentTheme === 'dark';
+  const { userId } = useAuth();
 
   const [routeState, setRouteState] = useState<RouteState | null>(null);
   const [loading, setLoading] = useState<
@@ -175,7 +177,7 @@ export default function Ride() {
   const mapRef = useRef<MapView>(null);
   const activeSheetRef = useRef<BottomSheet>(null);
 
-  const ride = useQuery(api.routes.rides.getRide, id ? { id } : 'skip');
+  const ride = useQuery(api.routes.rides.getRide, (id && userId) ? { id, userId } : 'skip');
   const settings = useQuery(api.routes.settings.rideSettings);
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);

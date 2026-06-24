@@ -27,7 +27,8 @@ import { api } from '@tutem/api';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuth } from '@clerk/expo';
+import { useAuth } from '@/hooks/useAuth';
+import { useDriver } from '@/hooks/useDriver';
 import ErrorScreen from '@/components/ErrorScreen';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import type { Id } from '@tutem/api';
@@ -52,10 +53,6 @@ const formSchema = z.object({
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
   organizationId: z.string().min(1, 'Select an organization.'),
-  phoneNumber: z.string()
-    .min(1, 'Phone number is required')
-    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
-    .length(10, "Phone number must be exactly 10 digits"),
 });
 export default function Register() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
@@ -66,13 +63,16 @@ export default function Register() {
   >(null);
 
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId, phoneNumber } = useAuth();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
   const driverLocation = useDriverLiveLocation();
 
-  const [initialLocationFetched, setInitialLocationFetched] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [initialLocationFetched, setInitialLocationFetched] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -80,13 +80,16 @@ export default function Register() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip');
+  const organizations = useQuery(
+    api.routes.organizations.getNearbyOrganization,
+    initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
+  );
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
-  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
+  const { driver } = useDriver();
 
-  useEffect(()=> {
-    if(driverLocation && !initialLocationFetched) {
+  useEffect(() => {
+    if (driverLocation && !initialLocationFetched) {
       setInitialLocationFetched(driverLocation);
     }
   }, [driverLocation]);
@@ -108,9 +111,14 @@ export default function Register() {
       licenseImageBackKey: undefined,
       organizationId: undefined,
       gender: undefined,
-      phoneNumber: '',
     },
   });
+
+  const displayPhone = phoneNumber
+    ? phoneNumber.startsWith('+91')
+      ? phoneNumber.slice(3)
+      : phoneNumber
+    : '';
 
   const selectedOrgId = useWatch({
     control,
@@ -134,7 +142,7 @@ export default function Register() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ 
+      result = await ImagePicker.launchCameraAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -148,7 +156,7 @@ export default function Register() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ 
+      result = await ImagePicker.launchImageLibraryAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -180,7 +188,10 @@ export default function Register() {
 
       setIsSubmitting(true);
 
-      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${userId}-front`);
+      const uploadedFrontKey = await uploadFile(
+        data.licenseImageFrontKey,
+        `licenses/${userId}-front`
+      );
       const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
@@ -188,10 +199,11 @@ export default function Register() {
         ...restData,
         organizationId: data.organizationId as Id<'organization'>,
         dob: String(data.dob),
-        clerkId: userId,
+        userId: userId,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
-        expoPushToken: expoPushToken ?? undefined
+        expoPushToken: expoPushToken ?? undefined,
+        phoneNumber: displayPhone,
       });
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
@@ -211,12 +223,12 @@ export default function Register() {
       setIsSubmitting(false);
     }
   });
-  
+
   useEffect(() => {
-    if(!userId || !driver || !expoPushToken) return;
-    if(!driver.driverDetails) return;
-    login({ driverId: driver.driverDetails._id, expoPushToken })
-  }, [])
+    if (!userId || !driver || !expoPushToken) return;
+    if (!driver.driverDetails) return;
+    login({ driverId: driver.driverDetails._id, expoPushToken });
+  }, []);
 
   if (driver === undefined) return <LoadingScreen message="Loading registration…" />;
 
@@ -248,41 +260,40 @@ export default function Register() {
                 <Feather name="briefcase" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
               </View>
-              {organizations ? <Controller
-                name="organizationId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(option) => field.onChange(option?.value)}
-                    value={{
-                      label:
-                        organizations.find((org) => org._id === field.value)?.name ??
-                        'Select organization',
-                      value: field.value,
-                    }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Organization" />
-                    </SelectTrigger>
-                    <SelectContent className="w-10/12">
-                      <SelectGroup>
-                        <SelectLabel>Organization</SelectLabel>
-                        {organizations.map((org) => (
-                          <SelectItem key={org._id} label={org.name} value={org._id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-              /> 
-              : organizations === undefined ? <Text className="text-md text-gray-600">
-                Fetching organizations...
-              </Text>
-              : <Text className="text-md text-destructive">
-                No organizations found near you.
-              </Text> }
-              
+              {organizations ? (
+                <Controller
+                  name="organizationId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={(option) => field.onChange(option?.value)}
+                      value={{
+                        label:
+                          organizations.find((org) => org._id === field.value)?.name ??
+                          'Select organization',
+                        value: field.value,
+                      }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Organization" />
+                      </SelectTrigger>
+                      <SelectContent className="w-10/12">
+                        <SelectGroup>
+                          <SelectLabel>Organization</SelectLabel>
+                          {organizations.map((org) => (
+                            <SelectItem key={org._id} label={org.name} value={org._id}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              ) : organizations === undefined ? (
+                <Text className="text-md text-gray-600">Fetching organizations...</Text>
+              ) : (
+                <Text className="text-md text-destructive">No organizations found near you.</Text>
+              )}
 
               {errors.organizationId && (
                 <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
@@ -343,38 +354,26 @@ export default function Register() {
               )}
             </View>
 
-            {/* Phone number */}
+            {/* Phone number — pre-filled from auth, read-only */}
             <View>
               <View className="mb-1 flex-row items-center gap-1.5">
                 <Feather name="phone" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
               </View>
-              <Controller
-                name="phoneNumber"
-                control={control}
-                rules={{ required: true }}
-                render={({ field: { onChange, value } }) => (
-                  <View className="relative">
-                    <Input
-                      ref={phoneRef}
-                      inputMode="tel"
-                      placeholder="9876543210"
-                      maxLength={10}
-                      onChangeText={onChange}
-                      className="pl-14"
-                      value={value}
-                      returnKeyType="next"
-                      onSubmitEditing={() => dobRef.current?.open()}
-                    />
-                    <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                      +91
-                    </Text>
-                  </View>
-                )}
-              />
-              {errors.phoneNumber && (
-                <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
-              )}
+              <View className="relative">
+                <Input
+                  inputMode="tel"
+                  value={displayPhone}
+                  editable={false}
+                  className="pl-14 opacity-60"
+                />
+                <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">
+                  +91
+                </Text>
+              </View>
+              <Text className="mt-1 text-xs text-muted-foreground">
+                Phone number verified at sign-in
+              </Text>
             </View>
 
             {/* DOB */}
@@ -527,7 +526,7 @@ export default function Register() {
               </View>
             )}
 
-            <Button onPress={onSubmit} disabled={isSubmitting} className='my-4'>
+            <Button onPress={onSubmit} disabled={isSubmitting} className="my-4">
               <Text>Submit</Text>
             </Button>
           </View>
@@ -552,14 +551,14 @@ export default function Register() {
             <TouchableOpacity
               className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('camera')}>
-              <Feather name="camera" size={32} color={"#1ca0d9"} />
+              <Feather name="camera" size={32} color={'#1ca0d9'} />
               <Text className="font-semibold text-gray-600">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border bg-background"
               onPress={() => handlePick('gallery')}>
-              <Feather name="image" size={32} color={"#eda51f"} />
+              <Feather name="image" size={32} color={'#eda51f'} />
               <Text className="font-semibold text-gray-600">Gallery</Text>
             </TouchableOpacity>
           </View>

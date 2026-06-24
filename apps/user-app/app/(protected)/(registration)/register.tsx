@@ -83,7 +83,7 @@ export default function Register() {
         ...data,
         dob: String(data.dob),
         phoneNumber: displayPhone,
-        clerkId: userId,
+        userId: userId,
         expoPushToken: expoPushToken ?? undefined,
       });
 

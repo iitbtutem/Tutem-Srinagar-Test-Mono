@@ -1,5 +1,6 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { useAuth } from '@clerk/expo';
+import { useAuth } from '@/hooks/useAuth';
+import { useDriver } from '@/hooks/useDriver';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
@@ -54,7 +55,7 @@ export default function Profile() {
   const licenseBottomSheetRef = useRef<BottomSheet>(null);
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
-  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
+  const { driver } = useDriver();
   const vehicle = useQuery(
     api.routes.vehicle.getVehicleByDriverId,
     driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip'
@@ -190,7 +191,7 @@ export default function Profile() {
   const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-secondary">
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Hero Header */}
@@ -200,7 +201,7 @@ export default function Profile() {
         {/* Action Buttons — absolute, won't affect layout */}
         <Animated.View
           style={[actionButtonStyle, { position: 'absolute', top: 0, zIndex: 1 }]}
-          className="w-full flex-row items-center justify-between px-4 mt-2">
+          className="mt-2 w-full flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: iconBackgroundColor }}
@@ -223,7 +224,7 @@ export default function Profile() {
                     licenseNumber: driver.driverDetails?.licenseNumber,
                     gender: driver.gender,
                     organizationId: driver.driverDetails?.organizationId,
-                    clerkId: driver.clerkId,
+                    userId: driver.userId,
                   },
                 })
               }>
@@ -262,7 +263,7 @@ export default function Profile() {
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                clerkId={driver.clerkId}
+                userId={driver.userId}
                 profilePictureKey={driver.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
@@ -699,7 +700,6 @@ export default function Profile() {
 const LicenseImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
   const [errored, setErrored] = useState(false);
   const showFallback = !uri || errored;
-  console.log("uri: ", uri);
 
   return (
     <View className="overflow-hidden rounded-2xl border border-zinc-200">
@@ -782,20 +782,19 @@ const ImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
 };
 
 function ImagePickerDialog({
-  clerkId,
+  userId,
   profilePictureKey,
   setImageUri,
   scrollY,
   scrollDistance,
 }: {
-  clerkId: string;
+  userId: string;
   profilePictureKey: string | undefined;
   setImageUri: (uri: string) => void;
   scrollY: SharedValue<number>;
   scrollDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { userId } = useAuth();
 
   const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
@@ -807,7 +806,7 @@ function ImagePickerDialog({
       if (newImgUri === '') return;
       setImageUri(newImgUri);
       const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}}`);
-      await uploadProfilePicture({ clerkId, profilePictureKey });
+      await uploadProfilePicture({ userId, profilePictureKey });
     } catch (error) {
       console.log('Error uploading profile picture:', error);
     }
@@ -816,7 +815,7 @@ function ImagePickerDialog({
   const handleDelete = async () => {
     setIsOpen(false);
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ clerkId });
+    await removeProfilePictureKey({ userId });
   };
 
   const uploadBtnOpacity = useAnimatedStyle(() => {

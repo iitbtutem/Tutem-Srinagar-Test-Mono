@@ -3,9 +3,8 @@ import '@/global.css';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ConvexReactClient } from 'convex/react';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { ClerkProvider, useAuth } from '@clerk/expo';
+import { ConvexReactClient, ConvexProvider } from 'convex/react';
+import { AuthProvider } from '@/context/AuthContext';
 import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
 import { View } from 'react-native';
@@ -29,23 +28,6 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
 });
 
-// Secure token cache for Clerk
-const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      await SecureStore.setItemAsync(key, value);
-    } catch {
-      return
-    }
-  },
-};
 
 export default function RootLayout() {
   const [launchedOffline, setLaunchedOffline] = useState(false);
@@ -77,10 +59,8 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider
-        publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-        tokenCache={tokenCache}>
-        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexProvider client={convex}>
+        <AuthProvider>
           <NotificationProvider>
             <ToastProvider>
               <KeyboardProvider>
@@ -103,8 +83,8 @@ export default function RootLayout() {
               </KeyboardProvider>
             </ToastProvider>
           </NotificationProvider>
-        </ConvexProviderWithClerk>
-      </ClerkProvider>
+        </AuthProvider>
+      </ConvexProvider>
     </GestureHandlerRootView>
   );
 }

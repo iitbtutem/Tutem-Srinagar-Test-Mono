@@ -14,7 +14,8 @@ import {
   Button,
   Loader,
 } from '@tutem/ui';
-import { useAuth } from '@clerk/expo';
+import { useAuth } from '@/hooks/useAuth';
+import { useDriver } from '@/hooks/useDriver';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,7 +64,7 @@ export default function RegisterAsRider() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const driver = useQuery(api.routes.driver.getUser, { clerkId: userId ?? '' });
+  const { driver } = useDriver();
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(api.routes.organizations.getNearbyOrganization, initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip');
   const { uploadFile } = useFileUpload();
@@ -157,7 +158,7 @@ export default function RegisterAsRider() {
       await registerAsDriver({
         ...restData,
         organizationId: data.organizationId as Id<'organization'>,
-        clerkId: userId,
+        userId: userId,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
         expoPushToken: expoPushToken ?? undefined,

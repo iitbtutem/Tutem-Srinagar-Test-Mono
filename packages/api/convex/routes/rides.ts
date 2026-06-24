@@ -52,11 +52,9 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     const settings = await ctx.db.query("rideSettings").first();
     const MaxRideRequest = settings?.maxDriverRideRequests ?? 3;
 
-    const allDrivers = await ctx.db.query("driver").collect();
-
     const drivers = await Promise.all(
-      allDrivers.map(async (driver) => {
-        const driverDetails = await ctx.db.get(driver._id);
+      driversInfo.map(async (driver) => {
+        const driverDetails = await ctx.db.get(driver.driverId);
 
         if (
           driverDetails === null ||
@@ -101,7 +99,7 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
         const vehicle = await ctx.db
           .query("vehicle")
-          .withIndex("by_owner", (q) => q.eq("ownerId", driver._id))
+          .withIndex("by_owner", (q) => q.eq("ownerId", driverDetails._id))
           .first();
         if (vehicle === null) return null;
         console.log("vehicle is", vehicle);
@@ -985,14 +983,12 @@ export const getDriverCurrentRideByDriverId = query({
 export const getRide = query({
   args: {
     id: v.id("ride"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const clerkUser = await ctx.auth.getUserIdentity();
-    if (clerkUser === null) throw new ConvexError("Invalid user");
-
     const convexUser = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkUser.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
     if (convexUser === null) throw new ConvexError("Invalid user");
 

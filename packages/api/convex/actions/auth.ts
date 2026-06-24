@@ -75,7 +75,7 @@ export const verifyOtp = action({
     });
 
     if (!session) {
-      throw new ConvexError("No OTP session found. Please request a new OTP.");
+      throw new ConvexError("Please request a new OTP.");
     }
 
     if (Date.now() > session.expiresAt) {

@@ -16,8 +16,8 @@ export default defineSchema({
     profilePictureKey: v.optional(v.string()),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
-    clerkId: v.string(),
-  }).index("by_clerkId", ["clerkId"]),
+    userId: v.string(),
+  }).index("by_userId", ["userId"]),
 
   //riders
   rider: defineTable({

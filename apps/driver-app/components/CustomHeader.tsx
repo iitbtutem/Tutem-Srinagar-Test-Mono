@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
-import { useAuth } from '@clerk/expo';
+import { useAuth } from '@/hooks/useAuth';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Link, router } from 'expo-router';
 import {

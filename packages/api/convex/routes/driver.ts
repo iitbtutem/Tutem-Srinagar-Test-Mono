@@ -51,19 +51,19 @@ export const addDriver = mutation({
     organizationId: v.id("organization"),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
-    clerkId: v.string(),
+    userId: v.string(),
     expoPushToken: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     let existingUser = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (existingUser) {
       const existingDriver = await ctx.db
         .query("driver")
-        .withIndex("by_user", (q) => q.eq("userId", args.clerkId as Id<"user">))
+        .withIndex("by_user", (q) => q.eq("userId", existingUser._id))
         .first();
 
       if (existingDriver) {
@@ -78,7 +78,7 @@ export const addDriver = mutation({
     let userId = existingUser?._id;
     if (existingUser === null) {
       userId = await ctx.db.insert("user", {
-        clerkId: args.clerkId,
+        userId: args.userId,
         firstName: args.firstName,
         lastName: args.lastName,
         dob: args.dob,
@@ -114,7 +114,7 @@ export const addDriver = mutation({
 
 export const registerAsDriver = mutation({
   args: {
-    clerkId: v.string(),
+    userId: v.string(),
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
@@ -124,7 +124,7 @@ export const registerAsDriver = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
     if (user === null) {
       throw new ConvexError("User not found");
@@ -164,12 +164,12 @@ export const registerAsDriver = mutation({
 
 export const getUser = query({
   args: {
-    clerkId: v.string(),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (user === null) return null;
@@ -343,13 +343,12 @@ export const updateDriver = mutation({
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
-    phoneNumber: v.string(),
-    clerkId: v.string(),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");
@@ -387,7 +386,6 @@ export const updateDriver = mutation({
     await ctx.db.patch(user._id, {
       firstName: args.firstName,
       lastName: args.lastName,
-      phoneNumber: args.phoneNumber,
     });
 
     await ctx.db.patch(driver._id, {
@@ -406,13 +404,13 @@ export const updateDriver = mutation({
 
 export const uploadProfilePicture = mutation({
   args: {
-    clerkId: v.string(),
+    userId: v.string(),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");
@@ -425,12 +423,12 @@ export const uploadProfilePicture = mutation({
 
 export const removeProfilePictureKey = mutation({
   args: {
-    clerkId: v.string(),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("user")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
     if (user === null) throw new ConvexError("User not found");

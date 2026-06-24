@@ -1,15 +1,12 @@
 import { Octicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { useAuth } from '@clerk/expo';
-import { useQuery } from 'convex/react';
+import { useDriver } from '@/hooks/useDriver';
 import HomeScreenHeader from '@/components/CustomHeader';
-import { api } from '@tutem/api';
 import { colors } from '@/constants/colors';
 
 export default function TabsLayout() {
-  const { userId } = useAuth();
-  const user = useQuery(api.routes.driver.getUser, userId && userId !== '' ? { clerkId: userId } : 'skip');
+  const { driver: user } = useDriver();
 
   return (
     <Tabs

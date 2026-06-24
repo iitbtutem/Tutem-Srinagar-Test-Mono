@@ -1,5 +1,6 @@
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from 'convex/react';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { ScrollView, View, Text } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-native';
@@ -319,8 +320,9 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
 
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
+  const { userId } = useAuthUser();
 
-  const ride = useQuery(api.routes.rides.getRide, { id });
+  const ride = useQuery(api.routes.rides.getRide, (id && userId) ? { id, userId } : 'skip');
 
   if (ride === undefined) {
     return (

@@ -12,7 +12,7 @@ import {
   Text,
   Input,
   Button,
-  Loader
+  Loader,
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +23,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { Feather } from '@expo/vector-icons';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { BasicHeader } from '@/components/CustomHeader';
 
 const formSchema = z.object({
@@ -33,10 +32,6 @@ const formSchema = z.object({
   lastName: z.string('Enter a valid last name').optional(),
   gender: z.enum(GENDER, 'Select gender'),
   dob: z.date('Enter your DOB'),
-  phoneNumber: z.string()
-    .min(1, 'Phone number is required')
-    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
-    .length(10, "Phone number must be exactly 10 digits"),
 });
 
 export default function EditProfile() {
@@ -45,13 +40,13 @@ export default function EditProfile() {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const { firstName, lastName, dob, phoneNumber, gender, clerkId } = useLocalSearchParams<{
+  const { firstName, lastName, dob, phoneNumber, gender, userId } = useLocalSearchParams<{
     firstName: string;
     lastName?: string;
     dob: string;
     phoneNumber: string;
     gender: 'Male' | 'Female' | 'Other';
-    clerkId: string;
+    userId: string;
   }>();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -71,15 +66,20 @@ export default function EditProfile() {
       lastName: lastName,
       dob: new Date(dob),
       gender: gender,
-      phoneNumber: phoneNumber,
     },
   });
+
+  const displayPhone = phoneNumber
+    ? phoneNumber.startsWith('+91')
+      ? phoneNumber.slice(3)
+      : phoneNumber
+    : '';
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true);
-      const {dob, gender, ...rest} = data;
-      await updateUser({ ...rest, clerkId: clerkId });
+      const { dob, gender, ...rest } = data;
+      await updateUser({ ...rest, userId: userId });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
@@ -93,13 +93,15 @@ export default function EditProfile() {
 
   return (
     <ScrollView className="flex-1 bg-background">
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: 'Edit Profile',
-        header: (props) => <BasicHeader {...props} />,
-      }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Edit Profile',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
 
-      {isSubmitting && <Loader subtitle='submitting...' />}
+      {isSubmitting && <Loader subtitle="submitting..." />}
       <View className="gap-3 px-3 pb-20 pt-2">
         {/* First name */}
         <View>
@@ -153,36 +155,21 @@ export default function EditProfile() {
           )}
         </View>
 
-        {/* Phone number */}
+        {/* Phone number — pre-filled from auth, read-only */}
         <View>
           <View className="mb-1 flex-row items-center gap-1.5">
             <Feather name="phone" size={14} color="gray" />
             <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
           </View>
-          <Controller
-            name="phoneNumber"
-            control={control}
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <View className="relative">
-                <Input
-                  ref={phoneRef}
-                  inputMode="tel"
-                  placeholder="9876543210"
-                  maxLength={10}
-                  onChangeText={onChange}
-                  className="pl-14"
-                  value={value}
-                  returnKeyType="next"
-                  onSubmitEditing={() => dobRef.current?.open()}
-                />
-                <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">+91</Text>
-              </View>
-            )}
-          />
-          {errors.phoneNumber && (
-            <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
-          )}
+          <View className="relative">
+            <Input
+              inputMode="tel"
+              value={displayPhone}
+              editable={false}
+              className="pl-14 opacity-60"
+            />
+            <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">+91</Text>
+          </View>
         </View>
 
         {/* DOB */}
@@ -262,7 +249,7 @@ export default function EditProfile() {
           )}
         </View>
 
-        <Button onPress={onSubmit} className='my-3'>
+        <Button onPress={onSubmit} className="my-3">
           <Text>Submit</Text>
         </Button>
       </View>

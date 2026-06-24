@@ -74,7 +74,7 @@ export const getNearbyDrivers = action({
 
       if (presenceSet.length === 0) {
         console.log("Raw Presence is empty");
-        // return [];
+        return [];
       }
 
       const nearbyDriversInfo = presenceSet
@@ -128,9 +128,7 @@ export const getNearbyDrivers = action({
 
       console.log("nearbyDrivers info", nearbyDriversInfo);
 
-      console.log("working...");
-
-      // if (nearbyDriversInfo.length === 0) return [];
+      if (nearbyDriversInfo.length === 0) return [];
 
       const result = await ctx.runQuery(
         internal.routes.rides.getNearbyDriversQueryResultInternal,

@@ -12,7 +12,7 @@ import {
   Input,
   Text,
   Button,
-  Loader
+  Loader,
 } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,10 +47,6 @@ const formSchema = z.object({
     .min(14, 'License number must be at least 14 characters long.')
     .max(20, 'License number must be at most 20 characters long.'),
   organizationId: z.string().min(1, 'Select an organization.'),
-  phoneNumber: z.string()
-    .min(1, 'Phone number is required')
-    .regex(/^\d+$/, "Phone number must contain only digits from 0 to 9")
-    .length(10, "Phone number must be exactly 10 digits"),
   licenseImageFrontKey: z.string().optional(),
   licenseImageBackKey: z.string().optional(),
 });
@@ -61,12 +57,12 @@ export default function EditProfile() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
   const router = useRouter();
-  const { showToast } = useToast();  
+  const { showToast } = useToast();
   const { uploadFile } = useFileUpload();
 
-  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
-  const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, clerkId } =
+  const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, userId } =
     useLocalSearchParams<{
       firstName: string;
       lastName?: string;
@@ -75,7 +71,7 @@ export default function EditProfile() {
       licenseNumber?: string;
       gender: 'Male' | 'Female' | 'Other';
       organizationId: string;
-      clerkId: string;
+      userId: string;
     }>();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -102,10 +98,15 @@ export default function EditProfile() {
       dob: new Date(dob),
       organizationId: organizationId,
       gender: gender,
-      phoneNumber: phoneNumber,
       licenseNumber: licenseNumber,
     },
   });
+
+  const displayPhone = phoneNumber
+    ? phoneNumber.startsWith('+91')
+      ? phoneNumber.slice(3)
+      : phoneNumber
+    : '';
 
   const selectedOrgId = useWatch({
     control,
@@ -163,12 +164,15 @@ export default function EditProfile() {
 
       setIsSubmitting(true);
 
-      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${clerkId}-front`);
-      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${clerkId}-back`);
+      const uploadedFrontKey = await uploadFile(
+        data.licenseImageFrontKey,
+        `licenses/${userId}-front`
+      );
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
       const { dob, gender, ...rest } = data;
       await updateDriver({
         ...rest,
-        clerkId: clerkId,
+        userId: userId,
         organizationId: data.organizationId as Id<'organization'>,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
@@ -185,18 +189,20 @@ export default function EditProfile() {
   });
 
   if (organizations && organizations.length === 0) {
-      return <ErrorScreen message="No organizations found near you" />;
-    }
+    return <ErrorScreen message="No organizations found near you" />;
+  }
 
   return (
     <View className="flex-1 bg-background">
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: 'Edit Profile',
-        header: (props) => <BasicHeader {...props} />,
-      }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Edit Profile',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
 
-      {isSubmitting && <Loader subtitle='submitting...' />}
+      {isSubmitting && <Loader subtitle="submitting..." />}
 
       <KeyboardAwareScrollView
         bottomOffset={62}
@@ -204,7 +210,6 @@ export default function EditProfile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Organization */}
             <View>
@@ -212,54 +217,54 @@ export default function EditProfile() {
                 <Feather name="briefcase" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Organization</Text>
               </View>
-              {organizations ? <Controller
-                name="organizationId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    defaultValue={
-                      field.value
-                        ? {
-                            value: field.value,
-                            label:
-                              organizations?.find((org) => org._id === field.value)?.name ||
-                              field.value,
-                          }
-                        : undefined
-                    }
-                    value={
-                      field.value
-                        ? {
-                            value: field.value,
-                            label:
-                              organizations?.find((org) => org._id === field.value)?.name ||
-                              field.value,
-                          }
-                        : undefined
-                    }
-                    onValueChange={(option) => field.onChange(option?.value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Organization" />
-                    </SelectTrigger>
-                    <SelectContent className="w-10/12">
-                      <SelectGroup>
-                        <SelectLabel>Organization</SelectLabel>
-                        {organizations.map((org) => (
-                          <SelectItem key={org._id} label={org.name} value={org._id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-              /> 
-              : organizations === undefined ? <Text className="text-md text-gray-600">
-                Fetching organizations...
-              </Text>
-              : <Text className="text-md text-destructive">
-                No organizations found near you.
-              </Text> }
+              {organizations ? (
+                <Controller
+                  name="organizationId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      defaultValue={
+                        field.value
+                          ? {
+                              value: field.value,
+                              label:
+                                organizations?.find((org) => org._id === field.value)?.name ||
+                                field.value,
+                            }
+                          : undefined
+                      }
+                      value={
+                        field.value
+                          ? {
+                              value: field.value,
+                              label:
+                                organizations?.find((org) => org._id === field.value)?.name ||
+                                field.value,
+                            }
+                          : undefined
+                      }
+                      onValueChange={(option) => field.onChange(option?.value)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Organization" />
+                      </SelectTrigger>
+                      <SelectContent className="w-10/12">
+                        <SelectGroup>
+                          <SelectLabel>Organization</SelectLabel>
+                          {organizations.map((org) => (
+                            <SelectItem key={org._id} label={org.name} value={org._id}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              ) : organizations === undefined ? (
+                <Text className="text-md text-gray-600">Fetching organizations...</Text>
+              ) : (
+                <Text className="text-md text-destructive">No organizations found near you.</Text>
+              )}
 
               {errors.organizationId && (
                 <Text className="text-md text-destructive">{errors.organizationId.message}</Text>
@@ -318,38 +323,23 @@ export default function EditProfile() {
               )}
             </View>
 
-            {/* Phone number */}
+            {/* Phone number — pre-filled from auth, read-only */}
             <View>
               <View className="mb-1 flex-row items-center gap-1.5">
                 <Feather name="phone" size={14} color="gray" />
                 <Text className="text-sm font-medium text-muted-foreground">Mobile Number</Text>
               </View>
-              <Controller
-                name="phoneNumber"
-                control={control}
-                rules={{ required: true }}
-                render={({ field: { onChange, value } }) => (
-                  <View className="relative">
-                    <Input
-                      ref={phoneRef}
-                      inputMode="tel"
-                      placeholder="9876543210"
-                      maxLength={10}
-                      onChangeText={onChange}
-                      className="pl-14"
-                      value={value}
-                      returnKeyType="next"
-                      onSubmitEditing={() => dobRef.current?.open()}
-                    />
-                    <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                      +91
-                    </Text>
-                  </View>
-                )}
-              />
-              {errors.phoneNumber && (
-                <Text className="text-md text-destructive">{errors.phoneNumber.message}</Text>
-              )}
+              <View className="relative">
+                <Input
+                  inputMode="tel"
+                  value={displayPhone}
+                  editable={false}
+                  className="pl-14 opacity-60"
+                />
+                <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">
+                  +91
+                </Text>
+              </View>
             </View>
 
             {/* DOB */}
@@ -517,7 +507,7 @@ export default function EditProfile() {
               </View>
             )}
 
-            <Button onPress={onSubmit} className='my-4'>
+            <Button onPress={onSubmit} className="my-4">
               <Text>Submit</Text>
             </Button>
           </View>

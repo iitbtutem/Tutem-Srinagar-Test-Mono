@@ -18,8 +18,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
-import { useUser } from '@clerk/expo';
-import { useMutation, useQuery } from 'convex/react';
+import { useDriver } from '@/hooks/useDriver';
+import { useMutation } from 'convex/react';
 import { useToast } from '@/components/CustomToast';
 import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -56,7 +56,6 @@ const vehicleSchema = z.object({
 });
 
 export default function CreateVehicle() {
-  const { user } = useUser();
   const router = useRouter();
   const { showToast } = useToast();  
   const { uploadFile } = useFileUpload();
@@ -66,7 +65,7 @@ export default function CreateVehicle() {
   const [imagePickupKey, setImagePickupKey] = useState<PickupImageKey>();
   const [isSubmitting, setIsSubmitting] = useState(false); 
 
-  const driver = useQuery(api.routes.driver.getUser, { clerkId: user?.id ?? '' });
+  const { driver } = useDriver();
   const addVehicle = useMutation(api.routes.vehicle.addVehicle);
 
   const modelRef = useRef<TextInput>(null);
