@@ -1,16 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import * as Location from "expo-location";
-import { haversineDistance } from "@/lib/utils";
+import { useEffect, useRef } from 'react';
+import * as Location from 'expo-location';
+import { haversineDistance } from '@/lib/utils';
+import { useAtom } from 'jotai';
+import { locationAtom, Cords } from '@/lib/location';
 
-type Cords = {
-  latitude: number;
-  longitude: number;
-};
-
-const DISTANCE_THRESHOLD = 1; // meters
+const DISTANCE_THRESHOLD = 10; // meters
 
 export function useDriverLiveLocation() {
-  const [currentLocation, setCurrentLocation] = useState<Cords | null>(null);
+  const [currentLocation, setCurrentLocation] = useAtom(locationAtom);
   const lastLocation = useRef<Cords | null>(null);
 
   useEffect(() => {
@@ -18,7 +15,7 @@ export function useDriverLiveLocation() {
 
     const startTracking = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
+      if (status !== 'granted') return;
 
       watcher = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, distanceInterval: 1 },
@@ -43,9 +40,7 @@ export function useDriverLiveLocation() {
             newLocation.longitude
           );
 
-          console.log("diffence : ", distance)
-
-          // Only update if moved at least 1 meter
+          // Only update if moved at least DISTANCE_THRESHOLD
           if (distance >= DISTANCE_THRESHOLD) {
             lastLocation.current = newLocation;
             setCurrentLocation(newLocation);
@@ -59,7 +54,7 @@ export function useDriverLiveLocation() {
     return () => {
       if (watcher) watcher.remove();
     };
-  }, []);
+  }, [setCurrentLocation]);
 
   return currentLocation;
 }

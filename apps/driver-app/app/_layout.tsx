@@ -5,7 +5,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ConvexReactClient, ConvexProvider } from 'convex/react';
 import { AuthProvider } from '@/context/AuthContext';
-import * as SecureStore from 'expo-secure-store';
 import { ToastProvider } from '@/components/CustomToast';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +17,8 @@ import { useEffect, useState } from 'react';
 import { Text } from '@tutem/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { useSetAtom } from 'jotai';
+import { locationAtom, getCurrentLocation } from '@/lib/location';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -28,11 +29,21 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
 });
 
-
 export default function RootLayout() {
   const [launchedOffline, setLaunchedOffline] = useState(false);
 
   const { isOnline, checked } = useInternet();
+  const setLocation = useSetAtom(locationAtom);
+
+  useEffect(() => {
+    getCurrentLocation()
+      .then((loc) => {
+        setLocation(loc);
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch location on launch:', err);
+      });
+  }, []);
 
   useEffect(() => {
     if (checked) {
@@ -50,7 +61,7 @@ export default function RootLayout() {
       }),
     });
   }, []);
-  
+
   if (!checked) return null;
 
   if (launchedOffline && !isOnline) {
@@ -66,15 +77,15 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <SafeAreaView edges={['top']} className="bg-primary" />
                 <StatusBar style="light" translucent backgroundColor={colors.primary} />
-                  
+
                 <Stack
                   screenOptions={{
                     headerShown: false,
                   }}
                 />
                 {!isOnline && (
-                  <View className="bg-red-500 py-2 px-3">
-                    <Text className="text-white text-center text-sm font-medium">
+                  <View className="bg-red-500 px-3 py-2">
+                    <Text className="text-center text-sm font-medium text-white">
                       You are offline
                     </Text>
                   </View>
