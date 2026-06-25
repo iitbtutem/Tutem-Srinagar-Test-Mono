@@ -8,30 +8,27 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatFare(amount?: number) {
-  if (!amount) return '—';
+  if (amount === undefined) return '—';
   return `₹${amount.toFixed(0)}`;
-};
+}
 
 export function numberFormat(number: number) {
-  return new Intl.NumberFormat("en-In", {
+  return new Intl.NumberFormat('en-In', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(number);
-};
+}
 
 export function distanceFormat(distance: number) {
-  return new Intl.NumberFormat("en-In", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  }).format(distance / METERS_IN_KM) + " km";
-};
+  return (
+    new Intl.NumberFormat('en-In', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    }).format(distance / METERS_IN_KM) + ' km'
+  );
+}
 
-export function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -43,13 +40,13 @@ export function haversineDistance(
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c * METERS_IN_KM; //return differnce between two locations in meters
-};
+}
 
-export function isNearby (
-  location1: { latitude: number, longitude: number }, 
-  location2: { latitude: number, longitude: number }, 
+export function isNearby(
+  location1: { latitude: number; longitude: number },
+  location2: { latitude: number; longitude: number },
   differenceInMts: number
-){
+) {
   const differnce = haversineDistance(
     location1.latitude,
     location1.longitude,
@@ -57,11 +54,11 @@ export function isNearby (
     location2.longitude
   );
   return differnce < differenceInMts;
-};
+}
 
 export const getAge = (birthDate: Date): string => {
   if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
-    throw new Error("Invalid date provided");
+    throw new Error('Invalid date provided');
   }
 
   const age = differenceInYears(new Date(), birthDate);
@@ -75,15 +72,15 @@ export const getTimeBetweenFormatted = (
   options?: { unit?: 'auto' | 'hours' | 'minutes' | 'seconds'; decimals?: number }
 ): string => {
   const { unit = 'auto', decimals = 1 } = options || {};
-  
+
   const earlier = startDate < endDate ? startDate : endDate;
   const later = startDate < endDate ? endDate : startDate;
-  
+
   const diffMs = later.getTime() - earlier.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
   const diffMinutes = diffMs / (1000 * 60);
   const diffSeconds = diffMs / 1000;
-  
+
   // If unit is explicitly specified, use that
   if (unit !== 'auto') {
     switch (unit) {
@@ -95,7 +92,7 @@ export const getTimeBetweenFormatted = (
         return `${Math.round(diffSeconds)} secs`;
     }
   }
-  
+
   // Auto mode: choose appropriate unit
   if (diffHours >= 1) {
     return `${diffHours.toFixed(decimals)} hrs`;
