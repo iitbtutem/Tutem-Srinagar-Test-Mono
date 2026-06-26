@@ -1491,7 +1491,7 @@ export const submitRating = mutation({
 
     const ride = await ctx.db.get(args.rideId);
     if (ride === null) throw new ConvexError("Ride not found");
-    if (ride.status !== "Completed")
+    if (ride.status !== "Completed" && ride.status !== "Abort")
       throw new ConvexError("Can only rate completed rides");
 
     // Prevent duplicate: same ride + same raterType

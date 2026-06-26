@@ -12,15 +12,18 @@ export const login = mutation({
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
-    if(driver === null) return;
+    if (driver === null) return;
 
-    const activeRide = await ctx.db.query("ride").withIndex("by_driver", q => q.eq("driverId", driver._id)).first();
+    const activeRide = await ctx.db
+      .query("ride")
+      .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+      .first();
 
     await ctx.db.patch(driver._id, {
       expoPushToken: args.expoPushToken,
       isAvailableForRide: activeRide ? false : true,
     });
-  }
+  },
 });
 
 export const logout = mutation({
@@ -29,15 +32,14 @@ export const logout = mutation({
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
-    if(driver === null) return;
-    
+    if (driver === null) return;
+
     await ctx.db.patch(driver._id, {
       isOnline: false,
       isAvailableForRide: false,
-      expoPushToken: undefined
+      expoPushToken: undefined,
     });
-    
-  }
+  },
 });
 
 export const addDriver = mutation({
@@ -52,7 +54,7 @@ export const addDriver = mutation({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     userId: v.string(),
-    expoPushToken: v.optional(v.string())
+    expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let existingUser = await ctx.db
@@ -181,46 +183,46 @@ export const getUser = query({
 
     const profilePictureUri = user.profilePictureKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: user.profilePictureKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: user.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
-    if(driver === null) {
+    if (driver === null) {
       return {
         ...user,
         profilePictureKey: profilePictureUri,
-        driverDetails: null
-      }
-    };
+        driverDetails: null,
+      };
+    }
 
     let licenseFrontImageUri;
     let licenseBackImageUri;
 
     licenseFrontImageUri = driver?.licenseImageFrontKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: driver.licenseImageFrontKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.licenseImageFrontKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     licenseBackImageUri = driver?.licenseImageBackKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: driver.licenseImageBackKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.licenseImageBackKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     const organization = await ctx.db.get(driver.organizationId);
@@ -239,14 +241,16 @@ export const getUser = query({
     return {
       ...user,
       profilePictureKey: profilePictureUri,
-      driverDetails: driver ? {
-        ...driver,
-        organization: organization,
-        licenseImageFrontKey: licenseFrontImageUri,
-        licenseImageBackKey: licenseBackImageUri,
-        averageRating,
-        totalRatings: ratings.length
-      } : null,
+      driverDetails: driver
+        ? {
+            ...driver,
+            organization: organization,
+            licenseImageFrontKey: licenseFrontImageUri,
+            licenseImageBackKey: licenseBackImageUri,
+            averageRating,
+            totalRatings: ratings.length,
+          }
+        : null,
     };
   },
 });
@@ -263,59 +267,62 @@ export const getDriver = query({
 
     const licenseFrontImageUri = driver.licenseImageFrontKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: driver.licenseImageFrontKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.licenseImageFrontKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     const licenseBackImageUri = driver.licenseImageBackKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: driver.licenseImageBackKey,
-        }),
-        { expiresIn: 300 },
-      )
-      : undefined;
-    
-    const paymentQrCodeUri = driver.paymentQrCodeKey
-      ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: driver.paymentQrCodeKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.licenseImageBackKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
-    const profilePictureUri = (user !== null && user.profilePictureKey)
+    const paymentQrCodeUri = driver.paymentQrCodeKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: user.profilePictureKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.paymentQrCodeKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
+
+    const profilePictureUri =
+      user !== null && user.profilePictureKey
+        ? await getSignedUrl(
+            s3Client,
+            new GetObjectCommand({
+              Bucket: process.env.MINIO_BUCKET,
+              Key: user.profilePictureKey,
+            }),
+            { expiresIn: 300 },
+          )
+        : undefined;
 
     return {
       ...driver,
-      userDetails: user ? {
-        ...user,
-        profilePictureKey: profilePictureUri,
-      } : null,
+      userDetails: user
+        ? {
+            ...user,
+            profilePictureKey: profilePictureUri,
+          }
+        : null,
       licenseImageFrontKey: licenseFrontImageUri,
       licenseImageBackKey: licenseBackImageUri,
       paymentQrCodeKey: paymentQrCodeUri,
-    };    
-  }
+    };
+  },
 });
 
 export const getDriverInternal = internalQuery({
@@ -324,7 +331,7 @@ export const getDriverInternal = internalQuery({
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.id);
-    if(driver === null) throw new ConvexError("Invalid Driver");
+    if (driver === null) throw new ConvexError("Invalid Driver");
 
     const vehicle = await ctx.db
       .query("vehicle")
@@ -332,7 +339,7 @@ export const getDriverInternal = internalQuery({
       .first();
 
     return { ...driver, vehicle };
-  }
+  },
 });
 
 export const updateDriver = mutation({
@@ -457,7 +464,7 @@ export const getDriverPaymentQrImage = query({
       { expiresIn: 300 },
     );
     return paymentQrCodeUrl;
-  }
+  },
 });
 
 export const updatePaymentQrCode = mutation({
@@ -493,7 +500,10 @@ export const updateLicense = mutation({
     if (organisation === null)
       throw new ConvexError("Driver doesn't belong to any organisation");
 
-    if (!organisation.canDriverEditLicesnse && driver.isLicenseVerified === "Verified")
+    if (
+      !organisation.canDriverEditLicesnse &&
+      driver.isLicenseVerified === "Verified"
+    )
       throw new ConvexError("Can't update license details");
 
     if (!organisation.isLicenseVerficationRequired) {
@@ -519,39 +529,51 @@ export const updateLicense = mutation({
 
 export const toggleAvailability = mutation({
   args: {
-    id: v.id("driver")
+    id: v.id("driver"),
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.id);
-    if(driver === null) throw new ConvexError("Invalid user");
+    if (driver === null) throw new ConvexError("Invalid user");
 
-    if(driver.isOnline === true) {
+    if (driver.isOnline === true) {
       const rideRequests = await ctx.db
-      .query("ride")
-      .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
-      .filter((q) => q.or(q.eq(q.field("status"), "Open"), q.eq(q.field("status"), "Active")))
-      .collect();
+        .query("ride")
+        .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+        .filter((q) =>
+          q.or(
+            q.and(
+              q.eq(q.field("status"), "Open"),
+              q.eq(q.field("requestStatus"), "Pending"),
+              q.eq(q.field("requestStatus"), "Accepted"),
+            ),
+            q.eq(q.field("status"), "Active"),
+          ),
+        )
+        .collect();
 
-      if(rideRequests.length > 0) throw new ConvexError("You have pending ride requests. Please reject or accept them before going offline.")
-    };
+      if (rideRequests.length > 0)
+        throw new ConvexError(
+          "You have pending ride requests. Please reject or accept them before going offline.",
+        );
+    }
 
     await ctx.db.patch(driver._id, {
       isAvailableForRide: driver.isOnline ? false : true,
       isOnline: !driver.isOnline,
     });
-  }
-})
+  },
+});
 
 export const toggleGenderMatching = mutation({
   args: {
-    id: v.id("driver")
+    id: v.id("driver"),
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.id);
-    if(driver === null) throw new ConvexError("Invalid user");
+    if (driver === null) throw new ConvexError("Invalid user");
 
     await ctx.db.patch(driver._id, {
-      genderMatching: !driver.genderMatching
-    })
-  }
-})
+      genderMatching: !driver.genderMatching,
+    });
+  },
+});
