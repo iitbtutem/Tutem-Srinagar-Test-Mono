@@ -380,16 +380,19 @@ export default function WhereTo() {
 
   // Discovery logic using Action
   useEffect(() => {
-    if (
+    const shouldFetch =
       bothSelected &&
       showDrivers &&
       hasSearchedDrivers &&
       selectedRoute &&
       rider &&
       rider.riderDetails &&
-      pickupLocation
-    ) {
-      const riderId = rider.riderDetails._id;
+      pickupLocation &&
+      !selectedDriverId &&
+      mapSelectionMode === null;
+
+    if (shouldFetch) {
+      const riderId = rider.riderDetails!._id;
       const pickupLat = pickupLocation.coords.latitude;
       const pickupLon = pickupLocation.coords.longitude;
 
@@ -420,11 +423,12 @@ export default function WhereTo() {
       };
 
       fetchDrivers();
-      // Optionally poll every 30s
-      const pollId = setInterval(fetchDrivers, 30000);
-      return () => clearInterval(pollId);
     } else {
-      setNearbyDrivers([]);
+      // Only clear nearby drivers if we are no longer in driver selection mode
+      const isStillInDriverSelection = bothSelected && showDrivers && hasSearchedDrivers;
+      if (!isStillInDriverSelection) {
+        setNearbyDrivers([]);
+      }
     }
   }, [
     bothSelected,
@@ -434,6 +438,8 @@ export default function WhereTo() {
     rider?.riderDetails?._id,
     genderMatch,
     filters,
+    selectedDriverId,
+    mapSelectionMode,
   ]);
 
   const fitMap = useCallback(
@@ -1096,6 +1102,7 @@ export default function WhereTo() {
                           onPress={async () => {
                             setMapSelectionMode('pickup');
                             setSheetIndex(0);
+                            setHasSearchedDrivers(false);
                             if (pickupLocation?.coords) {
                               fitMap(pickupLocation.coords, 500);
                             } else {
@@ -1116,6 +1123,7 @@ export default function WhereTo() {
                           onPress={async () => {
                             setMapSelectionMode('destination');
                             setSheetIndex(0);
+                            setHasSearchedDrivers(false);
                             if (destination?.coords) {
                               fitMap(destination.coords, 500);
                             } else {

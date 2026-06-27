@@ -51,6 +51,12 @@ export const getNearbyDrivers = action({
     if (!ABLY_API_KEY) {
       throw new Error("ABLY_API_KEY not configured in Convex environment");
     }
+    const ABLY_URL = process.env.ABLY_URL || process.env.EXPO_PUBLIC_ABLY_URL;
+    if (!ABLY_URL) {
+      throw new Error("ABLY_URL not configured in Convex environment");
+    }
+
+    console.log("Action called ");
 
     try {
       const settings = await ctx.runQuery(
@@ -59,74 +65,51 @@ export const getNearbyDrivers = action({
       const NearByRadius = settings.nearbyRadius / METERS_IN_KM;
 
       const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
-      const response = await fetch(
-        "https://rest.ably.io/channels/global:active-drivers/presence",
-        { headers: { Authorization: authHeader } },
-      );
+      const response = await fetch(ABLY_URL, {
+        headers: { Authorization: authHeader },
+      });
 
-      if (!response.ok) {
-        console.error("Ably Presence API error:", await response.text());
-        return [];
-      }
+      if (!response.ok) return [];
 
       const presenceSet: any[] = await response.json();
-      console.log("Raw Presence Set from Ably:", presenceSet);
 
-      if (presenceSet.length === 0) {
-        console.log("Raw Presence is empty");
-        return [];
-      }
+      if (presenceSet.length === 0) return [];
 
-      const nearbyDriversInfo = presenceSet
-        .map((m) => {
-          // Ably data can sometimes arrive as a stringified JSON
-          let parsedData = m.data;
-          if (typeof m.data === "string") {
-            try {
-              parsedData = JSON.parse(m.data);
-            } catch (e) {
-              console.error("Failed to parse presence data:", m.data);
-              return null;
-            }
+      const nearbyDriversInfo = presenceSet.flatMap((m) => {
+        let parsedData = m.data;
+
+        if (typeof m.data === "string") {
+          try {
+            parsedData = JSON.parse(m.data);
+          } catch (e) {
+            return [];
           }
-          return { ...m, parsedData };
-        })
-        .filter((m) => {
-          if (!m) return false;
-          const hasData =
-            m.parsedData &&
-            m.parsedData.latitude !== undefined &&
-            m.parsedData.longitude !== undefined;
-          if (!hasData)
-            console.log(
-              "Member filtered out (no lat/lng):",
-              m.clientId,
-              m.data,
-            );
-          return hasData;
-        })
-        .map((m) => ({
-          driverId: m!.parsedData.driverId,
-          latitude: Number(m!.parsedData.latitude),
-          longitude: Number(m!.parsedData.longitude),
-        }))
-        .filter((driver) => {
-          const dist = haversineDistance(
-            Number(args.pickup.latitude),
-            Number(args.pickup.longitude),
-            driver.latitude,
-            driver.longitude,
-          );
-          const isNearby = dist <= NearByRadius;
-          console.log(
-            `Driver ${driver.driverId} distance: ${dist.toFixed(3)}km. Nearby: ${isNearby}`,
-          );
-          return isNearby;
-        });
+        }
 
-      console.log("Final nearbyDrivers list:", nearbyDriversInfo);
+        const hasData =
+          parsedData &&
+          parsedData.latitude !== undefined &&
+          parsedData.longitude !== undefined;
 
-      console.log("nearbyDrivers info", nearbyDriversInfo);
+        if (!hasData) return [];
+
+        const driver = {
+          driverId: parsedData.driverId,
+          latitude: Number(parsedData.latitude),
+          longitude: Number(parsedData.longitude),
+        };
+
+        const dist = haversineDistance(
+          Number(args.pickup.latitude),
+          Number(args.pickup.longitude),
+          driver.latitude,
+          driver.longitude,
+        );
+
+        const isNearby = dist <= NearByRadius;
+
+        return isNearby ? [driver] : [];
+      });
 
       if (nearbyDriversInfo.length === 0) return [];
 
