@@ -1137,6 +1137,106 @@ export const getRide = query({
   },
 });
 
+export const getRiderRide = query({
+  args: {
+    id: v.id("ride"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const convexUser = await ctx.db
+      .query("user")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (convexUser === null) throw new ConvexError("Invalid user");
+
+    const ride = await ctx.db.get(args.id);
+    if (ride === null) throw new ConvexError("Ride not found");
+
+    const driver = await ctx.db.get(ride.driverId);
+    if (driver === null) return null;
+
+    // 2. Fetch user profile linked to rider
+    const driverUser = await ctx.db.get(driver.userId);
+    if (driverUser === null) throw new ConvexError("Invalid user");
+
+    const driverRatings = await ctx.db
+      .query("ratings")
+      .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+      .filter((q) => q.eq(q.field("raterType"), "Rider"))
+      .collect();
+
+    const driverAverageRating =
+      driverRatings.length > 0
+        ? driverRatings.reduce((sum, r) => sum + r.score, 0) /
+          driverRatings.length
+        : null;
+
+    const driverProfilePictureUri = driverUser.profilePictureKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driverUser.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
+
+    const paymentQrCodeKey = driver.paymentQrCodeKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driver.paymentQrCodeKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
+
+    const rideRatings = await ctx.db
+      .query("ratings")
+      .withIndex("by_ride", (q) => q.eq("rideId", ride._id))
+      .collect();
+
+    const rideReasons = await ctx.db
+      .query("rideReasons")
+      .withIndex("by_ride", (q) => q.eq("rideId", ride._id))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("driverId"), ride.driverId),
+          q.eq(q.field("driverId"), undefined),
+        ),
+      )
+      .collect();
+
+    const { otp, ...rideDetails } = ride; //prevent otp from sending to driver
+
+    return {
+      ...rideDetails,
+      ratings: rideRatings,
+      rideReasons,
+      driver: {
+        ...driver,
+        paymentQrCodeKey,
+        details: {
+          ...driverUser,
+          profilePictureKey: driverProfilePictureUri,
+        },
+        ratings: {
+          average:
+            driverAverageRating !== undefined && driverAverageRating !== null
+              ? Math.min(
+                  5,
+                  Math.max(0, Math.round(driverAverageRating * 10) / 10),
+                )
+              : null,
+          totalRatings: driverRatings.length,
+        },
+      },
+    };
+  },
+});
+
 export const getRideRequests = query({
   args: {
     driverId: v.id("driver"),

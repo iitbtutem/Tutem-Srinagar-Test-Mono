@@ -74,8 +74,8 @@ export default function RootLayout() {
                 }}
               />
               {!isOnline && (
-                <View className="bg-red-500 py-2 px-3">
-                  <Text className="text-white text-center text-sm font-medium">
+                <View className="bg-red-500 px-3 py-2">
+                  <Text className="text-center text-sm font-medium text-white">
                     You are offline
                   </Text>
                 </View>

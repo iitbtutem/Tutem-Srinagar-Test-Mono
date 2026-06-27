@@ -4,13 +4,7 @@ import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import { Star } from 'lucide-react-native';
 
 const RATING_LABELS: Record<number, string> = {
@@ -34,10 +28,7 @@ export default function Feedback() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
 
-  const ride = useQuery(
-    api.routes.rides.getRiderCurrentRideById,
-    rideId ? { id: rideId } : 'skip'
-  );
+  const ride = useQuery(api.routes.rides.getRiderCurrentRideById, rideId ? { id: rideId } : 'skip');
 
   const submitFeedback = useMutation(api.routes.rides.submitRating);
 
@@ -53,8 +44,7 @@ export default function Feedback() {
         <ActivityIndicator size="small" color="#a78bfa" />
       </View>
     );
-  if (ride === null)
-    return <ErrorScreen message="Ride not found" code="404" />;
+  if (ride === null) return <ErrorScreen message="Ride not found" code="404" />;
 
   const driver = ride.driver;
   const activeStar = hoveredStar || score;
@@ -74,7 +64,7 @@ export default function Feedback() {
       setIsSubmitting(true);
       await submitFeedback({
         rideId,
-        raterType: "Rider",
+        raterType: 'Rider',
         score,
         comment: comment.trim() || undefined,
       });
@@ -91,50 +81,51 @@ export default function Feedback() {
       className="flex-1 bg-background"
       contentContainerClassName="px-6 pt-14 pb-12"
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
+      keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View className="mb-10">
-        <Text className="text-primary/90 text-sm font-medium tracking-widest uppercase mb-1">
+        <Text className="mb-1 text-sm font-medium uppercase tracking-widest text-primary/90">
           Rate your ride
         </Text>
-        <Text className="text-primary/50 text-3xl font-bold leading-tight">
+        <Text className="text-3xl font-bold leading-tight text-primary/50">
           How was your{'\n'}experience?
         </Text>
       </View>
 
       {/* Driver Card */}
-      <View className="bg-background border border-zinc-800 rounded-2xl p-5 mb-8 flex-row items-center gap-4">
-        <Avatar alt={driver.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
-          <AvatarImage source={{ uri: driver.userDetails.profilePictureKey }} />
+      <View className="mb-8 flex-row items-center gap-4 rounded-2xl border border-zinc-800 bg-background p-5">
+        <Avatar alt={driver.userDetails.firstName?.[0] ?? 'Driver'} className="h-16 w-16">
+          <AvatarImage
+            source={
+              driver.userDetails.profilePictureKey?.trim()
+                ? { uri: driver.userDetails.profilePictureKey }
+                : require('@/assets/images/avatar.jpg')
+            }
+          />
           <AvatarFallback>
-            <Text className="text-white text-xl font-semibold">
+            <Text className="text-xl font-semibold text-white">
               {driver.userDetails.firstName?.[0] ?? 'D'}
             </Text>
           </AvatarFallback>
         </Avatar>
         <View className="flex-1">
-          <Text className="text-primary text-lg font-semibold">
+          <Text className="text-lg font-semibold text-primary">
             {`${driver.userDetails.firstName} ${driver.userDetails?.lastName}`}
           </Text>
-          <Text className="text-zinc-400 text-sm mt-0.5">
-            {ride.vehicle?.model ?? 'Vehicle'}
-          </Text>
-          <View className="flex-row items-center mt-1.5 gap-1">
+          <Text className="mt-0.5 text-sm text-zinc-400">{ride.vehicle?.model ?? 'Vehicle'}</Text>
+          <View className="mt-1.5 flex-row items-center gap-1">
             <Star size={13} color="#fbbf24" fill="#fbbf24" />
-            <Text className="text-amber-400 text-xs font-medium">
-              {driver.averageRating?.toFixed(1) ?? '—'}
+            <Text className="text-xs font-medium text-amber-400">
+              {driver.rating.average?.toFixed(1) ?? '—'}
             </Text>
-            <Text className="text-zinc-500 text-xs">
-              {driver.totalRating ?? 0} trips
-            </Text>
+            <Text className="text-xs text-zinc-500">{driver.rating.totalRatings ?? 0} trips</Text>
           </View>
         </View>
       </View>
 
       {/* Star Rating */}
-      <View className="items-center mb-2">
-        <View className="flex-row gap-3 mb-3">
+      <View className="mb-2 items-center">
+        <View className="mb-3 flex-row gap-3">
           {[1, 2, 3, 4, 5].map((star) => (
             <Pressable
               key={star}
@@ -142,8 +133,7 @@ export default function Feedback() {
               onPressIn={() => setHoveredStar(star)}
               onPressOut={() => setHoveredStar(0)}
               hitSlop={8}
-              className="active:scale-110"
-            >
+              className="active:scale-110">
               <Star
                 size={44}
                 color={star <= activeStar ? '#fbbf24' : '#3f3f46'}
@@ -157,7 +147,7 @@ export default function Feedback() {
         {/* Rating label */}
         <View className="h-6 items-center justify-center">
           {activeStar > 0 && (
-            <Text className="text-amber-400 text-base font-semibold tracking-wide">
+            <Text className="text-base font-semibold tracking-wide text-amber-400">
               {RATING_LABELS[activeStar]}
             </Text>
           )}
@@ -200,11 +190,9 @@ export default function Feedback() {
 
       {/* Comment */}
       <View className="mb-8 mt-4">
-        <Text className="text-primary/50 text-xs font-medium tracking-widest uppercase mb-3">
+        <Text className="mb-3 text-xs font-medium uppercase tracking-widest text-primary/50">
           Leave a comment{' '}
-          <Text className="text-primary/80 normal-case tracking-normal">
-            (optional)
-          </Text>
+          <Text className="normal-case tracking-normal text-primary/80">(optional)</Text>
         </Text>
         <Textarea
           placeholder="Tell us more about your experience with this driver…"
@@ -212,12 +200,10 @@ export default function Feedback() {
           onChangeText={setComment}
           numberOfLines={4}
           maxLength={500}
-          className="border-zinc-700 placeholder:text-primary/50 rounded-xl text-sm leading-relaxed"
+          className="rounded-xl border-zinc-700 text-sm leading-relaxed placeholder:text-primary/50"
           textAlignVertical="top"
         />
-        <Text className="text-zinc-600 text-xs text-right mt-1.5">
-          {comment.length}/500
-        </Text>
+        <Text className="mt-1.5 text-right text-xs text-zinc-600">{comment.length}/500</Text>
       </View>
 
       {/* Submit */}
@@ -225,19 +211,15 @@ export default function Feedback() {
         onPress={handleSubmit}
         disabled={isSubmitting || score === 0}
         className={`rounded-2xl ${
-          score === 0
-            ? 'bg-zinc-800'
-            : 'bg-violet-600 active:bg-violet-700'
-        }`}
-      >
+          score === 0 ? 'bg-zinc-800' : 'bg-violet-600 active:bg-violet-700'
+        }`}>
         {isSubmitting ? (
           <ActivityIndicator size="small" color="#ffffff" />
         ) : (
           <Text
             className={`text-center text-base font-semibold ${
               score === 0 ? 'text-zinc-500' : 'text-white'
-            }`}
-          >
+            }`}>
             Submit Feedback
           </Text>
         )}
@@ -245,9 +227,7 @@ export default function Feedback() {
 
       {/* Skip */}
       <Pressable onPress={() => router.replace('/')} className="mt-4 py-3">
-        <Text className="text-zinc-500 text-sm text-center">
-          Skip for now
-        </Text>
+        <Text className="text-center text-sm text-zinc-500">Skip for now</Text>
       </Pressable>
     </ScrollView>
   );

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { ScrollView, View, Text } from 'react-native';
@@ -7,14 +7,14 @@ import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-nati
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage, Loader, Separator } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Button, Loader, Separator } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GenderAge } from '@tutem/ui';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
 
-type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
+type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderRide>>;
 
 // helpers
 
@@ -240,8 +240,8 @@ function Timeline({ ride }: { ride: Ride }) {
             <View className="max-w-full self-start rounded-full bg-destructive/15 px-3 py-1">
               <Text numberOfLines={2} className="text-xs font-semibold text-primary">
                 {abortRideReason.driverId
-                  ? 'Aborted by You'
-                  : `Aborted by ${ride.rider.details.firstName} ${ride.rider.details.lastName}`}
+                  ? `Aborted by ${ride.driver.details.firstName} ${ride.driver.details.lastName}`
+                  : 'Aborted by You'}
               </Text>
             </View>
           </View>
@@ -271,7 +271,7 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
               <View className="mb-1 flex-row items-center justify-between">
                 <View className="flex-row items-center gap-1.5">
                   <View className="rounded-full bg-emerald-100 px-2 py-0.5">
-                    <Text className="text-xs font-semibold text-emerald-700">Rider</Text>
+                    <Text className="text-xs font-semibold text-emerald-700">You</Text>
                   </View>
                 </View>
                 <View className="flex-row items-center gap-1">
@@ -290,7 +290,7 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
               <View className="mb-1 flex-row items-center justify-between">
                 <View className="flex-row items-center gap-1.5">
                   <View className="rounded-full bg-indigo-100 px-2 py-0.5">
-                    <Text className="text-xs font-semibold text-indigo-700">You</Text>
+                    <Text className="text-xs font-semibold text-indigo-700">Driver</Text>
                   </View>
                 </View>
                 <View className="flex-row items-center gap-1">
@@ -322,7 +322,7 @@ export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
   const { userId } = useAuthUser();
 
-  const ride = useQuery(api.routes.rides.getRide, (id && userId) ? { id, userId } : 'skip');
+  const ride = useQuery(api.routes.rides.getRiderRide, id && userId ? { id, userId } : 'skip');
 
   if (ride === undefined) {
     return (
@@ -335,6 +335,8 @@ export default function RideDetailScreen() {
   if (ride === null) return <ErrorScreen message="Ride not found" code="404" />;
 
   const rideStatus = STATUS_STYLES[ride.status];
+
+  const showFeedbackBtn = ride.ratings.find((el) => el.raterType === 'Rider');
 
   return (
     <>
@@ -394,7 +396,7 @@ export default function RideDetailScreen() {
           <RouteCard ride={ride} />
         </Animated.View>
 
-        {/* rider */}
+        {/* Driver */}
         <Animated.View entering={FadeInDown.delay(180).duration(400).springify()}>
           <RiderCard
             driver={ride.driver}
@@ -402,23 +404,23 @@ export default function RideDetailScreen() {
               <View className="mt-3 flex-row flex-wrap gap-2">
                 <View
                   className={`rounded-full px-2.5 py-1 ${
-                    ride.rider.isVerified === 'Verified'
+                    ride.driver.isLicenseVerified === 'Verified'
                       ? 'bg-green-100'
-                      : ride.rider.isVerified === 'Rejected'
+                      : ride.driver.isLicenseVerified === 'Rejected'
                         ? 'bg-red-100'
                         : 'bg-yellow-100'
                   }`}>
                   <Text
                     className={`text-xs font-semibold ${
-                      ride.rider.isVerified === 'Verified'
+                      ride.driver.isLicenseVerified === 'Verified'
                         ? 'text-green-700'
-                        : ride.rider.isVerified === 'Rejected'
+                        : ride.driver.isLicenseVerified === 'Rejected'
                           ? 'text-red-700'
                           : 'text-yellow-700'
                     }`}>
-                    {ride.rider.isVerified === 'Verified'
-                      ? 'Verified Rider'
-                      : `Verification: ${ride.rider.isVerified}`}
+                    {ride.driver.isLicenseVerified === 'Verified'
+                      ? 'Verified License'
+                      : `License Verification: ${ride.driver.isLicenseVerified}`}
                   </Text>
                 </View>
               </View>
@@ -436,6 +438,22 @@ export default function RideDetailScreen() {
           <Animated.View entering={FadeInDown.delay(300).duration(400).springify()}>
             <RatingsSection ratings={ride.ratings} />
           </Animated.View>
+        )}
+        {!showFeedbackBtn && (
+          <>
+            <Button
+              onPress={() => router.push(`/ride/feedback?rideId=${ride._id}`)}
+              className="w-full rounded-xl">
+              <View className="flex-row items-center justify-center gap-2 py-1">
+                <MaterialCommunityIcons name="pencil" size={18} color="white" />
+                <Text className="text-base font-semibold text-white">Give Feedback</Text>
+              </View>
+            </Button>
+
+            <Text className="text-center text-sm text-gray-500">
+              You haven't submitted feedback for this ride yet.
+            </Text>
+          </>
         )}
       </ScrollView>
     </>

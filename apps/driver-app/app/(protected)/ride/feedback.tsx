@@ -1,15 +1,19 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea, Loader } from '@tutem/ui';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Text,
+  Button,
+  Separator,
+  Textarea,
+  Loader,
+} from '@tutem/ui';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
@@ -26,10 +30,7 @@ export default function Feedback() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
 
-  const ride = useQuery(
-    api.routes.rides.getRiderCurrentRideById,
-    rideId ? { id: rideId } : 'skip'
-  );
+  const ride = useQuery(api.routes.rides.getRiderCurrentRideById, rideId ? { id: rideId } : 'skip');
 
   const submitFeedback = useMutation(api.routes.rides.submitRating);
 
@@ -44,8 +45,7 @@ export default function Feedback() {
         <Loader subtitle="Loading..." />
       </View>
     );
-  if (ride === null)
-    return <ErrorScreen message="Ride not found" code="404" />;
+  if (ride === null) return <ErrorScreen message="Ride not found" code="404" />;
 
   const rider = ride.rider;
   const activeStar = hoveredStar || score;
@@ -59,7 +59,7 @@ export default function Feedback() {
       setIsSubmitting(true);
       await submitFeedback({
         rideId,
-        raterType: "Driver",
+        raterType: 'Driver',
         score,
         comment: comment.trim() || undefined,
       });
@@ -76,18 +76,19 @@ export default function Feedback() {
       className="flex-1 bg-background"
       contentContainerClassName="px-6 pt-6 pb-24"
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: 'Feedback',
-        header: (props) => <BasicHeader {...props} />,
-      }} />
+      keyboardShouldPersistTaps="handled">
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Feedback',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
 
-      {isSubmitting && <Loader subtitle='submitting...' />}
+      {isSubmitting && <Loader subtitle="submitting..." />}
       {/* Header */}
       <View className="mb-10">
-        <Text className="text-title/90 text-sm font-medium tracking-widest uppercase mb-1">
+        <Text className="text-title/90 mb-1 text-sm font-medium uppercase tracking-widest">
           Rate your ride
         </Text>
         <Text className="text-title/50 text-3xl font-bold leading-tight">
@@ -96,28 +97,32 @@ export default function Feedback() {
       </View>
 
       {/* Rider Card */}
-      <View className="bg-background border border-primary rounded-2xl p-5 mb-8 flex-row items-center gap-4">
-        <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="w-16 h-16">
-          <AvatarImage source={{ uri: rider.userDetails.profilePictureKey }} />
+      <View className="mb-8 flex-row items-center gap-4 rounded-2xl border border-primary bg-background p-5">
+        <Avatar alt={rider.userDetails.firstName?.[0] ?? 'Driver'} className="h-16 w-16">
+          <AvatarImage
+            source={
+              rider.userDetails.profilePictureKey?.trim()
+                ? { uri: rider.userDetails.profilePictureKey }
+                : require('@/assets/images/avatar.jpg')
+            }
+          />
           <AvatarFallback>
-            <Text className="text-black text-xl font-semibold">
+            <Text className="text-xl font-semibold text-black">
               {rider.userDetails.firstName?.[0] ?? 'R'}
             </Text>
           </AvatarFallback>
         </Avatar>
         <View className="flex-1">
           <Text className="text-title text-lg font-semibold">
-            {`${rider.userDetails.firstName} ${rider.userDetails?.lastName ?? ""}`}
+            {`${rider.userDetails.firstName} ${rider.userDetails?.lastName ?? ''}`}
           </Text>
-          <Text className="text-zinc-400 text-sm mt-0.5">
-            {ride.vehicle?.model ?? 'Vehicle'}
-          </Text>
+          <Text className="mt-0.5 text-sm text-zinc-400">{ride.vehicle?.model ?? 'Vehicle'}</Text>
         </View>
       </View>
 
       {/* Star Rating */}
-      <View className="items-center mb-2">
-        <View className="flex-row gap-3 mb-3">
+      <View className="mb-2 items-center">
+        <View className="mb-3 flex-row gap-3">
           {[1, 2, 3, 4, 5].map((star) => (
             <Pressable
               key={star}
@@ -125,8 +130,7 @@ export default function Feedback() {
               onPressIn={() => setHoveredStar(star)}
               onPressOut={() => setHoveredStar(0)}
               hitSlop={8}
-              className="active:scale-110"
-            >
+              className="active:scale-110">
               <Star
                 size={44}
                 color={star <= activeStar ? '#fbbf24' : colors.primary}
@@ -140,7 +144,7 @@ export default function Feedback() {
         {/* Rating label */}
         <View className="h-6 items-center justify-center">
           {activeStar > 0 && (
-            <Text className="text-amber-400 text-base font-semibold tracking-wide">
+            <Text className="text-base font-semibold tracking-wide text-amber-400">
               {RATING_LABELS[activeStar]}
             </Text>
           )}
@@ -152,11 +156,9 @@ export default function Feedback() {
 
       {/* Comment */}
       <View className="mb-6 mt-4">
-        <Text className="text-title/50 text-xs font-medium tracking-widest uppercase mb-3">
+        <Text className="text-title/50 mb-3 text-xs font-medium uppercase tracking-widest">
           Leave a comment{' '}
-          <Text className="text-title/80 normal-case tracking-normal">
-            (optional)
-          </Text>
+          <Text className="text-title/80 normal-case tracking-normal">(optional)</Text>
         </Text>
         <Textarea
           placeholder="Tell us more about your experience with this rider…"
@@ -167,30 +169,22 @@ export default function Feedback() {
           className="placeholder:text-title/50 rounded-xl text-sm leading-relaxed"
           textAlignVertical="top"
         />
-        <Text className="text-zinc-600 text-xs text-right mt-1.5">
-          {comment.length}/500
-        </Text>
+        <Text className="mt-1.5 text-right text-xs text-zinc-600">{comment.length}/500</Text>
       </View>
 
       {/* Submit */}
-      <Button
-        onPress={handleSubmit}
-        disabled={isSubmitting || score === 0}        
-      >
+      <Button onPress={handleSubmit} disabled={isSubmitting || score === 0}>
         <Text
           className={`text-center text-base font-semibold ${
             score === 0 ? 'text-zinc-500' : 'text-white'
-          }`}
-        >
+          }`}>
           Submit Feedback
         </Text>
       </Button>
 
       {/* Skip */}
       <Pressable onPress={() => router.replace('/')} className="mt-4 py-3">
-        <Text className="text-zinc-500 text-sm text-center">
-          Skip
-        </Text>
+        <Text className="text-center text-sm text-zinc-500">Skip</Text>
       </Pressable>
     </ScrollView>
   );

@@ -29,7 +29,7 @@ export function HomeScreenHeader({ user }: { user: User }) {
   return (
     <View className="rounded-br-2xl pb-2">
       <View
-        className="self-start rounded-br-2xl bg-card px-3 py-2"
+        className="self-start rounded-br-2xl bg-card px-3"
         style={{
           shadowColor: '#000',
           shadowOffset: {
@@ -70,7 +70,7 @@ function ProfileDropdown({ user }: { user: User }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <TouchableOpacity className="flex-row items-center gap-3 rounded-br-2xl">
+        <TouchableOpacity className="flex-row items-center gap-3 py-2">
           <View className="rounded-full border-2 border-green-600 bg-white/60">
             <Avatar alt="Profile pic" className="h-9 w-9">
               <AvatarImage source={{ uri: user.profilePictureKey }} />

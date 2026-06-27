@@ -110,12 +110,11 @@ export default function HomeScreen() {
           {services.map((service) => (
             <TouchableOpacity
               key={service.id}
-              activeOpacity={0.8}
               onPress={() => {
                 if (currentRide) return setShowRideDialog(true);
                 router.push(service.href);
               }}
-              className="aspect-square flex-1 items-center justify-center rounded-xl bg-primary/10 px-2">
+              className="aspect-square flex-1 items-center justify-center rounded-xl bg-primary/10 px-2 hover:scale-50">
               {/* Icon container */}
               <Image
                 source={service.image}

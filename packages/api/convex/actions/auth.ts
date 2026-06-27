@@ -26,7 +26,7 @@ export const sendOtp = action({
     const smsLicense = process.env.SMS_LICENSE;
     const smsUrl = process.env.SMS_URL;
     if (smsLicense === undefined || smsUrl === undefined)
-      throw new ConvexError(`L ${smsLicense}, U ${smsUrl}`);
+      throw new ConvexError("Failed to send OTP.");
 
     await ctx.runMutation(internal.routes.auth.upsertOtpSession, {
       phoneNumber,

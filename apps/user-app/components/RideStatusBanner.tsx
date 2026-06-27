@@ -16,6 +16,10 @@ type CurrentRideByRiderId = NonNullable<
   FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideById>
 >;
 
+type CurrentRide = NonNullable<
+  FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideByRiderId>
+>;
+
 type PulseConfig = {
   kind: 'pulse';
   dot: string;
@@ -39,7 +43,7 @@ type StaticConfig = {
   timestamp: number | undefined;
 };
 
-type RideDetails = CurrentRideByRiderId;
+type RideDetails = CurrentRideByRiderId | CurrentRide;
 
 type StatusConfig = PulseConfig | StaticConfig;
 

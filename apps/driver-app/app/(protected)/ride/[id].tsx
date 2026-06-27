@@ -1,4 +1,4 @@
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { useAuth } from '@/hooks/useAuth';
 import { ScrollView, View, Text, ActivityIndicator } from 'react-native';
@@ -7,7 +7,7 @@ import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-nati
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage, cn, Loader, Separator } from '@tutem/ui';
+import { Avatar, AvatarFallback, AvatarImage, Button, cn, Loader, Separator } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import GenderAge from '@/components/GenderAge';
@@ -163,7 +163,7 @@ function RouteCard({ ride }: { ride: Ride }) {
             />
           </View>
           <View className="flex-1">
-            <Text className="mb-0.5 text-xs" style={{ color: "#f97316" }}>
+            <Text className="mb-0.5 text-xs" style={{ color: '#f97316' }}>
               Drop Off
             </Text>
             <Text className="text-sm font-medium leading-snug text-slate-800">
@@ -176,7 +176,11 @@ function RouteCard({ ride }: { ride: Ride }) {
       {/* Destination */}
       <View className="flex-row items-start gap-3">
         <View className="items-center" style={{ width: 22 }}>
-          <MapPin size={14} color={ride.status === "Abort" ? "#9CA3AF" : colors.destination  } strokeWidth={2.2} />
+          <MapPin
+            size={14}
+            color={ride.status === 'Abort' ? '#9CA3AF' : colors.destination}
+            strokeWidth={2.2}
+          />
         </View>
         <View className="flex-1">
           <Text className="mb-0.5 text-xs" style={{ color: colors.destination }}>
@@ -357,6 +361,8 @@ export default function RideDetailScreen() {
 
   const rideStatus = STATUS_STYLES[ride.status];
 
+  const showFeedbackBtn = ride.ratings.find((el) => el.raterType === 'Driver');
+
   return (
     <>
       <Stack.Screen
@@ -429,6 +435,23 @@ export default function RideDetailScreen() {
           <Animated.View entering={FadeInDown.delay(300).duration(400).springify()}>
             <RatingsSection ratings={ride.ratings} />
           </Animated.View>
+        )}
+
+        {!showFeedbackBtn && (
+          <>
+            <Button
+              onPress={() => router.push(`/ride/feedback?rideId=${ride._id}`)}
+              className="w-full rounded-xl">
+              <View className="flex-row items-center justify-center gap-2 py-1">
+                <MaterialCommunityIcons name="pencil" size={18} color="white" />
+                <Text className="text-base font-semibold text-white">Give Feedback</Text>
+              </View>
+            </Button>
+
+            <Text className="text-center text-sm text-gray-500">
+              You haven't submitted feedback for this ride yet.
+            </Text>
+          </>
         )}
       </ScrollView>
     </>

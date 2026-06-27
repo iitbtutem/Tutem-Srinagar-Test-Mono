@@ -3,7 +3,7 @@ import { OTP_SIZE, OTP_TIMER } from '@/constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { TextInput, TextInputKeyPressEvent, View } from 'react-native';
+import { Keyboard, TextInput, TextInputKeyPressEvent, View } from 'react-native';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useAction } from 'convex/react';
@@ -25,6 +25,20 @@ export default function OtpScreen() {
   const sendOtpAction = useAction(api.actions.auth.sendOtp);
 
   const handleChange = (value: string, index: number) => {
+    const cleanedValue = value.replace(/[^0-9]/g, '');
+    if (cleanedValue.length > 1) {
+      const tempArr = [...inputArr];
+      for (let i = 0; i < OTP_SIZE - index; i++) {
+        if (i < cleanedValue.length) {
+          tempArr[index + i] = cleanedValue[i];
+        }
+      }
+      setInputArr(tempArr);
+      Keyboard.dismiss();
+
+      return;
+    }
+
     if (isNaN(Number(value))) return;
     const tempArr = [...inputArr];
     tempArr[index] = value.trim().slice(-1);
@@ -108,8 +122,10 @@ export default function OtpScreen() {
               inputRef.current[idx] = input;
             }}
             inputMode="numeric"
-            onChangeText={(val) => handleChange(val, idx)}
-            onKeyPress={(e) => handleKeyPress(e, idx)}
+            textContentType="oneTimeCode"
+            autoComplete="sms-otp"
+            onChangeText={(val: string) => handleChange(val, idx)}
+            onKeyPress={(e: TextInputKeyPressEvent) => handleKeyPress(e, idx)}
             className="h-14 w-12 text-center"
             value={inputArr[idx]}
             editable={!loading}
@@ -118,7 +134,7 @@ export default function OtpScreen() {
               idx === OTP_SIZE - 1
                 ? () => {
                     const code = inputArr.join('');
-                    if (code.length === OTP_SIZE) handleVerify(code);
+                    if (code.length === OTP_SIZE) Keyboard.dismiss();
                   }
                 : undefined
             }

@@ -1,8 +1,4 @@
-import {
-  Feather,
-  FontAwesome5,
-  MaterialIcons,
-} from '@expo/vector-icons';
+import { Feather, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '@/lib/utils';
@@ -18,9 +14,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Text,
   Switch,
 } from '@tutem/ui';
@@ -38,14 +34,12 @@ export default function HomeScreenHeader({ user }: { user: User }) {
 
   const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
-  
+
   if (!user) return;
   return (
     <View>
-      <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-1.5">
-
+      <View className="flex-row items-center justify-between gap-3 bg-primary px-4 pb-1.5">
         <View className="flex-1 flex-row items-center justify-end gap-3">
-
           <ProfileDropdown
             user={user}
             genderMatching={genderMatching}
@@ -53,12 +47,12 @@ export default function HomeScreenHeader({ user }: { user: User }) {
           />
 
           <View className="flex-1 items-start">
-            <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>              
-            <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>            
+            <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>
+            <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>
           </View>
         </View>
 
-        {/* Availability Toggle */}        
+        {/* Availability Toggle */}
         <TouchableOpacity
           activeOpacity={0.8}
           className={cn('flex-row items-center gap-2 rounded-2xl px-2.5 py-1.5', {
@@ -70,12 +64,12 @@ export default function HomeScreenHeader({ user }: { user: User }) {
             try {
               await toggleAvailability({ id: user.driverDetails._id });
             } catch (error: any) {
-              console.log("error", error);
+              console.log('error', error);
               showToast({
-                type: "error",
-                title: "Failed",
-                description: error.data ?? "Failed to switch"
-              })
+                type: 'error',
+                title: 'Failed',
+                description: error.data ?? 'Failed to switch',
+              });
             }
           }}>
           <View
@@ -142,7 +136,7 @@ function ProfileDropdown({
           className={cn(
             'rounded-full border-2',
             { 'border-green-600': user.driverDetails?.isAvailableForRide },
-            { 'border-red-600': !user.driverDetails?.isAvailableForRide },
+            { 'border-red-600': !user.driverDetails?.isAvailableForRide }
           )}>
           <Avatar alt="Profile pic" className="h-9 w-9">
             <AvatarImage source={{ uri: user.profilePictureKey }} />
@@ -155,27 +149,27 @@ function ProfileDropdown({
         </TouchableOpacity>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="native:w-64 elevation-lg shadow-lg/20 w-60 rounded-2xl bg-white/95 shadow-black backdrop-blur-xl">
+      <DropdownMenuContent className="native:w-64 elevation-md w-60 rounded-3xl bg-white/95">
         <Animated.View entering={FadeIn.duration(200)}>
           <View className="bg-primary/5 px-4 py-1">
-            <Text className="text-lg font-bold text-menu">Menu</Text>
+            <Text className="text-menu text-lg font-bold">Menu</Text>
           </View>
 
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem asChild closeOnPress className='py-1'>
+            <DropdownMenuItem asChild closeOnPress className="py-1">
               <Link href={'/profile'}>
                 <View className="flex-row items-center gap-3 px-2">
                   <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                     <FontAwesome5 name="user" size={18} color={colors.primary} />
                   </View>
-                  <Text className="text-base font-medium text-menu">Profile</Text>
+                  <Text className="text-menu text-base font-medium">Profile</Text>
                 </View>
               </Link>
             </DropdownMenuItem>
 
             {/* Gender matching switch */}
-            <DropdownMenuItem className='py-1'>
+            <DropdownMenuItem className="py-1">
               <View className="flex-row items-center gap-3 px-2">
                 <View className="h-8 w-8 items-center justify-center">
                   {/* <Checkbox checked={genderMatching} onCheckedChange={setGenderMatching}/> */}
@@ -183,25 +177,28 @@ function ProfileDropdown({
                 </View>
                 <Text
                   onPress={() => setGenderMatching((prev) => !prev)}
-                  className="text-base font-medium text-menu">
+                  className="text-menu text-base font-medium">
                   Gender Matching
                 </Text>
               </View>
             </DropdownMenuItem>
 
-            {user.driverDetails && <DropdownMenuItem asChild closeOnPress className='py-1'>
-              <Link href={{
-                pathname: '/paymentQrCode',
-                params: { driverId: (user.driverDetails._id).toString() }
-              }}>
-                <View className="flex-row items-center gap-3 px-2">
-                  <View className="h-8 w-8 items-center justify-center rounded-full bg-orange-500/10">
-                    <QrCode size={18} color="#f59e0b" strokeWidth={2} />
+            {user.driverDetails && (
+              <DropdownMenuItem asChild closeOnPress className="py-1">
+                <Link
+                  href={{
+                    pathname: '/paymentQrCode',
+                    params: { driverId: user.driverDetails._id.toString() },
+                  }}>
+                  <View className="flex-row items-center gap-3 px-2">
+                    <View className="h-8 w-8 items-center justify-center rounded-full bg-orange-500/10">
+                      <QrCode size={18} color="#f59e0b" strokeWidth={2} />
+                    </View>
+                    <Text className="text-menu text-base font-medium">Payment QR Code</Text>
                   </View>
-                  <Text className="text-base font-medium text-menu">Payment QR Code</Text>
-                </View>
-              </Link>
-            </DropdownMenuItem>}
+                </Link>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
@@ -224,25 +221,24 @@ function ProfileDropdown({
 
 export function BasicHeader({ navigation, options, back }: NativeStackHeaderProps) {
   return (
-      <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-3">
-        
-        {back ? (
-          <TouchableOpacity className="mr-2 flex-row gap-2 items-center" onPress={() => navigation.goBack()}>
-            <MaterialIcons
-              name="keyboard-backspace"
-              size={24}
-              color={'#FFF'}
-            />
-            <Text className='font-semibold text-md text-white'>{options.headerBackTitle ?? "Back"}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View className="min-w-[72px]" />
-        )}
+    <View className="flex-row items-center justify-between gap-3 bg-primary px-4 pb-3">
+      {back ? (
+        <TouchableOpacity
+          className="mr-2 flex-row items-center gap-2"
+          onPress={() => navigation.goBack()}>
+          <MaterialIcons name="keyboard-backspace" size={24} color={'#FFF'} />
+          <Text className="text-md font-semibold text-white">
+            {options.headerBackTitle ?? 'Back'}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View className="min-w-[72px]" />
+      )}
 
-        <Text className="flex-1 font-semibold text-center text-base text-white">
-          {options.title ?? ''}
-        </Text>
-        <View className='w-1/4' />
-      </View>
+      <Text className="flex-1 text-center text-base font-semibold text-white">
+        {options.title ?? ''}
+      </Text>
+      <View className="w-1/4" />
+    </View>
   );
 }
