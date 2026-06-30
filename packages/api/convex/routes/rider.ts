@@ -40,22 +40,36 @@ export const addRider = mutation({
     dob: v.string(),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
-    userId: v.string(),
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existingUser = await ctx.db
       .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
       .first();
 
     if (existingUser) {
-      throw new ConvexError("User already exists");
+      const existingRider = await ctx.db
+        .query("rider")
+        .withIndex("by_user", (q) => q.eq("userId", existingUser._id))
+        .first();
+
+      if (existingRider) {
+        throw new ConvexError(
+          "Rider already Registered with this phone number",
+        );
+      }
     }
 
     const { expoPushToken, ...userInput } = args;
 
-    const userId = await ctx.db.insert("user", { ...userInput });
+    let userId = existingUser?._id;
+    if (existingUser === null) {
+      userId = await ctx.db.insert("user", { ...userInput });
+    }
+
+    if (userId === undefined) throw new ConvexError("Failed to create user");
+
     await ctx.db.insert("rider", {
       isVerified: "Pending",
       userId,
@@ -73,14 +87,11 @@ export const addRider = mutation({
 
 export const registerAsRider = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (user === null) {
       throw new ConvexError("User not found");
     }
@@ -107,13 +118,10 @@ export const registerAsRider = mutation({
 
 export const getRider = query({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (user === null) return null;
 
@@ -145,13 +153,10 @@ export const updateRider = mutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (!user) {
       throw new ConvexError("User not found");
@@ -173,14 +178,11 @@ export const updateRider = mutation({
 
 export const uploadProfilePicture = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (!user) {
       throw new ConvexError("User not found");
@@ -193,13 +195,10 @@ export const uploadProfilePicture = mutation({
 
 export const removeProfilePictureKey = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (!user) throw new ConvexError("User not found");
 

@@ -60,11 +60,9 @@ export default function Profile() {
     api.routes.vehicle.getVehicleByDriverId,
     driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip'
   );
-  const logout = useMutation(api.routes.driver.logout);
 
-  const handleLogout = async (driverId: Id<'driver'> | undefined) => {
+  const handleLogout = async () => {
     try {
-      if (driverId !== undefined) await logout({ driverId });
       await signOut();
       router.replace('/signin');
     } catch (error) {
@@ -224,7 +222,6 @@ export default function Profile() {
                     licenseNumber: driver.driverDetails?.licenseNumber,
                     gender: driver.gender,
                     organizationId: driver.driverDetails?.organizationId,
-                    userId: driver.userId,
                   },
                 })
               }>
@@ -234,7 +231,7 @@ export default function Profile() {
             <TouchableOpacity
               className="h-9 w-9 items-center justify-center rounded-full"
               style={{ backgroundColor: iconBackgroundColor }}
-              onPress={() => handleLogout(driver.driverDetails?._id)}>
+              onPress={handleLogout}>
               <MaterialIcons name="logout" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -263,7 +260,6 @@ export default function Profile() {
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                userId={driver.userId}
                 profilePictureKey={driver.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
@@ -782,13 +778,11 @@ const ImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
 };
 
 function ImagePickerDialog({
-  userId,
   profilePictureKey,
   setImageUri,
   scrollY,
   scrollDistance,
 }: {
-  userId: string;
   profilePictureKey: string | undefined;
   setImageUri: (uri: string) => void;
   scrollY: SharedValue<number>;
@@ -796,12 +790,15 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const { userId } = useAuth();
+
   const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
 
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
+    if (!userId) return;
     try {
       if (newImgUri === '') return;
       setImageUri(newImgUri);
@@ -814,6 +811,7 @@ function ImagePickerDialog({
 
   const handleDelete = async () => {
     setIsOpen(false);
+    if (!userId) return;
     if (profilePictureKey === undefined) return;
     await removeProfilePictureKey({ userId });
   };

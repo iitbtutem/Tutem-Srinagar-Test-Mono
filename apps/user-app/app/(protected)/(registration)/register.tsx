@@ -17,9 +17,9 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useMutation } from 'convex/react';
+import { useMutation, useAction } from 'convex/react';
 import { api } from '@tutem/api';
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -39,8 +39,10 @@ const formSchema = z.object({
 export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { phoneNumber: phoneParam } = useLocalSearchParams<{ phoneNumber: string }>();
+
   const router = useRouter();
-  const { userId, phoneNumber } = useAuthUser();
+  const { userId, phoneNumber: authPhone, signIn } = useAuthUser();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const lastNameRef = useRef<TextInput>(null);
@@ -48,6 +50,7 @@ export default function Register() {
 
   const addUser = useMutation(api.routes.rider.addRider);
   const registerExpoPushToken = useMutation(api.routes.rider.registerExpoPushToken);
+  const createSession = useAction(api.actions.auth.createSessionForUser);
   const { rider } = useRider();
 
   const {
@@ -64,28 +67,30 @@ export default function Register() {
     },
   });
 
-  const displayPhone = phoneNumber
-    ? phoneNumber.startsWith('+91')
-      ? phoneNumber.slice(3)
-      : phoneNumber
-    : '';
+  const phoneNumber = phoneParam ?? authPhone ?? '';
+  const displayPhone = phoneNumber.startsWith('+91') ? phoneNumber.slice(3) : phoneNumber;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!userId) {
-        showToast({ title: 'Error', description: 'User not found', type: 'error' });
+      if (!phoneNumber) {
+        showToast({ title: 'Error', description: 'Phone number not found', type: 'error' });
         return;
       }
 
       setIsSubmitting(true);
 
-      await addUser({
+      const convexUserId = await addUser({
         ...data,
         dob: String(data.dob),
         phoneNumber: displayPhone,
-        userId: userId,
         expoPushToken: expoPushToken ?? undefined,
       });
+
+      const { sessionToken } = await createSession({
+        userId: convexUserId,
+        phoneNumber,
+      });
+      await signIn(sessionToken, convexUserId as string, phoneNumber);
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 

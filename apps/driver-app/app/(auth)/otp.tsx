@@ -62,10 +62,17 @@ export default function OtpScreen() {
         return;
       }
 
-      await signIn(result.userId!, phoneNumber);
-
-      if (router.canDismiss()) router.dismissAll();
-      router.replace('/(protected)');
+      if (result.userExists && result.sessionToken && result.userId) {
+        await signIn(result.sessionToken, result.userId, phoneNumber);
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/(protected)');
+      } else {
+        if (router.canDismiss()) router.dismissAll();
+        router.replace({
+          pathname: '/register',
+          params: { phoneNumber },
+        });
+      }
     } catch (err: any) {
       const message = err?.data ?? 'Invalid OTP. Please try again.';
       showToast({ title: 'Error', description: message, type: 'error' });

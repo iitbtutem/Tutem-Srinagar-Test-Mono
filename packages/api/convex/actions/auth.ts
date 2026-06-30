@@ -3,7 +3,7 @@
 import { ConvexError, v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { createHash, randomInt } from "crypto";
+import { createHash, randomInt, randomUUID } from "crypto";
 import { OTP_ATTEMPTS, OTP_SIZE } from "../CONSTANTS";
 
 function sha256(value: string): string {
@@ -84,6 +84,7 @@ export const verifyOtp = action({
       });
       throw new ConvexError("OTP has expired. Please request a new one.");
     }
+
     if (candidateHash !== session.hashedOtp) {
       await ctx.runMutation(internal.routes.auth.incrementAttempts, {
         phoneNumber,
@@ -95,15 +96,59 @@ export const verifyOtp = action({
           "Too many incorrect attempts. Please request a new OTP.",
         );
       }
-      throw new ConvexError(
-        `Incorrect OTP. ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} remaining.`,
-      );
+
+      const message =
+        attemptsLeft <= 3
+          ? ` ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} remaining.`
+          : "";
+      throw new ConvexError(`Incorrect OTP.${message}`);
     }
 
     await ctx.runMutation(internal.routes.auth.deleteOtpSession, {
       phoneNumber,
     });
 
-    return { success: true, userId: phoneNumber };
+    const existingUser: any = await ctx.runQuery(
+      internal.routes.auth.getUserByPhone,
+      { phoneNumber },
+    );
+
+    if (existingUser) {
+      const sessionToken = randomUUID();
+      await ctx.runMutation(internal.routes.auth.createSession, {
+        userId: existingUser._id,
+        phoneNumber,
+        sessionToken,
+      });
+      return {
+        success: true,
+        userExists: true,
+        sessionToken,
+        userId: existingUser._id as string,
+      };
+    }
+
+    return {
+      success: true,
+      userExists: false,
+      sessionToken: null,
+      userId: null,
+    };
+  },
+});
+
+export const createSessionForUser = action({
+  args: {
+    userId: v.id("user"),
+    phoneNumber: v.string(),
+  },
+  handler: async (ctx, { userId, phoneNumber }) => {
+    const sessionToken = randomUUID();
+    await ctx.runMutation(internal.routes.auth.createSession, {
+      userId,
+      phoneNumber,
+      sessionToken,
+    });
+    return { sessionToken };
   },
 });

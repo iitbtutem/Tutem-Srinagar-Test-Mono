@@ -16,8 +16,7 @@ export default defineSchema({
     profilePictureKey: v.optional(v.string()),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
-    userId: v.string(),
-  }).index("by_userId", ["userId"]),
+  }).index("by_phoneNumber", ["phoneNumber"]),
 
   //riders
   rider: defineTable({
@@ -212,4 +211,14 @@ export default defineSchema({
     expiresAt: v.number(),
     attempts: v.number(),
   }).index("by_phone", ["phoneNumber"]),
+
+  session: defineTable({
+    sessionToken: v.string(),
+    userId: v.id("user"),
+    phoneNumber: v.string(),
+    expiresAt: v.number(),
+  })
+    .index("by_sessionToken", ["sessionToken"])
+    .index("by_phone", ["phoneNumber"])
+    .index("by_userId", ["userId"]),
 });

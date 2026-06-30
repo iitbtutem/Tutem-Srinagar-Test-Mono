@@ -3,7 +3,7 @@ import { internalQuery, mutation, query } from "../_generated/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Id } from "../_generated/dataModel";
+import { internal } from "../_generated/api";
 
 export const login = mutation({
   args: {
@@ -28,10 +28,18 @@ export const login = mutation({
 
 export const logout = mutation({
   args: {
-    driverId: v.id("driver"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const driver = await ctx.db.get(args.driverId);
+    const session = await ctx.runQuery(internal.routes.auth.getSessionByToken, {
+      sessionToken: args.sessionToken,
+    });
+    if (session === null) return;
+
+    const driver = await ctx.db
+      .query("driver")
+      .withIndex("by_user", (q) => q.eq("userId", session.userId))
+      .first();
     if (driver === null) return;
 
     await ctx.db.patch(driver._id, {
@@ -53,13 +61,12 @@ export const addDriver = mutation({
     organizationId: v.id("organization"),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
-    userId: v.string(),
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let existingUser = await ctx.db
       .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
       .first();
 
     if (existingUser) {
@@ -69,7 +76,9 @@ export const addDriver = mutation({
         .first();
 
       if (existingDriver) {
-        throw new ConvexError("Driver already Registered");
+        throw new ConvexError(
+          "Driver already Registered with this phone number",
+        );
       }
     }
 
@@ -80,7 +89,6 @@ export const addDriver = mutation({
     let userId = existingUser?._id;
     if (existingUser === null) {
       userId = await ctx.db.insert("user", {
-        userId: args.userId,
         firstName: args.firstName,
         lastName: args.lastName,
         dob: args.dob,
@@ -96,7 +104,7 @@ export const addDriver = mutation({
       permission: "Driver",
     });
     await ctx.db.insert("driver", {
-      userId,
+      userId: userId,
       organizationId: args.organizationId,
       licenseImageBackKey: args.licenseImageBackKey,
       licenseImageFrontKey: args.licenseImageFrontKey,
@@ -110,13 +118,13 @@ export const addDriver = mutation({
       genderMatching: false,
     });
 
-    return;
+    return userId;
   },
 });
 
 export const registerAsDriver = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
@@ -124,10 +132,7 @@ export const registerAsDriver = mutation({
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (user === null) {
       throw new ConvexError("User not found");
     }
@@ -166,13 +171,10 @@ export const registerAsDriver = mutation({
 
 export const getUser = query({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (user === null) return null;
 
@@ -350,13 +352,10 @@ export const updateDriver = mutation({
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (user === null) throw new ConvexError("User not found");
 
@@ -411,14 +410,11 @@ export const updateDriver = mutation({
 
 export const uploadProfilePicture = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (user === null) throw new ConvexError("User not found");
 
@@ -430,13 +426,10 @@ export const uploadProfilePicture = mutation({
 
 export const removeProfilePictureKey = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
 
     if (user === null) throw new ConvexError("User not found");
 

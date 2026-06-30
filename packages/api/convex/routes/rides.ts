@@ -984,13 +984,10 @@ export const getDriverCurrentRideByDriverId = query({
 export const getRide = query({
   args: {
     id: v.id("ride"),
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const convexUser = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const convexUser = await ctx.db.get(args.userId);
     if (convexUser === null) throw new ConvexError("Invalid user");
 
     const isDriver = await ctx.db
@@ -1140,13 +1137,10 @@ export const getRide = query({
 export const getRiderRide = query({
   args: {
     id: v.id("ride"),
-    userId: v.string(),
+    userId: v.id("user"),
   },
   handler: async (ctx, args) => {
-    const convexUser = await ctx.db
-      .query("user")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const convexUser = await ctx.db.get(args.userId);
     if (convexUser === null) throw new ConvexError("Invalid user");
 
     const ride = await ctx.db.get(args.id);

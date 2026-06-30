@@ -1,6 +1,12 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "../_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+} from "../_generated/server";
 import { MAX_ATTEMPTS, OTP_EXPIRY_MS } from "../CONSTANTS";
+
+const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const upsertOtpSession = internalMutation({
   args: {
@@ -63,5 +69,61 @@ export const incrementAttempts = internalMutation({
     } else {
       await ctx.db.patch(session._id, { attempts: session.attempts + 1 });
     }
+  },
+});
+
+export const createSession = internalMutation({
+  args: {
+    userId: v.id("user"),
+    phoneNumber: v.string(),
+    sessionToken: v.string(),
+  },
+  handler: async (ctx, { userId, phoneNumber, sessionToken }) => {
+    const expiresAt = Date.now() + SESSION_EXPIRY_MS;
+
+    await ctx.db.insert("session", {
+      sessionToken,
+      userId,
+      phoneNumber,
+      expiresAt,
+    });
+
+    return sessionToken;
+  },
+});
+
+export const getSessionByToken = internalQuery({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
+      .first();
+
+    if (!session) return null;
+    if (Date.now() > session.expiresAt) return null;
+
+    return session;
+  },
+});
+
+export const getUserByPhone = internalQuery({
+  args: { phoneNumber: v.string() },
+  handler: async (ctx, { phoneNumber }) => {
+    return ctx.db
+      .query("user")
+      .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", phoneNumber))
+      .first();
+  },
+});
+
+export const deleteSession = mutation({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }) => {
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
+      .first();
+    if (session) await ctx.db.delete(session._id);
   },
 });

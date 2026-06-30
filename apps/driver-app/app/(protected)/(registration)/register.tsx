@@ -22,9 +22,9 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -62,8 +62,10 @@ export default function Register() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
 
+  const { phoneNumber: phoneParam } = useLocalSearchParams<{ phoneNumber: string }>();
+
   const router = useRouter();
-  const { userId, phoneNumber } = useAuth();
+  const { userId, phoneNumber: authPhone, signIn } = useAuth();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
@@ -86,6 +88,7 @@ export default function Register() {
   );
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
+  const createSession = useAction(api.actions.auth.createSessionForUser);
   const { driver } = useDriver();
 
   useEffect(() => {
@@ -114,11 +117,8 @@ export default function Register() {
     },
   });
 
-  const displayPhone = phoneNumber
-    ? phoneNumber.startsWith('+91')
-      ? phoneNumber.slice(3)
-      : phoneNumber
-    : '';
+  const phoneNumber = phoneParam ?? authPhone ?? '';
+  const displayPhone = phoneNumber.startsWith('+91') ? phoneNumber.slice(3) : phoneNumber;
 
   const selectedOrgId = useWatch({
     control,
@@ -172,9 +172,9 @@ export default function Register() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!userId) {
-        showToast({ title: 'Error', description: 'User not found', type: 'error' });
-        return;
+      if (!phoneNumber) {
+        showToast({ title: 'Error', description: 'Phone number not found', type: 'error' });
+        return router.push('/signin');
       }
 
       if (requiresLicenseImage && (!data.licenseImageFrontKey || !data.licenseImageBackKey)) {
@@ -182,7 +182,6 @@ export default function Register() {
           setError('licenseImageFrontKey', { message: 'Front image is required' });
         if (!data.licenseImageBackKey)
           setError('licenseImageBackKey', { message: 'Back image is required' });
-
         return;
       }
 
@@ -190,28 +189,36 @@ export default function Register() {
 
       const uploadedFrontKey = await uploadFile(
         data.licenseImageFrontKey,
-        `licenses/${userId}-front`
+        `licenses/${phoneNumber}-front`
       );
-      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
+      const uploadedBackKey = await uploadFile(
+        data.licenseImageBackKey,
+        `licenses/${phoneNumber}-back`
+      );
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
-      await addDriver({
+
+      const convexUserId = await addDriver({
         ...restData,
         organizationId: data.organizationId as Id<'organization'>,
         dob: String(data.dob),
-        userId: userId,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
         expoPushToken: expoPushToken ?? undefined,
         phoneNumber: displayPhone,
       });
 
+      if (convexUserId) {
+        const { sessionToken } = await createSession({
+          userId: convexUserId,
+          phoneNumber,
+        });
+        await signIn(sessionToken, convexUserId as string, phoneNumber);
+      }
+
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
-      // Navigate to the main app after profile completion
-      if (router.canDismiss()) {
-        router.dismissAll();
-      }
+      if (router.canDismiss()) router.dismissAll();
       router.replace('/createVehicle');
     } catch (error: any) {
       showToast({

@@ -1,13 +1,44 @@
 import { AuthContext } from '@/context/AuthContext';
 import { useContext } from 'react';
+import { useMutation } from 'convex/react';
+import { api } from '@tutem/api';
+import { Id } from '@tutem/api';
 
 export function useAuthUser() {
   const authState = useContext(AuthContext);
   if (!authState) {
-    throw new Error('useAuthContext must be used inside <AuthProvider>');
+    throw new Error('useAuthUser must be used inside <AuthProvider>');
   }
 
-  const { userId, phoneNumber, isAuthenticated, isLoaded, signIn, signOut } = authState;
+  const {
+    sessionToken,
+    userId,
+    phoneNumber,
+    isAuthenticated,
+    isLoaded,
+    signIn,
+    signOut: localSignOut,
+  } = authState;
 
-  return { userId, phoneNumber, isAuthenticated, isLoaded, signIn, signOut };
+  const deleteSessionMutation = useMutation(api.routes.auth.deleteSession);
+  const signOut = async () => {
+    if (sessionToken) {
+      try {
+        await deleteSessionMutation({ sessionToken });
+      } catch {
+        // Clear local state even if backend call fails
+      }
+    }
+    await localSignOut();
+  };
+
+  return {
+    sessionToken,
+    userId: userId as Id<'user'> | null,
+    phoneNumber,
+    isAuthenticated,
+    isLoaded,
+    signIn,
+    signOut,
+  };
 }
