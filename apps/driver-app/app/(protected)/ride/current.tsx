@@ -378,7 +378,7 @@ export default function Ride() {
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';
-  const isDriverNearby = routeState
+  const isDriverNearby = routeState?.remainingDistance
     ? routeState.remainingDistance.value < arrivedRadiusInMts
     : false;
 

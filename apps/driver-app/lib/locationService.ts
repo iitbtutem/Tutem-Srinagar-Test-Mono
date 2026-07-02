@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { BACKGROUND_LOCATION_TASK } from './tasks';
 
-export const startLocationTracking = async (credentials?: { driverId: string; authToken: string }) => {
+export const startLocationTracking = async (credentials?: { driverId: string; user_id: string }) => {
   try {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== 'granted') {
@@ -34,7 +34,7 @@ export const startLocationTracking = async (credentials?: { driverId: string; au
 
     if (credentials) {
       await SecureStore.setItemAsync('driverId', credentials.driverId);
-      await SecureStore.setItemAsync('authToken', credentials.authToken);
+      await SecureStore.setItemAsync('user_id', credentials.user_id);
     }
 
     const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);

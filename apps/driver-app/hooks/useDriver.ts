@@ -8,7 +8,7 @@ export function useDriver() {
   const driver = useQuery(api.routes.driver.getUser, sessionToken ? { sessionToken } : 'skip');
 
   return {
-    driver,
-    isLoading: driver === undefined,
+    driver: !sessionToken ? null : driver,
+    isLoading: !sessionToken ? false : driver === undefined,
   };
 }

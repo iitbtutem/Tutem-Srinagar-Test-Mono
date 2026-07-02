@@ -8,7 +8,7 @@ let ably: Ably.Realtime | null = null;
  * Returns a singleton instance of the Ably Realtime client.
  * Ensure EXPO_PUBLIC_ABLY_API_KEY is defined in your .env file.
  */
-export const getAblyClient = () => {
+export const getAblyClient = (user_id?: string) => {
   if (ably && (ably.connection.state === 'failed' || ably.connection.state === 'closed')) {
     ably = null;
   }
@@ -22,7 +22,7 @@ export const getAblyClient = () => {
     try {
       ably = new Ably.Realtime({ 
         key: ABLY_API_KEY,
-        clientId: 'user-client',
+        clientId: user_id || 'user-client',
         autoConnect: true,
       });
 
@@ -43,8 +43,8 @@ export const getAblyClient = () => {
  * Utility to get a specific driver's location channel.
  * For subscribing, you can pass additional params like { rewind: '1' } 
  */
-export const getDriverChannel = (driverId: string, params?: Ably.ChannelOptions['params']) => {
-  const client = getAblyClient();
+export const getDriverChannel = (driverId: string, params?: Ably.ChannelOptions['params'], user_id?: string) => {
+  const client = getAblyClient(user_id);
   if (!client) return null;
   return client.channels.get(`driver:location:${driverId}`, { params });
 };

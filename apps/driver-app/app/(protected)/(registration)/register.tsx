@@ -70,6 +70,7 @@ export default function Register() {
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
   const driverLocation = useDriverLiveLocation();
+  const { driver, isLoading: driverIsLoading } = useDriver();
 
   const [initialLocationFetched, setInitialLocationFetched] = useState<{
     latitude: number;
@@ -89,7 +90,6 @@ export default function Register() {
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const createSession = useAction(api.actions.auth.createSessionForUser);
-  const { driver, isLoading: driverIsLoading } = useDriver();
 
   useEffect(() => {
     if (driverLocation && !initialLocationFetched) {
@@ -237,7 +237,7 @@ export default function Register() {
     login({ driverId: driver.driverDetails._id, expoPushToken });
   }, []);
 
-  if (driverIsLoading) return <LoadingScreen message="Loading account…" />;
+  if (driverIsLoading === undefined) return <LoadingScreen message="Loading account…" />;
 
   if (driver && sessionToken) return <Redirect href="/" />;
 

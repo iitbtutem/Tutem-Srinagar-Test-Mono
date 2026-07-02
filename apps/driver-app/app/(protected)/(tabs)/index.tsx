@@ -1,4 +1,3 @@
-import { useAuth } from '@/hooks/useAuth';
 import { useDriver } from '@/hooks/useDriver';
 import { api, Id } from '@tutem/api';
 import { useQuery, useAction } from 'convex/react';
@@ -54,8 +53,6 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 
 // Main Screen
 export default function Home() {
-  const { getToken } = useAuth();
-
   const { driver } = useDriver();
 
   const currentRide = useQuery(
@@ -72,17 +69,16 @@ export default function Home() {
     if (!driverDetails) return;
 
     if ((driverDetails.isAvailableForRide && driverDetails.isOnline) || currentRide) {
-      // Fetch a fresh Clerk token and pass real credentials so the headless
-      // background task publishes to the correct driver Ably channel.
-      getToken().then((authToken) => {
+      const user_id = driver?._id;
+      if (user_id) {
         console.log('started location tracking..');
-        startLocationTracking(authToken ? { driverId: driverDetails._id, authToken } : undefined);
-      });
+        startLocationTracking({ driverId: driverDetails._id, user_id });
+      }
     } else {
       console.log('stopped location tracking');
       stopLocationTracking();
     }
-  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
+  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide, driver?._id]);
 
   // Live GPS
   useEffect(() => {
@@ -106,7 +102,7 @@ export default function Home() {
           (driverDetails?._id && driverDetails.isAvailableForRide && driverDetails.isOnline) ||
           (currentRide && driverDetails)
         ) {
-          const channel = getDriverChannel(driverDetails._id);
+          const channel = getDriverChannel(driverDetails._id, driver?._id);
           if (channel) {
             channel
               .publish('location', {
@@ -123,7 +119,7 @@ export default function Home() {
       }
 
       // Presence handling for nearby search discovery
-      const globalChannel = getGlobalChannel();
+      const globalChannel = getGlobalChannel(undefined, driver?._id);
 
       const updatePresence = async (lat: number, lng: number) => {
         if (
@@ -163,7 +159,7 @@ export default function Home() {
 
           // Publish to Ably if online or on a ride
           if (driverDetails?._id && (driverDetails.isAvailableForRide || currentRide)) {
-            const channel = getDriverChannel(driverDetails._id);
+            const channel = getDriverChannel(driverDetails._id, driver?._id);
             if (channel) {
               channel
                 .publish('location', {
@@ -194,7 +190,7 @@ export default function Home() {
 
             updatePresence(coords.latitude, coords.longitude);
 
-            const channel = getDriverChannel(driverDetails._id);
+            const channel = getDriverChannel(driverDetails._id, driver?._id);
             if (channel) {
               // console.log('Publishing regular 10s location heartbeat...');
               channel

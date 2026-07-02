@@ -28,11 +28,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 
     try {
       const driverId = await SecureStore.getItemAsync('driverId');
-      const authToken = await SecureStore.getItemAsync('authToken');
+      const user_id = await SecureStore.getItemAsync('user_id');
 
-      if (!driverId || !authToken) {
+      if (!driverId || !user_id) {
         console.warn(
-          '[tasks.ts] Driver ID or Auth Token missing. Cannot sync location.'
+          '[tasks.ts] Driver ID or User ID missing. Cannot sync location.'
         );
         return;
       }

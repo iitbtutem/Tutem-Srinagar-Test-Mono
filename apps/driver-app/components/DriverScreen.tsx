@@ -6,14 +6,12 @@ import * as SecureStore from 'expo-secure-store';
 import { MapPin, Navigation } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { BACKGROUND_LOCATION_TASK } from '@/lib/tasks';
-import { useAuth } from '@/hooks/useAuth';
 import { useDriver } from '@/hooks/useDriver';
 
 export function DriverScreen() {
   const [isOnline, setIsOnline] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { getToken } = useAuth();
   const { driver } = useDriver();
 
   const driverId = driver?.driverDetails?._id;
@@ -40,19 +38,19 @@ export function DriverScreen() {
         return;
       }
 
-      // Fetch the Clerk session token and persist everything the background task needs.
+      // Persist everything the background task needs.
       // The background task runs in a separate headless thread with NO access to
       // React context, hooks, or process.env — SecureStore is the only bridge.
-      const authToken = await getToken();
-      if (!authToken) {
-        Alert.alert('Auth Error', 'Could not retrieve session token. Please log in again.');
+      const user_id = driver?._id;
+      if (!user_id) {
+        Alert.alert('Error', 'Driver profile is not fully loaded. Please try again.');
         return;
       }
 
       await SecureStore.setItemAsync('driverId', driverId);
-      await SecureStore.setItemAsync('authToken', authToken);
+      await SecureStore.setItemAsync('user_id', user_id);
 
-      const success = await startLocationTracking();
+      const success = await startLocationTracking({ driverId, user_id });
       if (success) {
         setIsOnline(true);
       } else {

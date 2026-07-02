@@ -8,7 +8,7 @@ export function useRider() {
   const rider = useQuery(api.routes.rider.getRider, sessionToken ? { sessionToken } : 'skip');
 
   return {
-    rider,
-    isLoading: rider === undefined,
+    rider: !sessionToken ? null : rider,
+    isLoading: !sessionToken ? false : rider === undefined,
   };
 }

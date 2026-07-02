@@ -4,9 +4,12 @@ import React from 'react';
 import { useDriver } from '@/hooks/useDriver';
 import HomeScreenHeader from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
+import { Loader } from '@tutem/ui';
 
 export default function TabsLayout() {
-  const { driver: user } = useDriver();
+  const { driver: user, isLoading } = useDriver();
+
+  if (isLoading) return <Loader subtitle="loading" />;
 
   return (
     <Tabs

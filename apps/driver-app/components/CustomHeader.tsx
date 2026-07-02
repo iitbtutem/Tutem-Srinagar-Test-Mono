@@ -102,19 +102,8 @@ function ProfileDropdown({
   setGenderMatching: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { signOut } = useAuth();
-  const logout = useMutation(api.routes.driver.logout);
 
   const handleLogout = async () => {
-    if (
-      user === undefined ||
-      user?.driverDetails === undefined ||
-      user.driverDetails?._id === undefined
-    )
-      return;
-
-    const driverId = user.driverDetails._id;
-
-    await logout({ driverId });
     await signOut();
     router.replace('/(auth)/signin');
   };

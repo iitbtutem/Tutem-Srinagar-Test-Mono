@@ -350,11 +350,7 @@ export default function RideDetailScreen() {
   const ride = useQuery(api.routes.rides.getRide, sessionToken ? { id, sessionToken } : 'skip');
 
   if (ride === undefined) {
-    return (
-      <View className="flex-1 bg-background">
-        <Loader subtitle="Loading ride details..." />
-      </View>
-    );
+    return <Loader subtitle="Loading ride details..." />;
   }
 
   if (ride === null) return <ErrorScreen message="Ride not found" code="404" />;

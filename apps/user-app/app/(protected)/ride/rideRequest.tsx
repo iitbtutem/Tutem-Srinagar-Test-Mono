@@ -384,7 +384,7 @@ export default function RideRequest() {
     // console.log('Setting up Ably for driver:', ride.driver._id);
 
     // Use rewind: '1' to get the last known location immediately
-    const channel = getDriverChannel(ride.driver._id, { rewind: '1' });
+    const channel = getDriverChannel(ride.driver._id, { rewind: '1' }, ride?.rider?.userId);
     // console.log('channel is', channel);
     if (!channel) return;
 

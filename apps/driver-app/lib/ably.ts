@@ -8,7 +8,7 @@ let ably: Ably.Realtime | null = null;
  * Returns a singleton instance of the Ably Realtime client.
  * Ensure EXPO_PUBLIC_ABLY_API_KEY is defined in your .env file.
  */
-export const getAblyClient = () => {
+export const getAblyClient = (user_id?: string) => {
   // If the client exists but is in a failed state, clear it so it can be recreated
   if (ably && (ably.connection.state === 'failed' || ably.connection.state === 'closed')) {
     console.log(`Ably client is in ${ably.connection.state} state, clearing for recreation.`);
@@ -25,7 +25,7 @@ export const getAblyClient = () => {
       console.log('Initializing Ably Realtime Client...');
       ably = new Ably.Realtime({ 
         key: ABLY_API_KEY,
-        clientId: 'driver-client',
+        clientId: user_id || 'driver-client',
         autoConnect: true,
         // Optional: you can add more robust connection settings here if needed
         recover: (lastName, lastSerial) => {
@@ -50,8 +50,8 @@ export const getAblyClient = () => {
 /**
  * Utility to get a specific driver's location channel.
  */
-export const getDriverChannel = (driverId: string) => {
-  const client = getAblyClient();
+export const getDriverChannel = (driverId: string, user_id?: string) => {
+  const client = getAblyClient(user_id);
   if (!client) return null;
   return client.channels.get(`driver:location:${driverId}`);
 };
@@ -59,8 +59,8 @@ export const getDriverChannel = (driverId: string) => {
 /**
  * Utility to get the global channel for active drivers.
  */
-export const getGlobalChannel = (channelName: string = 'global:active-drivers') => {
-  const client = getAblyClient();
+export const getGlobalChannel = (channelName: string = 'global:active-drivers', user_id?: string) => {
+  const client = getAblyClient(user_id);
   if (!client) return null;
   return client.channels.get(channelName);
 };
