@@ -35,6 +35,8 @@ import useThemeColors from '@/hooks/useColorScheme';
 import { BasicHeader } from '@/components/CustomHeader';
 import { subYears } from 'date-fns';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import { useDriver } from '@/hooks/useDriver';
+import { useAuth } from '@/hooks/useAuth';
 
 const formSchema = z.object({
   firstName: z
@@ -68,7 +70,7 @@ export default function EditProfile() {
     longitude: number;
   } | null>(null);
 
-  const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId, userId } =
+  const { firstName, lastName, dob, phoneNumber, licenseNumber, gender, organizationId } =
     useLocalSearchParams<{
       firstName: string;
       lastName?: string;
@@ -77,8 +79,10 @@ export default function EditProfile() {
       licenseNumber?: string;
       gender: 'Male' | 'Female' | 'Other';
       organizationId: string;
-      userId: string;
     }>();
+
+  const { sessionToken } = useAuth();
+  const { driver, isLoading: isLoadingDriver } = useDriver();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -177,17 +181,24 @@ export default function EditProfile() {
         return;
       }
 
+      if (!sessionToken || !driver) {
+        showToast({ title: 'Error', description: 'User not found', type: 'error' });
+        return;
+      }
       setIsSubmitting(true);
 
       const uploadedFrontKey = await uploadFile(
         data.licenseImageFrontKey,
-        `licenses/${userId}-front`
+        `licenses/${driver._id}-front`
       );
-      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
+      const uploadedBackKey = await uploadFile(
+        data.licenseImageBackKey,
+        `licenses/${driver._id}-back`
+      );
       const { dob, gender, ...rest } = data;
       await updateDriver({
         ...rest,
-        userId: userId,
+        sessionToken: sessionToken,
         organizationId: data.organizationId as Id<'organization'>,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,

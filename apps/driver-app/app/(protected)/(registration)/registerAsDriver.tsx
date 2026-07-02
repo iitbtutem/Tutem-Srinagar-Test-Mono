@@ -52,21 +52,27 @@ export default function RegisterAsRider() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
 
-  const [initialLocationFetched, setInitialLocationFetched] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [initialLocationFetched, setInitialLocationFetched] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
-  const { userId } = useAuth();
+  const { sessionToken } = useAuth();
   const router = useRouter();
-  const { showToast } = useToast();  
+  const { showToast } = useToast();
   const { expoPushToken } = useNotification();
-    const driverLocation = useDriverLiveLocation();
+  const driverLocation = useDriverLiveLocation();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const licenseRef = useRef<TextInput>(null);
 
-  const { driver } = useDriver();
+  const { driver, isLoading: driverIsLoading } = useDriver();
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
-  const organizations = useQuery(api.routes.organizations.getNearbyOrganization, initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip');
+  const organizations = useQuery(
+    api.routes.organizations.getNearbyOrganization,
+    initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
+  );
   const { uploadFile } = useFileUpload();
 
   const {
@@ -102,7 +108,7 @@ export default function RegisterAsRider() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ 
+      result = await ImagePicker.launchCameraAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -116,7 +122,7 @@ export default function RegisterAsRider() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ 
+      result = await ImagePicker.launchImageLibraryAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -132,7 +138,7 @@ export default function RegisterAsRider() {
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
-      if (!userId) {
+      if (!sessionToken || !driver) {
         showToast({ title: 'Error', description: 'User not found', type: 'error' });
         return;
       }
@@ -142,7 +148,7 @@ export default function RegisterAsRider() {
           setError('licenseImageFrontKey', { message: 'Front image is required' });
         if (!data.licenseImageBackKey)
           setError('licenseImageBackKey', { message: 'Back image is required' });
-        
+
         return;
       }
 
@@ -150,15 +156,18 @@ export default function RegisterAsRider() {
 
       showToast({ title: 'Info', description: `Uploading license images`, type: 'info' });
 
-      const uploadedFrontKey = await uploadFile(data.licenseImageFrontKey, `licenses/${userId}-front`);
-      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${userId}-back`);
+      const uploadedFrontKey = await uploadFile(
+        data.licenseImageFrontKey,
+        `licenses/${driver._id}-front`
+      );
+      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${driver._id}-back`);
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
 
       await registerAsDriver({
         ...restData,
         organizationId: data.organizationId as Id<'organization'>,
-        userId: userId,
+        sessionToken: sessionToken,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
         expoPushToken: expoPushToken ?? undefined,
@@ -182,12 +191,13 @@ export default function RegisterAsRider() {
     }
   });
 
-  useEffect(()=> {
-    if(driverLocation && !initialLocationFetched) {
+  useEffect(() => {
+    if (driverLocation && !initialLocationFetched) {
       setInitialLocationFetched(driverLocation);
     }
   }, [driverLocation]);
 
+  if (driverIsLoading) return <LoadingScreen message="Loading account…" />;
   if (driver && driver.driverDetails) return <Redirect href="/" />;
 
   if (organizations === undefined) return <LoadingScreen message="Fetching nearby organization…" />;
@@ -198,12 +208,14 @@ export default function RegisterAsRider() {
 
   return (
     <View className="flex-1 bg-background">
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: "Driver Registration",
-        header: (props) => <BasicHeader {...props} />, 
-      }} />
-      {isSubmitting && <Loader subtitle='submitting...' />}
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Driver Registration',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
+      {isSubmitting && <Loader subtitle="submitting..." />}
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
@@ -212,13 +224,12 @@ export default function RegisterAsRider() {
         <Animated.View
           entering={FadeInRight.delay(300).duration(400)}
           className="flex-1 bg-background">
-
           <Text className="px-3 text-lg font-semibold">Fill in your details</Text>
 
           <View className="mx-2 my-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
             <Text className="text-sm text-blue-800">
-              You are already registered with us. Fill in the required details below to
-              register as a driver.
+              You are already registered with us. Fill in the required details below to register as
+              a driver.
             </Text>
           </View>
           <View className="gap-3 px-3 pb-20 pt-2">
@@ -346,7 +357,7 @@ export default function RegisterAsRider() {
               </View>
             )}
 
-            <Button onPress={onSubmit} disabled={isSubmitting} className='my-3'>
+            <Button onPress={onSubmit} disabled={isSubmitting} className="my-3">
               <Text>Submit</Text>
             </Button>
           </View>
@@ -369,14 +380,14 @@ export default function RegisterAsRider() {
 
           <View className="flex-row justify-between">
             <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl bg-background border border-cyan-800"
+              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800 bg-background"
               onPress={() => handlePick('camera')}>
               <Feather name="camera" size={32} color="#1ca0d9" />
               <Text className="font-semibold text-gray-600 dark:text-zinc-400">Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl bg-background border border-orange-800"
+              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800 bg-background"
               onPress={() => handlePick('gallery')}>
               <Feather name="image" size={32} color="#ed9d2d" />
               <Text className="font-semibold text-gray-600 dark:text-zinc-400">Gallery</Text>

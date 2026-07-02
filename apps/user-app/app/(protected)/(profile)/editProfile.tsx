@@ -24,6 +24,7 @@ import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { Feather } from '@expo/vector-icons';
 import { BasicHeader } from '@/components/CustomHeader';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 const formSchema = z.object({
   firstName: z
@@ -40,14 +41,15 @@ export default function EditProfile() {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const { firstName, lastName, dob, phoneNumber, gender, userId } = useLocalSearchParams<{
+  const { firstName, lastName, dob, phoneNumber, gender } = useLocalSearchParams<{
     firstName: string;
     lastName?: string;
     dob: string;
     phoneNumber: string;
     gender: 'Male' | 'Female' | 'Other';
-    userId: string;
   }>();
+
+  const { sessionToken } = useAuthUser();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -76,10 +78,12 @@ export default function EditProfile() {
     : '';
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
+    if (!sessionToken) return;
     try {
       setIsSubmitting(true);
       const { dob, gender, ...rest } = data;
-      await updateUser({ ...rest, userId: userId });
+
+      await updateUser({ ...rest, sessionToken });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 

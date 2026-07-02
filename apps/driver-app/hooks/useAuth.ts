@@ -12,7 +12,6 @@ export function useAuth() {
 
   const {
     sessionToken,
-    userId,
     phoneNumber,
     isAuthenticated,
     isLoaded,
@@ -35,7 +34,6 @@ export function useAuth() {
 
   return {
     sessionToken,
-    userId: userId as Id<'user'> | null,
     phoneNumber,
     isSignedIn: isAuthenticated,
     isLoaded,

@@ -4,10 +4,10 @@ import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProtectedLayout() {
-  const { userId } = useAuthUser();
+  const { sessionToken } = useAuthUser();
   const { rider } = useRider();
 
-  const protectedGuard = !!userId && !!rider;
+  const protectedGuard = !!sessionToken && !!rider;
 
   return (
     <SafeAreaView edges={['bottom']} className="flex-1 bg-primary">

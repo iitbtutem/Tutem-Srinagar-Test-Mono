@@ -42,11 +42,11 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 export default function Profile() {
   const [image, setImage] = useState('');
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
-  const { userId, signOut } = useAuthUser();
+  const { signOut } = useAuthUser();
   const router = useRouter();
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
-  const { rider } = useRider();
+  const { rider, isLoading: riderIsLoading } = useRider();
   const logout = useMutation(api.routes.rider.logout);
   const toggleGenderMatching = useMutation(api.routes.rider.toggleGenderMatching);
 
@@ -146,8 +146,7 @@ export default function Profile() {
     };
   });
 
-  if (!userId) return <ErrorScreen message="User not found" />;
-  if (rider === undefined) return <Loader subtitle="Loading profile…" />;
+  if (rider === undefined || riderIsLoading) return <Loader subtitle="Loading profile…" />;
   if (rider === null) return <ErrorScreen message="User not found" />;
 
   const toggleGenderMatch = async () => {
@@ -192,7 +191,6 @@ export default function Profile() {
                     dob: rider.dob,
                     phoneNumber: rider.phoneNumber,
                     gender: rider.gender,
-                    userId: rider?.userId,
                   },
                 })
               }>
@@ -231,7 +229,7 @@ export default function Profile() {
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
-                userId={rider.userId}
+                userId={rider._id}
                 profilePictureKey={rider.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
@@ -361,22 +359,25 @@ function ImagePickerDialog({
   scrollDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { sessionToken } = useAuthUser();
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
   const { uploadFile } = useFileUpload();
 
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
+    if (!sessionToken) return;
     if (newImgUri === '') return;
     setImageUri(newImgUri);
     const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
-    await uploadProfilePicture({ userId, profilePictureKey });
+    await uploadProfilePicture({ sessionToken, profilePictureKey });
   };
 
   const handleDelete = async () => {
     setIsOpen(false);
+    if (!sessionToken) return;
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ userId });
+    await removeProfilePictureKey({ sessionToken });
     setImageUri('');
   };
 

@@ -2,7 +2,6 @@ import { AuthContext } from '@/context/AuthContext';
 import { useContext } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
-import { Id } from '@tutem/api';
 
 export function useAuthUser() {
   const authState = useContext(AuthContext);
@@ -12,7 +11,6 @@ export function useAuthUser() {
 
   const {
     sessionToken,
-    userId,
     phoneNumber,
     isAuthenticated,
     isLoaded,
@@ -34,7 +32,6 @@ export function useAuthUser() {
 
   return {
     sessionToken,
-    userId: userId as Id<'user'> | null,
     phoneNumber,
     isAuthenticated,
     isLoaded,

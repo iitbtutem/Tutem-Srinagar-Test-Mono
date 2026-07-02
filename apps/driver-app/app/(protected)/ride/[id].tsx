@@ -345,9 +345,9 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
 
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
-  const { userId } = useAuth();
+  const { sessionToken } = useAuth();
 
-  const ride = useQuery(api.routes.rides.getRide, userId ? { id, userId } : 'skip');
+  const ride = useQuery(api.routes.rides.getRide, sessionToken ? { id, sessionToken } : 'skip');
 
   if (ride === undefined) {
     return (

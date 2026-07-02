@@ -44,7 +44,7 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
-  const { userId, signOut } = useAuth();
+  const { sessionToken, signOut } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
@@ -179,7 +179,7 @@ export default function Profile() {
     };
   });
 
-  if (!userId) return <ErrorScreen message="Account not found" />;
+  if (!sessionToken) return <ErrorScreen message="Account not found" />;
   if (driver === undefined) return <Loader subtitle="Loading profile…" />;
   if (driver === null || driver.driverDetails === null)
     return <ErrorScreen message="Account not found" />;
@@ -260,6 +260,7 @@ export default function Profile() {
               </Avatar>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
+                userId={driver._id}
                 profilePictureKey={driver.profilePictureKey}
                 scrollY={scrollY}
                 scrollDistance={SCROLL_DISTANCE}
@@ -778,11 +779,13 @@ const ImageCard = ({ label, uri }: { label: string; uri?: string | null }) => {
 };
 
 function ImagePickerDialog({
+  userId,
   profilePictureKey,
   setImageUri,
   scrollY,
   scrollDistance,
 }: {
+  userId: string;
   profilePictureKey: string | undefined;
   setImageUri: (uri: string) => void;
   scrollY: SharedValue<number>;
@@ -790,7 +793,7 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const { userId } = useAuth();
+  const { sessionToken } = useAuth();
 
   const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
@@ -798,12 +801,12 @@ function ImagePickerDialog({
 
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
-    if (!userId) return;
+    if (!sessionToken) return;
     try {
       if (newImgUri === '') return;
       setImageUri(newImgUri);
-      const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}}`);
-      await uploadProfilePicture({ userId, profilePictureKey });
+      const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
+      await uploadProfilePicture({ sessionToken: sessionToken || '', profilePictureKey });
     } catch (error) {
       console.log('Error uploading profile picture:', error);
     }
@@ -811,9 +814,9 @@ function ImagePickerDialog({
 
   const handleDelete = async () => {
     setIsOpen(false);
-    if (!userId) return;
+    if (!sessionToken) return;
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ userId });
+    await removeProfilePictureKey({ sessionToken });
   };
 
   const uploadBtnOpacity = useAnimatedStyle(() => {

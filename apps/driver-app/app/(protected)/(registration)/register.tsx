@@ -65,7 +65,7 @@ export default function Register() {
   const { phoneNumber: phoneParam } = useLocalSearchParams<{ phoneNumber: string }>();
 
   const router = useRouter();
-  const { userId, phoneNumber: authPhone, signIn } = useAuth();
+  const { sessionToken, phoneNumber: authPhone, signIn } = useAuth();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
@@ -89,7 +89,7 @@ export default function Register() {
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const createSession = useAction(api.actions.auth.createSessionForUser);
-  const { driver } = useDriver();
+  const { driver, isLoading: driverIsLoading } = useDriver();
 
   useEffect(() => {
     if (driverLocation && !initialLocationFetched) {
@@ -213,7 +213,7 @@ export default function Register() {
           userId: convexUserId,
           phoneNumber,
         });
-        await signIn(sessionToken, convexUserId as string, phoneNumber);
+        await signIn(sessionToken, phoneNumber);
       }
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
@@ -232,16 +232,14 @@ export default function Register() {
   });
 
   useEffect(() => {
-    if (!userId || !driver || !expoPushToken) return;
+    if (!sessionToken || !driver || !expoPushToken) return;
     if (!driver.driverDetails) return;
     login({ driverId: driver.driverDetails._id, expoPushToken });
   }, []);
 
-  if (driver === undefined) return <LoadingScreen message="Loading registration…" />;
+  if (driverIsLoading) return <LoadingScreen message="Loading account…" />;
 
-  if (driver && userId) return <Redirect href="/" />;
-
-  // if (organizations === undefined) return <LoadingScreen message="Fetching nearby organizations…" />;
+  if (driver && sessionToken) return <Redirect href="/" />;
 
   if (organizations && organizations.length === 0) {
     return <ErrorScreen message="No organizations found near you" />;

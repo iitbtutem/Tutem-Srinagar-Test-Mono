@@ -42,7 +42,7 @@ export default function Register() {
   const { phoneNumber: phoneParam } = useLocalSearchParams<{ phoneNumber: string }>();
 
   const router = useRouter();
-  const { userId, phoneNumber: authPhone, signIn } = useAuthUser();
+  const { phoneNumber: authPhone, signIn } = useAuthUser();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const lastNameRef = useRef<TextInput>(null);
@@ -51,7 +51,9 @@ export default function Register() {
   const addUser = useMutation(api.routes.rider.addRider);
   const registerExpoPushToken = useMutation(api.routes.rider.registerExpoPushToken);
   const createSession = useAction(api.actions.auth.createSessionForUser);
-  const { rider } = useRider();
+  const { rider, isLoading: riderIsLoading } = useRider();
+
+  console.log('in register screen');
 
   const {
     handleSubmit,
@@ -90,7 +92,7 @@ export default function Register() {
         userId: convexUserId,
         phoneNumber,
       });
-      await signIn(sessionToken, convexUserId as string, phoneNumber);
+      await signIn(sessionToken, phoneNumber);
 
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
@@ -103,14 +105,14 @@ export default function Register() {
   });
 
   useEffect(() => {
-    if (!userId || !rider || !expoPushToken) return;
+    if (!rider || !expoPushToken) return;
     if (!rider.riderDetails) return;
     registerExpoPushToken({ riderId: rider.riderDetails._id, expoPushToken });
   }, []);
 
-  if (rider === undefined) return <ActivityIndicator />;
+  if (riderIsLoading === undefined) return <ActivityIndicator />;
 
-  if (rider && userId) return <Redirect href="/" />;
+  if (rider) return <Redirect href="/" />;
 
   return (
     <ScrollView className="flex-1 bg-background">

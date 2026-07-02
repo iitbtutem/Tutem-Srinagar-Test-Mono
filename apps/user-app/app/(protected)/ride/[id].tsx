@@ -320,9 +320,12 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
 
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
-  const { userId } = useAuthUser();
+  const { sessionToken } = useAuthUser();
 
-  const ride = useQuery(api.routes.rides.getRiderRide, id && userId ? { id, userId } : 'skip');
+  const ride = useQuery(
+    api.routes.rides.getRiderRide,
+    id && sessionToken ? { id, sessionToken } : 'skip'
+  );
 
   if (ride === undefined) {
     return (

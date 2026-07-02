@@ -55,17 +55,12 @@ export default function OtpScreen() {
     try {
       const result = await verifyOtpAction({ phoneNumber, otp });
 
-      if (!result.success) {
-        showToast({ title: 'Error', description: 'Verification failed.', type: 'error' });
-        return;
-      }
+      if (router.canDismiss()) router.dismissAll();
 
-      if (result.userExists && result.sessionToken && result.userId) {
-        await signIn(result.sessionToken, result.userId, phoneNumber);
-        if (router.canDismiss()) router.dismissAll();
+      if (result.userExists && result.sessionToken) {
+        await signIn(result.sessionToken, phoneNumber);
         router.replace('/(protected)');
       } else {
-        if (router.canDismiss()) router.dismissAll();
         router.replace({
           pathname: '/register',
           params: { phoneNumber },

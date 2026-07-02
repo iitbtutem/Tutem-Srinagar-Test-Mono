@@ -3,9 +3,9 @@ import { useQuery } from 'convex/react';
 import { useAuth } from './useAuth';
 
 export function useDriver() {
-  const { userId } = useAuth();
+  const { sessionToken } = useAuth();
 
-  const driver = useQuery(api.routes.driver.getUser, userId && userId !== '' ? { userId } : 'skip');
+  const driver = useQuery(api.routes.driver.getUser, sessionToken ? { sessionToken } : 'skip');
 
   return {
     driver,

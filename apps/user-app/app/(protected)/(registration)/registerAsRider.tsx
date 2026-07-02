@@ -1,8 +1,8 @@
 import { useToast } from '@/components/CustomToast';
 import { Text, Button, Loader, Avatar, AvatarImage, AvatarFallback, GenderAge } from '@tutem/ui';
 import { useNotification } from '@/context/NotificationContext';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useRider } from '@/hooks/useRider';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { api } from '@tutem/api';
 import { useMutation } from 'convex/react';
 import { Redirect } from 'expo-router';
@@ -10,39 +10,43 @@ import { View } from 'react-native';
 import { useState } from 'react';
 
 export default function RegisterAsRider() {
-  const { userId } = useAuthUser();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { rider } = useRider();
+  const { sessionToken } = useAuthUser();
+  const { rider, isLoading: riderIsLoading } = useRider();
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
   const handleRegisterAsRider = async () => {
-    if (expoPushToken !== null)
-      try {
-        setIsSubmitting(true);
-        await registerAsRider({ userId: userId ?? '', expoPushToken: expoPushToken });
-        showToast({
-          type: 'success',
-          title: 'Registered',
-          description: 'Registration done successfully',
-        });
-      } catch (error: any) {
-        console.log(`error ${error}`);
-        showToast({
-          type: 'error',
-          title: 'Failed',
-          description: error.data ?? 'Failed to register',
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (expoPushToken === null || sessionToken === null) return;
+
+    try {
+      setIsSubmitting(true);
+      await registerAsRider({
+        sessionToken,
+        expoPushToken,
+      });
+      showToast({
+        type: 'success',
+        title: 'Registered',
+        description: 'Registration done successfully',
+      });
+    } catch (error: any) {
+      console.log(`error ${error}`);
+      showToast({
+        type: 'error',
+        title: 'Failed',
+        description: error.data ?? 'Failed to register',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  if (riderIsLoading) return <Loader subtitle="Loading account" />;
   if (rider && rider.riderDetails) return <Redirect href="/" />;
-  if (rider === null) return <Redirect href="/register" />;
-  if (rider === undefined) return <Loader subtitle="Loading account" />;
+  if (!rider) return <Redirect href="/register" />;
 
   return (
     <View className="flex-1 bg-background p-6">
@@ -64,7 +68,7 @@ export default function RegisterAsRider() {
         </Text>
       </View>
 
-      <View className="flex-row items-center border border-primary rounded-2xl my-8 p-3 gap-2">
+      <View className="my-8 flex-row items-center gap-2 rounded-2xl border border-primary p-3">
         <Avatar alt="Profile pic" className="h-16 w-16">
           <AvatarImage
             source={

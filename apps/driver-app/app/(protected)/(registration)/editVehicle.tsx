@@ -28,8 +28,8 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useDriver } from '@/hooks/useDriver';
 import { Stack } from 'expo-router';
 import useThemeColors from '@/hooks/useColorScheme';
 import { BasicHeader } from '@/components/CustomHeader';
@@ -121,13 +121,13 @@ export default function EditVehicle() {
     },
   });
 
-  const { userId } = useAuth();
+  const { driver } = useDriver();
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof vehicleSchema>) => {
     try {
       const rcImageKey = await uploadFile(
         data.rcImageKey,
-        `vehicleRegisration/${userId}}`
+        `vehicleRegisration/${driver?._id}`
       );
 
       if (isVehicleRCVerificationRequired && rcImageKey === undefined) {
@@ -136,7 +136,7 @@ export default function EditVehicle() {
           message: 'RC image required',
         });
       };
-      const insuranceImageKey = await uploadFile(data.insuranceImageKey, `vehicleInsurance/${userId}}`);
+      const insuranceImageKey = await uploadFile(data.insuranceImageKey, `vehicleInsurance/${driver?._id}`);
 
       if (isVehicleRCVerificationRequired && insuranceImageKey === undefined) {
         setError('insuranceImageKey', {

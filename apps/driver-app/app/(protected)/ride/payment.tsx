@@ -22,11 +22,11 @@ import { useAuth } from '@/hooks/useAuth';
 export default function Payment() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
-  const { userId } = useAuth();
+  const { sessionToken } = useAuth();
 
   const ride = useQuery(
     api.routes.rides.getRide,
-    rideId && userId ? { id: rideId, userId } : 'skip'
+    rideId && sessionToken ? { id: rideId, sessionToken } : 'skip'
   );
 
   if (ride === undefined) {

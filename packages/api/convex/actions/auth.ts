@@ -121,7 +121,6 @@ export const verifyOtp = action({
         sessionToken,
       });
       return {
-        success: true,
         userExists: true,
         sessionToken,
         userId: existingUser._id as string,
@@ -129,7 +128,6 @@ export const verifyOtp = action({
     }
 
     return {
-      success: true,
       userExists: false,
       sessionToken: null,
       userId: null,

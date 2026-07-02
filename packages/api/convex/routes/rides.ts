@@ -984,10 +984,19 @@ export const getDriverCurrentRideByDriverId = query({
 export const getRide = query({
   args: {
     id: v.id("ride"),
-    userId: v.id("user"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const convexUser = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const convexUser = await ctx.db.get(session.userId);
     if (convexUser === null) throw new ConvexError("Invalid user");
 
     const isDriver = await ctx.db
@@ -1137,10 +1146,19 @@ export const getRide = query({
 export const getRiderRide = query({
   args: {
     id: v.id("ride"),
-    userId: v.id("user"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const convexUser = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const convexUser = await ctx.db.get(session.userId);
     if (convexUser === null) throw new ConvexError("Invalid user");
 
     const ride = await ctx.db.get(args.id);

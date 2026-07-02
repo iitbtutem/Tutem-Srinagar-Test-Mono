@@ -87,11 +87,20 @@ export const addRider = mutation({
 
 export const registerAsRider = mutation({
   args: {
-    userId: v.id("user"),
+    sessionToken: v.string(),
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const user = await ctx.db.get(session.userId);
     if (user === null) {
       throw new ConvexError("User not found");
     }
@@ -118,10 +127,18 @@ export const registerAsRider = mutation({
 
 export const getRider = query({
   args: {
-    userId: v.id("user"),
+    sessionToken: v.string(),
   },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+  handler: async (ctx, { sessionToken }) => {
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
+      .first();
+
+    if (!session) return null;
+    if (Date.now() > session.expiresAt) return null;
+
+    const user = await ctx.db.get(session.userId);
 
     if (user === null) return null;
 
@@ -153,10 +170,19 @@ export const updateRider = mutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
-    userId: v.id("user"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const user = await ctx.db.get(session.userId);
 
     if (!user) {
       throw new ConvexError("User not found");
@@ -178,11 +204,20 @@ export const updateRider = mutation({
 
 export const uploadProfilePicture = mutation({
   args: {
-    userId: v.id("user"),
+    sessionToken: v.string(),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const user = await ctx.db.get(session.userId);
 
     if (!user) {
       throw new ConvexError("User not found");
@@ -195,10 +230,19 @@ export const uploadProfilePicture = mutation({
 
 export const removeProfilePictureKey = mutation({
   args: {
-    userId: v.id("user"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
+      .first();
+
+    if (!session || Date.now() > session.expiresAt) {
+      throw new ConvexError("Invalid or expired session");
+    }
+
+    const user = await ctx.db.get(session.userId);
 
     if (!user) throw new ConvexError("User not found");
 
