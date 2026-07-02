@@ -161,8 +161,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
           vehicle: vehicle,
           fare: Math.round(fare),
           cords: {
-            latitude: 101,
-            longitude: 101,
+            latitude: driver.latitude,
+            longitude: driver.longitude,
           },
         };
       }),

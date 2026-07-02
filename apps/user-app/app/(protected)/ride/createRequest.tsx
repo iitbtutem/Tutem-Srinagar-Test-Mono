@@ -51,6 +51,7 @@ import {
 } from '@tutem/ui';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useLocation } from '@/hooks/useCurrentLocation';
+import DriverMarker from '@/components/DriverMarker';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -779,21 +780,12 @@ export default function WhereTo() {
             latitudeDelta: 0.3,
             longitudeDelta: 0.3,
           }}>
-          {nearbyDrivers?.map((nearbyDriver) => (
-            <Marker
-              key={nearbyDriver.driver._id}
-              coordinate={{
-                latitude: nearbyDriver.cords.latitude,
-                longitude: nearbyDriver.cords.longitude,
-              }}
-              anchor={{ x: 0, y: 0 }}>
-              {/* <MaterialCommunityIcons name="car-hatchback" size={30} color={iconColor} /> */}
-              <Image
-                source={require('@/assets/images/top_cab.png')}
-                style={{ width: 30, height: 35 }}
-                resizeMode="contain"
-              />
-            </Marker>
+          {nearbyDrivers?.map((nearbyDriver, idx) => (
+            <DriverMarker
+              key={idx}
+              location={nearbyDriver.cords}
+              vehicleClass={nearbyDriver.vehicle.class}
+            />
           ))}
           {pickupLocation?.coords && (
             <Marker coordinate={pickupLocation.coords} anchor={{ x: 0.5, y: 0.5 }}>

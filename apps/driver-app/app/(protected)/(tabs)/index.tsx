@@ -65,8 +65,10 @@ export default function Home() {
   // Start / stop background location foreground service whenever the
   // driver toggles online / offline via the Convex isAvailableForRide flag.
   useEffect(() => {
-    stopLocationTracking();
-    if (!driverDetails) return;
+    if (!driverDetails) {
+      stopLocationTracking();
+      return;
+    }
 
     if ((driverDetails.isAvailableForRide && driverDetails.isOnline) || currentRide) {
       const user_id = driver?._id;
@@ -83,15 +85,46 @@ export default function Home() {
   // Live GPS
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
-    (async () => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let globalChannel: ReturnType<typeof getGlobalChannel> | null = null;
+    let isCancelled = false;
+
+    const updatePresence = async (lat: number, lng: number) => {
+      if (
+        driverDetails &&
+        driverDetails.isAvailableForRide &&
+        driverDetails.isOnline &&
+        !currentRide
+      ) {
+        try {
+          await globalChannel?.presence.update({
+            driverId: driverDetails._id,
+            latitude: lat,
+            longitude: lng,
+            vehicleClass: driver?.driverDetails?.isLicenseVerified ? 'verified' : 'Not Verified',
+            lastUpdated: Date.now(),
+          });
+        } catch (e) {
+          console.error('Ably presence update error:', e);
+        }
+      } else if (globalChannel) {
+        globalChannel.presence.leave().catch(() => {});
+      }
+    };
+
+    const start = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+      if (status !== 'granted' || isCancelled) return;
+
+      // Presence handling for nearby search discovery
+      globalChannel = getGlobalChannel(undefined, driver?._id);
 
       // Fetch initial position immediately
       try {
         const initialLoc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
+        if (isCancelled) return;
         const coords = {
           latitude: initialLoc.coords.latitude,
           longitude: initialLoc.coords.longitude,
@@ -118,34 +151,7 @@ export default function Home() {
         console.error('Failed to get initial location:', err);
       }
 
-      // Presence handling for nearby search discovery
-      const globalChannel = getGlobalChannel(undefined, driver?._id);
-
-      const updatePresence = async (lat: number, lng: number) => {
-        if (
-          driverDetails &&
-          driverDetails.isAvailableForRide &&
-          driverDetails.isOnline &&
-          !currentRide
-        ) {
-          // console.log('updating presence to global Channel');
-          try {
-            await globalChannel?.presence.update({
-              driverId: driverDetails._id,
-              latitude: lat,
-              longitude: lng,
-              vehicleClass: driver?.driverDetails?.isLicenseVerified ? 'verified' : 'Not Verified', // Example metadata
-              lastUpdated: Date.now(),
-            });
-          } catch (e) {
-            console.error('Ably presence update error:', e);
-          }
-        } else if (globalChannel) {
-          // If not available or on a ride, leave the global discovery channel
-          globalChannel.presence.leave().catch(() => {});
-          // console.log('leaving ...');
-        }
-      };
+      if (isCancelled) return;
 
       sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, distanceInterval: 0 },
@@ -176,8 +182,14 @@ export default function Home() {
         }
       );
 
+      if (isCancelled) {
+        sub.remove();
+        sub = null;
+        return;
+      }
+
       // Also publish at a regular interval (every 10s) to satisfy "constant update" requirement
-      const intervalId = setInterval(async () => {
+      intervalId = setInterval(async () => {
         if (driverDetails?._id && (driverDetails.isAvailableForRide || currentRide)) {
           try {
             const loc = await Location.getCurrentPositionAsync({
@@ -192,7 +204,6 @@ export default function Home() {
 
             const channel = getDriverChannel(driverDetails._id, driver?._id);
             if (channel) {
-              // console.log('Publishing regular 10s location heartbeat...');
               channel
                 .publish('location', {
                   ...coords,
@@ -213,17 +224,20 @@ export default function Home() {
         globalChannel?.presence
           .enter({
             driverId: driverDetails._id,
-            // Use current driverLocation if we have it, otherwise wait for next update
           })
           .catch(() => {});
       }
+    };
 
-      return () => {
-        sub?.remove();
-        clearInterval(intervalId);
-        globalChannel?.presence.leave().catch(() => {});
-      };
-    })();
+    start();
+
+    // This cleanup IS properly returned to React
+    return () => {
+      isCancelled = true;
+      sub?.remove();
+      if (intervalId !== null) clearInterval(intervalId);
+      globalChannel?.presence.leave().catch(() => {});
+    };
   }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
 
   useEffect(() => {
