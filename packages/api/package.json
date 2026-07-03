@@ -18,7 +18,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1015.0",
     "@aws-sdk/s3-request-presigner": "^3.1015.0",
-    "convex": "^1.32.0"
+    "convex": "^1.32.0",
+    "convex-helpers": "^0.1.120"
   },
   "devDependencies": {
     "@tutem/typescript-config": "*",

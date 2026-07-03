@@ -4664,6 +4664,11 @@ convert-source-map@^2.0.0:
   resolved "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz"
   integrity sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==
 
+convex-helpers@^0.1.120:
+  version "0.1.120"
+  resolved "https://registry.yarnpkg.com/convex-helpers/-/convex-helpers-0.1.120.tgz#e8f6088a0164172d116b3786f087aa772c0ce6f9"
+  integrity sha512-FPqtmN/10uoxmmhVq0ViNi08AnmHKT/eU1R8+ohmPZoHfg8noZEZCltApY/ASDdhq92o0kLZETggzBvMfHJDLQ==
+
 convex@*, convex@^1.32.0:
   version "1.32.0"
   resolved "https://registry.npmjs.org/convex/-/convex-1.32.0.tgz"

@@ -127,3 +127,10 @@ export const deleteSession = mutation({
     if (session) await ctx.db.delete(session._id);
   },
 });
+
+export const getUserByIdInternal = internalQuery({
+  args: { userId: v.id("user") },
+  handler: async (ctx, { userId }) => {
+    return ctx.db.get(userId);
+  },
+});

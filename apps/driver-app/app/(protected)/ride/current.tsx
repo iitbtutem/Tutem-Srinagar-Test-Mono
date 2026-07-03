@@ -258,7 +258,7 @@ export default function Ride() {
     if (!ride) return;
     setLoading('driverArrived');
     try {
-      await driverArrived({ rideId: id, driverId });
+      await driverArrived({ sessionToken: sessionToken || "", rideId: id, driverId });
       setRouteState(null);
       showToast({
         type: 'success',
@@ -278,7 +278,7 @@ export default function Ride() {
     setLoading("completing")
     try {
       if(driverLocation === null) throw new Error("Failed to access your location")
-      await completeRide({ driverId, rideId: ride._id, driverLocation });
+      await completeRide({ sessionToken: sessionToken || "", driverId, rideId: ride._id, driverLocation });
       pushToPayments();
       showToast({
         type: 'success',
@@ -311,6 +311,7 @@ export default function Ride() {
       if(driverLocation === null) throw new Error("Failed to access your location")
         if(selectedReason === null) throw new Error("Please select a valid reason")
       await cancelRide({
+        sessionToken: sessionToken || "",
         rideId: id,
         driverId,
         reason: selectedReason,
@@ -345,7 +346,7 @@ export default function Ride() {
     if (driverLocation === null || !ride) return;
     setLoading("canceling")
     try {
-      const result = ride.status !== "Active" ? null : await calculateDriverCancelRideCharges({ id, driverLocation });
+      const result = ride.status !== "Active" ? null : await calculateDriverCancelRideCharges({ sessionToken: sessionToken || "", id, driverLocation });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error) {

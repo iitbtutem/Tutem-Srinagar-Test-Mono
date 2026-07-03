@@ -5,6 +5,7 @@ import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { NearbyDriverResult } from "../routes/rides";
 import { METERS_IN_KM } from "../CONSTANTS";
+import { validateSession } from "../helpers/sessionFunctions";
 
 type ReturnValue = NearbyDriverResult[];
 
@@ -30,6 +31,7 @@ function haversineDistance(
 // ✅ Export directly — no intermediate variable
 export const getNearbyDrivers = action({
   args: {
+    sessionToken: v.string(),
     pickup: v.object({
       latitude: v.number(),
       longitude: v.number(),
@@ -46,6 +48,9 @@ export const getNearbyDrivers = action({
     ),
   },
   handler: async (ctx, args): Promise<ReturnValue> => {
+    // Validate session
+    await validateSession(ctx, args.sessionToken);
+
     const ABLY_API_KEY =
       process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;
     if (!ABLY_API_KEY) {

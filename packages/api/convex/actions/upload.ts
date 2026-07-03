@@ -5,13 +5,18 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v } from "convex/values";
 import { s3Client } from "../s3";
+import { validateSession } from "../helpers/sessionFunctions";
 
 export const getPresignedUrl = action({
   args: {
+    sessionToken: v.string(),
     key: v.string(),
     contentType: v.string()
   },
   handler: async (ctx, args) => {
+    // Validate session
+    await validateSession(ctx, args.sessionToken);
+
     // Make sure these environment variables are set in your Convex dashboard
 
     const command = new PutObjectCommand({

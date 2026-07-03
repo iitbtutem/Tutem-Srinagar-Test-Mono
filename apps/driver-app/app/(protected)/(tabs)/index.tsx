@@ -16,6 +16,7 @@ import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
 
 // Types
@@ -263,6 +264,7 @@ export default function Home() {
 export const RideRequests = memo(
   ({ driver, currentRide }: { driver: Driver; currentRide: CurrentRide | null }) => {
     const { showToast } = useToast();
+    const { sessionToken } = useAuth();
     const driverLocation = useDriverLiveLocation();
 
     const vehicle = useQuery(
@@ -334,7 +336,7 @@ export const RideRequests = memo(
       }
       setActionLoading('accept');
       try {
-        await acceptRide({ driverId: driver.driverDetails._id, rideId });
+        await acceptRide({ sessionToken: sessionToken || "", driverId: driver.driverDetails._id, rideId });
         showToast({
           title: 'Ride Accepted',
           description: 'Ride accepted successfully',
@@ -352,7 +354,7 @@ export const RideRequests = memo(
       if (!driver?.driverDetails) return;
       setActionLoading('reject');
       try {
-        await rejectRide({ driverId: driver.driverDetails._id, rideId });
+        await rejectRide({ sessionToken: sessionToken || "", driverId: driver.driverDetails._id, rideId });
         showToast({ title: 'Ride Rejected', description: 'Ride rejected', type: 'success' });
       } catch (e) {
         console.error(e);

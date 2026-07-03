@@ -17,6 +17,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
+import { useToast } from '@/components/CustomToast';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Poor',
@@ -29,6 +30,7 @@ const RATING_LABELS: Record<number, string> = {
 export default function Feedback() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
+  const toast = useToast();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, rideId ? { id: rideId } : 'skip');
 
@@ -52,7 +54,11 @@ export default function Feedback() {
 
   const handleSubmit = async () => {
     if (score === 0) {
-      Alert.alert('Rating required', 'Please select a star rating before submitting.');
+      toast.showToast({
+        type: 'error',
+        title: 'Error',
+        description: 'Please select a star rating before submitting.',
+      });
       return;
     }
     try {
@@ -63,9 +69,18 @@ export default function Feedback() {
         score,
         comment: comment.trim() || undefined,
       });
+      toast.showToast({
+        type: 'success',
+        title: 'Success',
+        description: 'Feedback submitted successfully',
+      });
       router.replace('/');
-    } catch (e) {
-      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    } catch (error: any) {
+      toast.showToast({
+        type: 'error',
+        title: 'Failed',
+        description: error?.data ?? 'Failed to submit',
+      });
     } finally {
       setIsSubmitting(false);
     }

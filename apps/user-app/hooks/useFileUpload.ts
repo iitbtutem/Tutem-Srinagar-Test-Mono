@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAction } from 'convex/react';
 import { api } from '@tutem/api';
+import { useAuthUser } from './useAuthUser';
 
 type UploadState = {
   isUploading: boolean;
@@ -9,6 +10,7 @@ type UploadState = {
 
 export function useFileUpload() {
   const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  const { sessionToken } = useAuthUser();
 
   const [state, setState] = useState<UploadState>({
     isUploading: false,
@@ -28,7 +30,12 @@ export function useFileUpload() {
       const blob = await response.blob();
       const extension = fileUri.split('.').pop() || 'jpg';
 
+      if (!sessionToken) {
+        throw new Error("No active session token");
+      }
+
       const { url: presignedUrl, key } = await getPresignedUrl({
+        sessionToken,
         key: `${fileKey}-${Date.now()}.${extension}`,
         contentType: blob.type,
       });

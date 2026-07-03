@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { AuthProvider } from '@/context/AuthContext';
+import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { useEffect, useState } from 'react';
 import { useInternet } from '@/hooks/useInternet';
 import { View } from 'react-native';
@@ -64,25 +65,27 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ConvexProvider client={convex}>
         <AuthProvider>
-          <NotificationProvider>
-            <ToastProvider>
-              <SafeAreaView edges={['top']} className="bg-primary" />
-              <StatusBar style="light" translucent backgroundColor={colors.primary} />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                }}
-              />
-              {!isOnline && (
-                <View className="bg-red-500 px-3 py-2">
-                  <Text className="text-center text-sm font-medium text-white">
-                    You are offline
-                  </Text>
-                </View>
-              )}
-              <PortalHost />
-            </ToastProvider>
-          </NotificationProvider>
+          <AuthErrorBoundary>
+            <NotificationProvider>
+              <ToastProvider>
+                <SafeAreaView edges={['top']} className="bg-primary" />
+                <StatusBar style="light" translucent backgroundColor={colors.primary} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                />
+                {!isOnline && (
+                  <View className="bg-red-500 px-3 py-2">
+                    <Text className="text-center text-sm font-medium text-white">
+                      You are offline
+                    </Text>
+                  </View>
+                )}
+                <PortalHost />
+              </ToastProvider>
+            </NotificationProvider>
+          </AuthErrorBoundary>
         </AuthProvider>
       </ConvexProvider>
     </GestureHandlerRootView>

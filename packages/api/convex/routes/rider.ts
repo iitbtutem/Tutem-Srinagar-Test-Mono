@@ -1,5 +1,9 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation } from "../_generated/server";
+import {
+  authenticatedQuery,
+  authenticatedMutation,
+} from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -85,168 +89,93 @@ export const addRider = mutation({
   },
 });
 
-export const registerAsRider = mutation({
+export const registerAsRider = authenticatedMutation({
   args: {
-    sessionToken: v.string(),
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-    if (user === null) {
-      throw new ConvexError("User not found");
-    }
-
     const existingRider = await ctx.db
       .query("rider")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
     if (existingRider !== null)
       throw new ConvexError("Rider profile already exists");
 
     await ctx.db.insert("rider", {
       isVerified: "Pending",
-      userId: user._id,
+      userId: ctx.user._id,
       expoPushToken: args.expoPushToken,
       genderMatching: false,
     });
     await ctx.db.insert("userPermission", {
-      userId: user._id,
+      userId: ctx.user._id,
       permission: "Rider",
     });
   },
 });
 
-export const getRider = query({
-  args: {
-    sessionToken: v.string(),
-  },
-  handler: async (ctx, { sessionToken }) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
-      .first();
-
-    if (!session) return null;
-    if (Date.now() > session.expiresAt) return null;
-
-    const user = await ctx.db.get(session.userId);
-
-    if (user === null) return null;
-
+export const getRider = authenticatedQuery({
+  args: {},
+  handler: async (ctx) => {
     const rider = await ctx.db
       .query("rider")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
 
-    const profilePictureUri = user.profilePictureKey
+    const profilePictureUri = ctx.user.profilePictureKey
       ? await getSignedUrl(
           s3Client,
           new GetObjectCommand({
             Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
+            Key: ctx.user.profilePictureKey,
           }),
           { expiresIn: 300 },
         )
       : undefined;
 
     return {
-      ...user,
+      ...ctx.user,
       riderDetails: rider,
       profilePictureKey: profilePictureUri,
     };
   },
 });
 
-export const updateRider = mutation({
+export const updateRider = authenticatedMutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
-    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (!user) {
-      throw new ConvexError("User not found");
-    }
-
     const rider = await ctx.db
       .query("rider")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
 
     if (rider === null) throw new ConvexError("Rider not found");
 
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch(ctx.user._id, {
       firstName: args.firstName,
       lastName: args.lastName,
     });
   },
 });
 
-export const uploadProfilePicture = mutation({
+export const uploadProfilePicture = authenticatedMutation({
   args: {
-    sessionToken: v.string(),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (!user) {
-      throw new ConvexError("User not found");
-    }
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch(ctx.user._id, {
       profilePictureKey: args.profilePictureKey,
     });
   },
 });
 
-export const removeProfilePictureKey = mutation({
-  args: {
-    sessionToken: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (!user) throw new ConvexError("User not found");
-
-    await ctx.db.patch(user._id, {
+export const removeProfilePictureKey = authenticatedMutation({
+  args: {},
+  handler: async (ctx) => {
+    await ctx.db.patch(ctx.user._id, {
       profilePictureKey: undefined,
     });
   },

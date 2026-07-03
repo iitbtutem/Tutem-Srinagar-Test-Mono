@@ -38,6 +38,7 @@ import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useRider } from '@/hooks/useRider';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import {
   Avatar,
   AvatarFallback,
@@ -306,6 +307,7 @@ function NearbyDriversPanel({
 
 export default function WhereTo() {
   const { rider } = useRider();
+  const { sessionToken } = useAuthUser();
   const bookRide = useAction(api.actions.ride.bookRide);
 
   const { showToast } = useToast();
@@ -401,6 +403,7 @@ export default function WhereTo() {
         setIsSearchingDrivers(true);
         try {
           const drivers = await getNearbyDriversAction({
+            sessionToken: sessionToken || "",
             pickup: {
               latitude: pickupLat,
               longitude: pickupLon,
@@ -724,6 +727,7 @@ export default function WhereTo() {
       if (destination === null) throw new Error('Please select destination');
 
       const rideId = await bookRide({
+        sessionToken: sessionToken || "",
         riderId: rider.riderDetails._id,
         driverId: selectedDriver.driver._id,
         pickup: {

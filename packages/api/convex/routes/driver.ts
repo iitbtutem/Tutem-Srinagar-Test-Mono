@@ -1,5 +1,9 @@
 import { ConvexError, v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
+import {
+  authenticatedQuery,
+  authenticatedMutation,
+} from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -122,9 +126,8 @@ export const addDriver = mutation({
   },
 });
 
-export const registerAsDriver = mutation({
+export const registerAsDriver = authenticatedMutation({
   args: {
-    sessionToken: v.string(),
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
@@ -132,23 +135,9 @@ export const registerAsDriver = mutation({
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-    if (user === null) {
-      throw new ConvexError("User not found");
-    }
-
     const existingDriver = await ctx.db
       .query("driver")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
     if (existingDriver !== null)
       throw new ConvexError("Driver profile already exists");
@@ -158,7 +147,7 @@ export const registerAsDriver = mutation({
     if (organization === null) throw new ConvexError("Organization not found");
 
     await ctx.db.insert("driver", {
-      userId: user._id,
+      userId: ctx.user._id,
       licenseNumber: args.licenseNumber,
       isAvailableForRide: true,
       isOnline: true,
@@ -172,40 +161,26 @@ export const registerAsDriver = mutation({
       genderMatching: false,
     });
     await ctx.db.insert("userPermission", {
-      userId: user._id,
+      userId: ctx.user._id,
       permission: "Rider",
     });
   },
 });
 
-export const getUser = query({
-  args: {
-    sessionToken: v.string(),
-  },
-  handler: async (ctx, { sessionToken }) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
-      .first();
-
-    if (!session) return null;
-    if (Date.now() > session.expiresAt) return null;
-
-    const user = await ctx.db.get(session.userId);
-
-    if (user === null) return null;
-
+export const getUser = authenticatedQuery({
+  args: {},
+  handler: async (ctx) => {
     const driver = await ctx.db
       .query("driver")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
 
-    const profilePictureUri = user.profilePictureKey
+    const profilePictureUri = ctx.user.profilePictureKey
       ? await getSignedUrl(
           s3Client,
           new GetObjectCommand({
             Bucket: process.env.MINIO_BUCKET,
-            Key: user.profilePictureKey,
+            Key: ctx.user.profilePictureKey,
           }),
           { expiresIn: 300 },
         )
@@ -213,7 +188,7 @@ export const getUser = query({
 
     if (driver === null) {
       return {
-        ...user,
+        ...ctx.user,
         profilePictureKey: profilePictureUri,
         driverDetails: null,
       };
@@ -258,7 +233,7 @@ export const getUser = query({
         : ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
 
     return {
-      ...user,
+      ...ctx.user,
       profilePictureKey: profilePictureUri,
       driverDetails: driver
         ? {
@@ -361,7 +336,7 @@ export const getDriverInternal = internalQuery({
   },
 });
 
-export const updateDriver = mutation({
+export const updateDriver = authenticatedMutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
@@ -369,25 +344,11 @@ export const updateDriver = mutation({
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
-    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (user === null) throw new ConvexError("User not found");
-
     const driver = await ctx.db
       .query("driver")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
 
     if (driver === null) throw new ConvexError("Driver not found");
@@ -415,7 +376,7 @@ export const updateDriver = mutation({
         ? "Pending"
         : "Verified";
 
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch(ctx.user._id, {
       firstName: args.firstName,
       lastName: args.lastName,
     });
@@ -434,50 +395,21 @@ export const updateDriver = mutation({
   },
 });
 
-export const uploadProfilePicture = mutation({
+export const uploadProfilePicture = authenticatedMutation({
   args: {
-    sessionToken: v.string(),
     profilePictureKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (user === null) throw new ConvexError("User not found");
-
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch(ctx.user._id, {
       profilePictureKey: args.profilePictureKey,
     });
   },
 });
 
-export const removeProfilePictureKey = mutation({
-  args: {
-    sessionToken: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const user = await ctx.db.get(session.userId);
-
-    if (user === null) throw new ConvexError("User not found");
-
-    await ctx.db.patch(user._id, {
+export const removeProfilePictureKey = authenticatedMutation({
+  args: {},
+  handler: async (ctx) => {
+    await ctx.db.patch(ctx.user._id, {
       profilePictureKey: undefined,
     });
   },

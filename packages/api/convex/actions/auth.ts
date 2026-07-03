@@ -108,9 +108,15 @@ export const verifyOtp = action({
       phoneNumber,
     });
 
+    const ph = phoneNumber
+      ? phoneNumber.startsWith("+91")
+        ? phoneNumber.slice(3)
+        : phoneNumber
+      : "";
+
     const existingUser: any = await ctx.runQuery(
       internal.routes.auth.getUserByPhone,
-      { phoneNumber },
+      { phoneNumber: ph },
     );
 
     if (existingUser) {

@@ -5,6 +5,7 @@ import {
   mutation,
   query,
 } from "../_generated/server";
+import { authenticatedQuery } from "../helpers/sessionFunctions";
 import { Doc } from "../_generated/dataModel";
 import { TWENTY_FOUR_HOURS, METERS_IN_KM } from "../CONSTANTS";
 import { s3Client } from "../s3";
@@ -413,6 +414,17 @@ export const riderAbortRideInternal = internalMutation({
     });
 
     const driver = await ctx.db.get(ride.driverId);
+    if (driver === null) return;
+
+    if (
+      driver.isAvailableForRide === false &&
+      ride.requestStatus === "Accepted"
+    ) {
+      await ctx.db.patch(driver._id, {
+        isAvailableForRide: true,
+      });
+    }
+
     return driver?.expoPushToken;
   },
 });
@@ -981,27 +993,14 @@ export const getDriverCurrentRideByDriverId = query({
   },
 });
 
-export const getRide = query({
+export const getRide = authenticatedQuery({
   args: {
     id: v.id("ride"),
-    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const convexUser = await ctx.db.get(session.userId);
-    if (convexUser === null) throw new ConvexError("Invalid user");
-
     const isDriver = await ctx.db
       .query("driver")
-      .withIndex("by_user", (q) => q.eq("userId", convexUser._id))
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
       .first();
 
     const ride = await ctx.db.get(args.id);
@@ -1143,24 +1142,11 @@ export const getRide = query({
   },
 });
 
-export const getRiderRide = query({
+export const getRiderRide = authenticatedQuery({
   args: {
     id: v.id("ride"),
-    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", args.sessionToken))
-      .first();
-
-    if (!session || Date.now() > session.expiresAt) {
-      throw new ConvexError("Invalid or expired session");
-    }
-
-    const convexUser = await ctx.db.get(session.userId);
-    if (convexUser === null) throw new ConvexError("Invalid user");
-
     const ride = await ctx.db.get(args.id);
     if (ride === null) throw new ConvexError("Ride not found");
 
@@ -1609,6 +1595,7 @@ export const submitRating = mutation({
     // Prevent duplicate: same ride + same raterType
     const existing = await ctx.db
       .query("ratings")
+      .withIndex("by_ride", q => q.eq("rideId", ride._id))
       .filter((q) => q.eq(q.field("raterType"), args.raterType))
       .first();
 

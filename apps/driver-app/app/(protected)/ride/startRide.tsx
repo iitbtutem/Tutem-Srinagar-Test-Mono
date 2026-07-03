@@ -2,6 +2,7 @@ import { useToast } from '@/components/CustomToast';
 import { Text, Input, Button, Loader } from '@tutem/ui';
 import { RIDE_OTP_TIMER_MINUTES } from '@/constants';
 import { useCountdown } from '@/hooks/useCountdown';
+import { useAuth } from '@/hooks/useAuth';
 import { api, Id } from '@tutem/api';
 import { useAction } from 'convex/react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -20,6 +21,7 @@ export default function startRide() {
   const [inputArr, setInputArr] = useState<string[]>(new Array(RIDE_OTP_SIZE).fill(''));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState<'start' | 'resend' | null>(null);
+  const { sessionToken } = useAuth();
   
   const { formattedTime, timeLeft, reset } = useCountdown({ initialTime: RIDE_OTP_TIMER_MINUTES * 60})
   const { showToast } = useToast();
@@ -58,7 +60,7 @@ export default function startRide() {
         return;
       }
       console.log(otp, " OTP")
-      await startRide({ driverId, rideId, otp: Number(otp) });
+      await startRide({ sessionToken: sessionToken || "", driverId, rideId, otp: Number(otp) });
       showToast({ title: 'Ride Started', description: 'Have a safe trip!', type: 'success' });
       router.back();
     } catch (e: any) {
@@ -71,7 +73,7 @@ export default function startRide() {
 
   const resendOtp = async () => {
     try {
-      await generateRideOtp({ rideId })
+      await generateRideOtp({ sessionToken: sessionToken || "", rideId })
       reset();
     } catch (error: any) {
       console.log(`error: ${error}`)

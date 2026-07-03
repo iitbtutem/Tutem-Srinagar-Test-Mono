@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
 import { distanceFormat, formatFare } from '../../../../driver-app/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { BasicHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
@@ -130,6 +131,7 @@ export default function RideRequest() {
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
+  const { sessionToken } = useAuthUser();
 
   const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
   const riderCancelRide = useAction(api.actions.ride.riderCancelRide);
@@ -190,6 +192,7 @@ export default function RideRequest() {
     setIsSearchingDrivers(true);
     try {
       const drivers = await getNearbyDriversAction({
+        sessionToken: sessionToken || "",
         pickup: {
           latitude: ride.pickup.latitude,
           longitude: ride.pickup.longitude,
@@ -229,7 +232,7 @@ export default function RideRequest() {
           ? null
           : driverLocation === null
             ? null
-            : await calculateRiderCancelRideCharges({ rideId: id, driverLocation });
+            : await calculateRiderCancelRideCharges({ sessionToken: sessionToken || "", rideId: id, driverLocation });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error: any) {
@@ -248,6 +251,7 @@ export default function RideRequest() {
     setCancelling(true);
     try {
       await riderCancelRide({
+        sessionToken: sessionToken || "",
         rideId: id,
         riderId: ride.riderId,
         reason: selectedReason,
@@ -287,6 +291,7 @@ export default function RideRequest() {
     setChangingDriver(true);
     try {
       await changeDriver({
+        sessionToken: sessionToken || "",
         rideId: ride._id,
         riderId: ride.riderId,
         driverId: selectedDriver.driver._id,
