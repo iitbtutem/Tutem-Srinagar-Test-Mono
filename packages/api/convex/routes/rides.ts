@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import {
   internalMutation,
   internalQuery,
@@ -829,6 +830,7 @@ export const getRiderCurrentRideByRiderId = query({
 export const getRiderHistory = query({
   args: {
     riderId: v.id("rider"),
+    paginationOpts: paginationOptsValidator,
     statuses: v.optional(
       v.array(v.union(v.literal("Completed"), v.literal("Canceled"))),
     ),
@@ -837,7 +839,7 @@ export const getRiderHistory = query({
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
 
-    const rides = await ctx.db
+    const paginatedRides = await ctx.db
       .query("ride")
       .withIndex("by_rider", (q) => q.eq("riderId", args.riderId))
       .filter((q) => {
@@ -853,17 +855,17 @@ export const getRiderHistory = query({
         return q.or(...statusConditions);
       })
       .order("desc")
-      .collect();
+      .paginate(args.paginationOpts);
 
-    const ridesWithDrivers = Promise.all(
-      rides.map(async (ride) => {
+    const ridesWithDrivers = await Promise.all(
+      paginatedRides.page.map(async (ride) => {
         const driver = await ctx.db.get(ride.driverId);
         if (driver === null) return { ...ride, driver: null };
 
         const userDetails = await ctx.db.get(driver.userId);
         if (userDetails === null) return { ...ride, driver: null };
 
-        // 3. Fetch all ratings where this rider was rated BY drivers (i.e. driver rated the rider)
+        // Fetch all ratings where this driver was rated BY riders
         const riderRatings = rider
           ? await ctx.db
               .query("ratings")
@@ -872,7 +874,7 @@ export const getRiderHistory = query({
               .collect()
           : [];
 
-        // 4. Compute average rating
+        // Compute average rating
         const averageRating =
           riderRatings.length > 0
             ? riderRatings.reduce((sum, r) => sum + r.score, 0) /
@@ -909,7 +911,7 @@ export const getRiderHistory = query({
       }),
     );
 
-    return ridesWithDrivers;
+    return { ...paginatedRides, page: ridesWithDrivers };
   },
 });
 
@@ -1320,12 +1322,13 @@ export const getRideRequests = query({
 export const getDriverHistory = query({
   args: {
     driverId: v.id("driver"),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Invalid user");
 
-    const rides = await ctx.db
+    const paginatedRides = await ctx.db
       .query("ride")
       .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
       .filter((q) =>
@@ -1334,17 +1337,18 @@ export const getDriverHistory = query({
           q.eq(q.field("status"), "Completed"),
         ),
       )
-      .collect();
+      .order("desc")
+      .paginate(args.paginationOpts);
 
-    const ridesWithRiders = Promise.all(
-      rides.map(async (ride) => {
+    const ridesWithRiders = await Promise.all(
+      paginatedRides.page.map(async (ride) => {
         const rider = await ctx.db.get(ride.riderId);
         if (rider === null) return { ...ride, rider: null };
 
         const userDetails = await ctx.db.get(rider.userId);
         if (userDetails === null) return { ...ride, rider: null };
 
-        // 3. Fetch all ratings where this rider was rated BY drivers (i.e. driver rated the rider)
+        // Fetch all ratings where this rider was rated BY drivers
         const riderRatings = rider
           ? await ctx.db
               .query("ratings")
@@ -1353,7 +1357,7 @@ export const getDriverHistory = query({
               .collect()
           : [];
 
-        // 4. Compute average rating
+        // Compute average rating
         const averageRating =
           riderRatings.length > 0
             ? riderRatings.reduce((sum, r) => sum + r.score, 0) /
@@ -1390,7 +1394,7 @@ export const getDriverHistory = query({
       }),
     );
 
-    return ridesWithRiders;
+    return { ...paginatedRides, page: ridesWithRiders };
   },
 });
 
