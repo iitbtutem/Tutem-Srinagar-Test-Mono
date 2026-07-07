@@ -2,11 +2,12 @@ import { AuthContext } from '@/context/AuthContext';
 import { useContext } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
+import { ConvexError } from 'convex/values';
 
 export function useAuthUser() {
   const authState = useContext(AuthContext);
   if (!authState) {
-    throw new Error('useAuthUser must be used inside <AuthProvider>');
+    throw new ConvexError('useAuthUser must be used inside <AuthProvider>');
   }
 
   const {
