@@ -3,11 +3,12 @@ import { useContext } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
 import { Id } from '@tutem/api';
+import { ConvexError } from 'convex/values';
 
 export function useAuth() {
   const authState = useContext(AuthContext);
   if (!authState) {
-    throw new Error('useAuth must be used inside <AuthProvider>');
+    throw new ConvexError('useAuth must be used inside <AuthProvider>');
   }
 
   const {
@@ -23,8 +24,8 @@ export function useAuth() {
   const signOut = async () => {
     if (sessionToken) {
       try {
-        await deleteSessionMutation({ sessionToken });
         await logout({ sessionToken });
+        await deleteSessionMutation({ sessionToken });
       } catch {
         // Even if backend call fails, clear local state so the user is signed out
       }

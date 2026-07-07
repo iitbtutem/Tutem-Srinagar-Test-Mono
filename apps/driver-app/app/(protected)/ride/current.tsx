@@ -25,10 +25,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
-  Text, 
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Text,
   Button,
   Loader,
 } from '@tutem/ui';
@@ -40,7 +40,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Types
 
-type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
+type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverRide>>;
 
 type Cords = { latitude: number; longitude: number };
 
@@ -104,47 +104,59 @@ function RouteLegend({ labelA, labelB }: { labelA: string; labelB: string }) {
   );
 }
 
-function RouteCard ({ pickup, destination }: { pickup: { address : string } & Cords, destination: { address: string } & Cords }) {
+function RouteCard({
+  pickup,
+  destination,
+}: {
+  pickup: { address: string } & Cords;
+  destination: { address: string } & Cords;
+}) {
   return (
     <View className="bg-primary-background mb-1 rounded-2xl border border-slate-800 p-4">
-    <View className="flex-row items-stretch mb-3 pl-0.5">
-      <View className="items-center w-4">
-        <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
-        <View className="w-px flex-1 bg-slate-700 my-1" />
-        <View className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.destination }} />
-      </View>
-      <View className="flex-1 ml-3 gap-2.5">
-        <TouchableOpacity
-          onPress={() => openNavigation(pickup.latitude, pickup.longitude)}
-          activeOpacity={0.75}
-          className="flex-1">
-          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]" style={{ color: colors.pickup }}>
-            Pickup
-          </Text>
-          <Text className="text-title text-[14px] font-semibold leading-5">
-            {pickup?.address ?? 'Pickup not set'}
-          </Text>
-          <Text className="text-xs font-bold" style={{ color: colors.pickup }}>Navigate →</Text>
-        </TouchableOpacity>
+      <View className="mb-3 flex-row items-stretch pl-0.5">
+        <View className="w-4 items-center">
+          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
+          <View className="my-1 w-px flex-1 bg-slate-700" />
+          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.destination }} />
+        </View>
+        <View className="ml-3 flex-1 gap-2.5">
+          <TouchableOpacity
+            onPress={() => openNavigation(pickup.latitude, pickup.longitude)}
+            activeOpacity={0.75}
+            className="flex-1">
+            <Text
+              className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]"
+              style={{ color: colors.pickup }}>
+              Pickup
+            </Text>
+            <Text className="text-title text-[14px] font-semibold leading-5">
+              {pickup?.address ?? 'Pickup not set'}
+            </Text>
+            <Text className="text-xs font-bold" style={{ color: colors.pickup }}>
+              Navigate →
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() =>
-            openNavigation(destination.latitude, destination.longitude)
-          }
-          activeOpacity={0.75}
-          className="flex-1">
-          <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]" style={{ color: colors.destination }}>
-            Destination
-          </Text>
-          <Text className="text-title text-[14px] font-semibold leading-5">
-            {destination?.address ?? 'Destination not set'}
-          </Text>
-          <Text className="text-xs font-bold" style={{ color: colors.destination }}>Navigate →</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => openNavigation(destination.latitude, destination.longitude)}
+            activeOpacity={0.75}
+            className="flex-1">
+            <Text
+              className="mb-0.5 text-[10px] font-bold uppercase tracking-[1.5px]"
+              style={{ color: colors.destination }}>
+              Destination
+            </Text>
+            <Text className="text-title text-[14px] font-semibold leading-5">
+              {destination?.address ?? 'Destination not set'}
+            </Text>
+            <Text className="text-xs font-bold" style={{ color: colors.destination }}>
+              Navigate →
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
-  </View>
-  )
+  );
 }
 
 export default function Ride() {
@@ -177,15 +189,20 @@ export default function Ride() {
   const mapRef = useRef<MapView>(null);
   const activeSheetRef = useRef<BottomSheet>(null);
 
-  const ride = useQuery(api.routes.rides.getRide, (id && sessionToken) ? { id, sessionToken } : 'skip');
+  const ride = useQuery(
+    api.routes.rides.getDriverRide,
+    id && sessionToken ? { id, sessionToken } : 'skip'
+  );
   const settings = useQuery(api.routes.settings.rideSettings);
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);
   const cancelRide = useAction(api.actions.ride.driverCancelRide);
-  const calculateDriverCancelRideCharges = useAction(api.actions.ride.calculateDriverCancelRideCharges);
-  const hasReachedDestination = useMutation(api.routes.rides.hasReachedDestination)
+  const calculateDriverCancelRideCharges = useAction(
+    api.actions.ride.calculateDriverCancelRideCharges
+  );
+  const hasReachedDestination = useMutation(api.routes.rides.hasReachedDestination);
   const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, ride ? { driverId } : 'skip');
-  
+
   const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 
   // Map / route logic
@@ -198,24 +215,24 @@ export default function Ride() {
     };
     const cords: Cords = ride.status === 'Open' ? pickupCords : destCords;
     const isDriverNearby = isNearby(driverLocation, cords, arrivedRadiusInMts);
-    if (isDriverNearby && routeState === null && !ride.hasReachedDestionation) configRoute(cords);
-  }, [driverLocation, ride?._id, ride?.status, ride?.hasReachedDestionation]);
+    if (isDriverNearby && routeState === null && !ride.hasReachedDestination) configRoute(cords);
+  }, [driverLocation, ride?._id, ride?.status, ride?.hasReachedDestination]);
 
   async function configRoute(cords: Cords) {
     if (!driverLocation || !ride) return;
     try {
-      if(ride.status === "Active"){
-        if(cancelStep !== null) setCancelStep(null);
-        if(ride.hasReachedDestionation === false){
+      if (ride.status === 'Active') {
+        if (cancelStep !== null) setCancelStep(null);
+        if (ride.hasReachedDestination === false) {
           try {
-            await hasReachedDestination({ driverId: driverId, rideId: ride._id })
+            await hasReachedDestination({ driverId: driverId, rideId: ride._id });
           } catch (error: any) {
             console.log(`error: ${error}`);
             showToast({
-              type: "error",
-              title: "Error",
-              description: "Failed to update destination reached status"
-            })
+              type: 'error',
+              title: 'Error',
+              description: 'Failed to update destination reached status',
+            });
           }
         }
       } else {
@@ -236,7 +253,7 @@ export default function Ride() {
     fitMap([
       { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude },
       { latitude: ride.destination.latitude, longitude: ride.destination.longitude },
-    ])
+    ]);
   }, [ride]);
 
   const fitMap = useCallback(
@@ -258,7 +275,7 @@ export default function Ride() {
     if (!ride) return;
     setLoading('driverArrived');
     try {
-      await driverArrived({ sessionToken: sessionToken || "", rideId: id, driverId });
+      await driverArrived({ sessionToken: sessionToken || '', rideId: id, driverId });
       setRouteState(null);
       showToast({
         type: 'success',
@@ -274,11 +291,16 @@ export default function Ride() {
   };
 
   const handleCompleteRide = async () => {
-    if(!ride) return;
-    setLoading("completing")
+    if (!ride) return;
+    setLoading('completing');
     try {
-      if(driverLocation === null) throw new Error("Failed to access your location")
-      await completeRide({ sessionToken: sessionToken || "", driverId, rideId: ride._id, driverLocation });
+      if (driverLocation === null) throw new Error('Failed to access your location');
+      await completeRide({
+        sessionToken: sessionToken || '',
+        driverId,
+        rideId: ride._id,
+        driverLocation,
+      });
       pushToPayments();
       showToast({
         type: 'success',
@@ -292,30 +314,30 @@ export default function Ride() {
         description: e.data ?? 'Failed to complete ride.',
       });
     } finally {
-      setLoading(null)
+      setLoading(null);
     }
   };
 
   const pushToPayments = () => {
     router.push({
-      pathname: "/ride/payment",
+      pathname: '/ride/payment',
       params: {
         rideId: id.toString(),
-      }
-    })
-  }
+      },
+    });
+  };
 
   const handleConfirmCancel = async () => {
     setLoading('canceling');
     try {
-      if(driverLocation === null) throw new Error("Failed to access your location")
-        if(selectedReason === null) throw new Error("Please select a valid reason")
+      if (driverLocation === null) throw new Error('Failed to access your location');
+      if (selectedReason === null) throw new Error('Please select a valid reason');
       await cancelRide({
-        sessionToken: sessionToken || "",
+        sessionToken: sessionToken || '',
         rideId: id,
         driverId,
         reason: selectedReason,
-        driverLocation
+        driverLocation,
       });
       setCancelStep(null);
       setSelectedReason(null);
@@ -325,9 +347,9 @@ export default function Ride() {
         description: 'The ride has been cancelled.',
       });
 
-      if(canceledRideCharges === null || canceledRideCharges.calculatedFare <= 0){
-        router.replace("/")
-        if(router.canDismiss()) router.dismissAll();
+      if (canceledRideCharges === null || canceledRideCharges.calculatedFare <= 0) {
+        router.replace('/');
+        if (router.canDismiss()) router.dismissAll();
       } else {
         pushToPayments();
       }
@@ -344,38 +366,45 @@ export default function Ride() {
 
   const calculateCancelRide = async () => {
     if (driverLocation === null || !ride) return;
-    setLoading("canceling")
+    setLoading('canceling');
     try {
-      const result = ride.status !== "Active" ? null : await calculateDriverCancelRideCharges({ sessionToken: sessionToken || "", id, driverLocation });
+      const result =
+        ride.status !== 'Active'
+          ? null
+          : await calculateDriverCancelRideCharges({
+              sessionToken: sessionToken || '',
+              id,
+              driverLocation,
+            });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error) {
       confirm(`error ${error}`);
     } finally {
-      setLoading(null)
+      setLoading(null);
     }
   };
 
   useEffect(() => {
-    if(!ride || ride.status !== "Abort") return;
+    if (!ride || ride.status !== 'Abort') return;
     calculateCancelRide();
-  }, [ride?.status])
+  }, [ride?.status]);
 
   // Guards
   if (ride === undefined || vehicle === undefined || settings === undefined)
     return (
       <View className="absolute inset-0 items-center justify-center bg-background">
-        <Loader subtitle='Loading ride details...' />
+        <Loader subtitle="Loading ride details..." />
       </View>
     );
 
-  if (ride === null) return <Redirect href={"/"} />;  
+  if (ride === null) return <Redirect href={'/'} />;
 
   const handleLocateDriver = () => {
     const { address: pickupAddress, ...pickupCords } = ride.pickup;
     const { address: destAddress, ...destCords } = ride.destination;
-    fitMap([pickupCords, destCords].filter(Boolean) as Cords[])
-  }
+    fitMap([pickupCords, destCords].filter(Boolean) as Cords[]);
+  };
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';
@@ -385,13 +414,13 @@ export default function Ride() {
 
   const driverChanged = ride.driverId !== driverId;
 
-  const rideCanceled = ride.status === "Canceled";
-  const rideAborted = ride.status === "Abort";
-  const rideCompleted = ride.status === "Completed";
-  const riderCancelReason = ride.rideReasons.find(reason => reason.driverId === undefined);
-  const driverCancelReason = ride.rideReasons.find(reason => reason.driverId === driverId);
+  const rideCanceled = ride.status === 'Canceled';
+  const rideAborted = ride.status === 'Abort';
+  const rideCompleted = ride.status === 'Completed';
+  const riderCancelReason = ride.rideReasons.find((reason) => reason.driverId === undefined);
+  const driverCancelReason = ride.rideReasons.find((reason) => reason.driverId === driverId);
 
-  const cancelReasons = ride.status === "Active" ? CANCEL_REASONS_AFTER_START : CANCEL_REASONS;
+  const cancelReasons = ride.status === 'Active' ? CANCEL_REASONS_AFTER_START : CANCEL_REASONS;
 
   return (
     <View className="flex-1">
@@ -407,27 +436,29 @@ export default function Ride() {
       />
       {loading && (
         <Loader
-        title={
-          loading === "driverArrived"
-          ? "Arrived"
-          : loading === "completing"
-          ? "Completing Ride"
-          : (loading === "canceling" && ride.status === "Active")
-          ? "Ending Ride"
-          : undefined
-        }
+          title={
+            loading === 'driverArrived'
+              ? 'Arrived'
+              : loading === 'completing'
+                ? 'Completing Ride'
+                : loading === 'canceling' && ride.status === 'Active'
+                  ? 'Ending Ride'
+                  : undefined
+          }
           subtitle={
-            loading === "driverArrived" 
-              ? "Updating status…" 
-              : loading === "completing" 
-              ? "Calculating fare…" 
-              : (loading === "canceling" && ride.status === "Active")
-              ? "Calculating fare…"
-              : "Cancelling ride…"
-            }
+            loading === 'driverArrived'
+              ? 'Updating status…'
+              : loading === 'completing'
+                ? 'Calculating fare…'
+                : loading === 'canceling' && ride.status === 'Active'
+                  ? 'Calculating fare…'
+                  : 'Cancelling ride…'
+          }
         />
       )}
-      <View style={{ height: MAP_HEIGHT }} pointerEvents={(driverChanged || rideCanceled) ? 'none' : 'auto'}>
+      <View
+        style={{ height: MAP_HEIGHT }}
+        pointerEvents={driverChanged || rideCanceled ? 'none' : 'auto'}>
         {/* Full-screen map */}
         <MapView
           ref={mapRef}
@@ -488,7 +519,7 @@ export default function Ride() {
       <BottomSheet
         ref={activeSheetRef}
         index={1}
-        snapPoints={['23%', "55%"]}
+        snapPoints={['23%', '55%']}
         enablePanDownToClose={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
@@ -545,7 +576,7 @@ export default function Ride() {
               {/* Action buttons */}
               <View className="flex-row gap-3">
                 <Button
-                  disabled={ loading === "canceling"}
+                  disabled={loading === 'canceling'}
                   onPress={() => {
                     setCancelStep(null);
                     setSelectedReason(null);
@@ -554,7 +585,7 @@ export default function Ride() {
                   <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
                 </Button>
                 <Button
-                  disabled={selectedReason === null || loading === "canceling"}
+                  disabled={selectedReason === null || loading === 'canceling'}
                   onPress={() => calculateCancelRide()}
                   className={`flex-1 ${
                     selectedReason === null
@@ -602,87 +633,101 @@ export default function Ride() {
               </View>
 
               {/* Trip stats card */}
-              {(canceledRideCharges && ride.status !== "Open" && ride.status !== "Driver Arrived") && <View className="mb-3 overflow-hidden rounded-2xl border border-slate-700/70">
-                {/* Covered */}
-                <View className="flex-row items-center justify-between px-5 pt-4">
-                  <View className="flex-row items-center gap-2.5">
-                    <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
-                      <MaterialCommunityIcons name="map-marker-check" size={16} color="#10b981" />
-                    </View>
-                    <View>
-                      <Text className="text-xs font-lighter text-primary/50">Distance Covered</Text>
-                      <Text className="text-xs font-lighter text-primary/50">Remaining Distance</Text>
-                    </View>
-                  </View>
-                  <View>
-                    <Text className="text-xs font-lighter text-right text-emerald-400">
-                      {distanceFormat(canceledRideCharges.chargableDistance)}
-                    </Text>
-                    <Text className="text-xs font-lighter text-right text-amber-400">
-                      {distanceFormat(canceledRideCharges.remainingDistance)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Cancellation fare */}
-                <View className="px-5 py-4">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2.5">
-                      <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
-                        <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
-                      </View>
-                      <View>
-                        <Text className="text-sm font-semibold pb-0.5">
-                          Calculated Fare
-                        </Text>
-                        <View className="flex-row justify-between gap-2 hidden">
-                          <View className="gap-1">
-                            <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
-                            <Text className="text-[10px] text-slate-600">
-                              {formatFare(canceledRideCharges.ratePerKm)}
-                            </Text>
-                          </View>
-                          <View className="gap-1">
-                            <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
-                            <Text className="text-[10px] text-slate-600">
-                              {distanceFormat(canceledRideCharges.baseDistance)}
-                            </Text>
-                          </View>
-                          <View className="gap-1">
-                            <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
-                            <Text className="text-[10px] text-slate-600">
-                              {formatFare(canceledRideCharges.basePrice)}
-                            </Text>
-                          </View>
+              {canceledRideCharges &&
+                ride.status !== 'Open' &&
+                ride.status !== 'Driver Arrived' && (
+                  <View className="mb-3 overflow-hidden rounded-2xl border border-slate-700/70">
+                    {/* Covered */}
+                    <View className="flex-row items-center justify-between px-5 pt-4">
+                      <View className="flex-row items-center gap-2.5">
+                        <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
+                          <MaterialCommunityIcons
+                            name="map-marker-check"
+                            size={16}
+                            color="#10b981"
+                          />
+                        </View>
+                        <View>
+                          <Text className="font-lighter text-xs text-primary/50">
+                            Distance Covered
+                          </Text>
+                          <Text className="font-lighter text-xs text-primary/50">
+                            Remaining Distance
+                          </Text>
                         </View>
                       </View>
+                      <View>
+                        <Text className="font-lighter text-right text-xs text-emerald-400">
+                          {distanceFormat(canceledRideCharges.chargableDistance)}
+                        </Text>
+                        <Text className="font-lighter text-right text-xs text-amber-400">
+                          {distanceFormat(canceledRideCharges.remainingDistance)}
+                        </Text>
+                      </View>
                     </View>
-                    <Text className="text-2xl font-extrabold tracking-tight text-red-400">
-                      {formatFare(canceledRideCharges.calculatedFare)}
-                    </Text>
+
+                    {/* Cancellation fare */}
+                    <View className="px-5 py-4">
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center gap-2.5">
+                          <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
+                            <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
+                          </View>
+                          <View>
+                            <Text className="pb-0.5 text-sm font-semibold">Calculated Fare</Text>
+                            <View className="hidden flex-row justify-between gap-2">
+                              <View className="gap-1">
+                                <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
+                                <Text className="text-[10px] text-slate-600">
+                                  {formatFare(canceledRideCharges.ratePerKm)}
+                                </Text>
+                              </View>
+                              <View className="gap-1">
+                                <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
+                                <Text className="text-[10px] text-slate-600">
+                                  {distanceFormat(canceledRideCharges.baseDistance)}
+                                </Text>
+                              </View>
+                              <View className="gap-1">
+                                <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
+                                <Text className="text-[10px] text-slate-600">
+                                  {formatFare(canceledRideCharges.basePrice)}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                        <Text className="text-2xl font-extrabold tracking-tight text-red-400">
+                          {formatFare(canceledRideCharges.calculatedFare)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>}
+                )}
 
               {/* Selected reasons recap */}
-              {ride.status === "Abort" ? (
+              {ride.status === 'Abort' ? (
                 <>
-                  {riderCancelReason && <View className="mb-3 rounded-2xl border border-slate-800/50 px-4 py-3">
-                    <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                      Abort Reason
-                    </Text>
-                    <View key={id} className="mb-1 flex-row items-center gap-2">
-                      <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                      <Text className="text-xs font-medium text-slate-400">{riderCancelReason?.reason}</Text>
+                  {riderCancelReason && (
+                    <View className="mb-3 rounded-2xl border border-slate-800/50 px-4 py-3">
+                      <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        Abort Reason
+                      </Text>
+                      <View key={id} className="mb-1 flex-row items-center gap-2">
+                        <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                        <Text className="text-xs font-medium text-slate-400">
+                          {riderCancelReason?.reason}
+                        </Text>
+                      </View>
                     </View>
-                  </View>}
+                  )}
                 </>
               ) : (
                 <View className="mb-3 rounded-2xl border border-slate-800/50 px-4 py-3">
                   <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    { (ride.status === "Driver Arrived" || ride.status === "Active")
-                    ? "Abort Reason"
-                    : "Cancellation Reason"}
+                    {ride.status === 'Driver Arrived' || ride.status === 'Active'
+                      ? 'Abort Reason'
+                      : 'Cancellation Reason'}
                   </Text>
                   <View key={id} className="mb-1 flex-row items-center gap-2">
                     <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
@@ -692,13 +737,13 @@ export default function Ride() {
               )}
 
               {/* Action buttons */}
-              { ride.status === "Abort" ? (
+              {ride.status === 'Abort' ? (
                 <Button
                   onPress={pushToPayments}
                   className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
                   <Text className="text-[15px] font-bold">Continue →</Text>
                 </Button>
-              ) : ( 
+              ) : (
                 <View className="flex-row gap-3">
                   <Button
                     onPress={() => setCancelStep('reason')}
@@ -710,10 +755,11 @@ export default function Ride() {
                     disabled={loading === 'canceling'}
                     onPress={handleConfirmCancel}
                     className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
-                    
                     <View className="flex-row items-center gap-2">
                       <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
-                      <Text className="text-[15px] font-extrabold text-red-400">{ride.status === "Open" ? "Cancel Ride" : "Abort Ride"}</Text>
+                      <Text className="text-[15px] font-extrabold text-red-400">
+                        {ride.status === 'Open' ? 'Cancel Ride' : 'Abort Ride'}
+                      </Text>
                     </View>
                   </Button>
                 </View>
@@ -722,7 +768,9 @@ export default function Ride() {
               {/* Disclaimer */}
               <Text className="mt-3 text-center text-[11px] leading-4 text-slate-600">
                 Fare will be charged based on distance covered.{'\n'}
-                { ride.status !== "Abort" ? "Repeated cancellations may affect your driver rating." : ""}
+                {ride.status !== 'Abort'
+                  ? 'Repeated cancellations may affect your driver rating.'
+                  : ''}
               </Text>
             </Animated.View>
           )}
@@ -730,216 +778,227 @@ export default function Ride() {
           {/* NORMAL RIDE VIEW */}
           {cancelStep === null && (
             <Animated.View entering={FadeInUp.duration(250)}>
-            {(rideAborted && driverCancelReason) ? (
-              <View className="gap-5">
-                {/* Icon + Header */}
-                <View className="items-center gap-3 py-4">
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
-                    <Text className="text-3xl">🚫</Text>
-                  </View>
-                  <View className="items-center gap-1">
-                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
-                      Ride Aborted
-                    </Text>
-                    <Text className="text-[20px] font-extrabold tracking-tight text-title text-center">
-                      You cancelled this ride
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
-                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
-                  <View key={id} className="mb-1 flex-row items-center gap-2">
-                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                    <Text className="text-xs font-medium text-slate-400">{driverCancelReason.reason}</Text>
-                  </View>
-                </View>
-                <Button
-                  onPress={pushToPayments}
-                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                  <Text className="text-[15px] font-bold">Continue →</Text>
-                </Button>
-              </View>
-            ) : (rideAborted && riderCancelReason) ? (
-              <View className="gap-5">
-                {/* Icon + Header */}
-                <View className="items-center gap-3 py-4">
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
-                    <Text className="text-3xl">🚫</Text>
-                  </View>
-                  <View className="items-center gap-1">
-                    <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
-                      Ride Aborted
-                    </Text>
-                    <Text className="text-[20px] font-extrabold tracking-tight text-white text-center">
-                      Rider cancelled this ride
-                    </Text>
-                  </View>
-                </View>
-                <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
-                  <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"> Abort Reason </Text>
-                  <View key={id} className="mb-1 flex-row items-center gap-2">
-                    <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                    <Text className="text-xs font-medium text-slate-400">{riderCancelReason.reason}</Text>
-                  </View>
-                </View>
-                <Button
-                  onPress={pushToPayments}
-                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                  <Text className="text-[15px] font-bold">Continue →</Text>
-                </Button>
-              </View>
-            ) : ( rideCompleted ? (
-              <View className="gap-4">
-                <View className="flex-row items-center justify-center gap-2">
-                  <View className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                  <Text className="text-[11px] text-center font-bold uppercase tracking-[0.15em] text-emerald-400">
-                    Ride Completed
-                  </Text>
-                </View>
-
-                {/* Heading */}
-                <Text className="text-[22px] text-center font-extrabold tracking-tight text-title leading-snug">
-                  You've reached the{"\n"}destination 🎉
-                </Text>
-
-                {/* Completion Card */}
-                <View className="rounded-2xl border border-emerald-500/20 px-4 py-4">
-                  <Text className="text-sm font-medium text-slate-400 leading-relaxed">
-                    Great job! The ride has been completed successfully. Proceed to review payment details.
-                  </Text>
-                </View>
-                
-                <Button
-                  onPress={pushToPayments}
-                  className="min-h-[54px] flex-1 items-center justify-center rounded-2xl bg-emerald-500">
-                  <Text className="text-[15px] font-bold text-white">Continue to Payment →</Text>
-                </Button>
-              </View>
-            ) : (
-              <View>
-                {/* Status banner */}
-                <RideStatusBanner ride={ride} />
-
-                {/* Rider + fare */}
-                <View className="my-2 flex-row items-center justify-between">
-                  <View className="flex-1 flex-row items-center gap-3">
-                    <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
-                      <Avatar alt="Profile pic" className="h-12 w-12">
-                        <AvatarImage
-                          source={
-                            ride.rider.details.profilePictureKey
-                              ? { uri: ride.rider.details.profilePictureKey }
-                              : require('@/assets/images/avatar.jpg')
-                          }
-                        />
-                        <AvatarFallback className="bg-white/20">
-                          <Text className="text-2xl font-bold text-primary">
-                            {ride.rider.details.firstName[0].toUpperCase() ?? 'R'}
-                          </Text>
-                        </AvatarFallback>
-                      </Avatar>
+              {rideAborted && driverCancelReason ? (
+                <View className="gap-5">
+                  {/* Icon + Header */}
+                  <View className="items-center gap-3 py-4">
+                    <View className="h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/15">
+                      <Text className="text-3xl">🚫</Text>
                     </View>
-                    <View className="flex-1">
-                      <Text
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                        className="text-title mb-0.5 text-[22px] font-extrabold tracking-tight"
-                      >
-                        {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
-                          'Rider'}
+                    <View className="items-center gap-1">
+                      <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                        Ride Aborted
                       </Text>
-                      <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
-                      {ride.rider.ratings?.average != null && (
-                        <View className="mt-0.5 flex-row items-center gap-1">
-                          <Text className="text-xs text-amber-400">★</Text>
-                          <Text className="text-xs font-semibold text-slate-400">
-                            {ride.rider.ratings.average.toFixed(1)}
+                      <Text className="text-title text-center text-[20px] font-extrabold tracking-tight">
+                        You cancelled this ride
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                    <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      {' '}
+                      Abort Reason{' '}
+                    </Text>
+                    <View key={id} className="mb-1 flex-row items-center gap-2">
+                      <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                      <Text className="text-xs font-medium text-slate-400">
+                        {driverCancelReason.reason}
+                      </Text>
+                    </View>
+                  </View>
+                  <Button
+                    onPress={pushToPayments}
+                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                    <Text className="text-[15px] font-bold">Continue →</Text>
+                  </Button>
+                </View>
+              ) : rideAborted && riderCancelReason ? (
+                <View className="gap-5">
+                  {/* Icon + Header */}
+                  <View className="items-center gap-3 py-4">
+                    <View className="h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/15">
+                      <Text className="text-3xl">🚫</Text>
+                    </View>
+                    <View className="items-center gap-1">
+                      <Text className="text-[11px] font-bold uppercase tracking-[0.15em] text-red-400">
+                        Ride Aborted
+                      </Text>
+                      <Text className="text-center text-[20px] font-extrabold tracking-tight text-white">
+                        Rider cancelled this ride
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="mb-5 rounded-2xl border border-slate-800/50 px-4 py-3">
+                    <Text className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      {' '}
+                      Abort Reason{' '}
+                    </Text>
+                    <View key={id} className="mb-1 flex-row items-center gap-2">
+                      <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                      <Text className="text-xs font-medium text-slate-400">
+                        {riderCancelReason.reason}
+                      </Text>
+                    </View>
+                  </View>
+                  <Button
+                    onPress={pushToPayments}
+                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                    <Text className="text-[15px] font-bold">Continue →</Text>
+                  </Button>
+                </View>
+              ) : rideCompleted ? (
+                <View className="gap-4">
+                  <View className="flex-row items-center justify-center gap-2">
+                    <View className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                    <Text className="text-center text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-400">
+                      Ride Completed
+                    </Text>
+                  </View>
+
+                  {/* Heading */}
+                  <Text className="text-title text-center text-[22px] font-extrabold leading-snug tracking-tight">
+                    You've reached the{'\n'}destination 🎉
+                  </Text>
+
+                  {/* Completion Card */}
+                  <View className="rounded-2xl border border-emerald-500/20 px-4 py-4">
+                    <Text className="text-sm font-medium leading-relaxed text-slate-400">
+                      Great job! The ride has been completed successfully. Proceed to review payment
+                      details.
+                    </Text>
+                  </View>
+
+                  <Button
+                    onPress={pushToPayments}
+                    className="min-h-[54px] flex-1 items-center justify-center rounded-2xl bg-emerald-500">
+                    <Text className="text-[15px] font-bold text-white">Continue to Payment →</Text>
+                  </Button>
+                </View>
+              ) : (
+                <View>
+                  {/* Status banner */}
+                  <RideStatusBanner ride={ride} />
+
+                  {/* Rider + fare */}
+                  <View className="my-2 flex-row items-center justify-between">
+                    <View className="flex-1 flex-row items-center gap-3">
+                      <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
+                        <Avatar alt="Profile pic" className="h-12 w-12">
+                          <AvatarImage
+                            source={
+                              ride.rider.details.profilePictureKey
+                                ? { uri: ride.rider.details.profilePictureKey }
+                                : require('@/assets/images/avatar.jpg')
+                            }
+                          />
+                          <AvatarFallback className="bg-white/20">
+                            <Text className="text-2xl font-bold text-primary">
+                              {ride.rider.details.firstName[0].toUpperCase() ?? 'R'}
+                            </Text>
+                          </AvatarFallback>
+                        </Avatar>
+                      </View>
+                      <View className="flex-1">
+                        <Text
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                          className="text-title mb-0.5 text-[22px] font-extrabold tracking-tight">
+                          {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
+                            'Rider'}
+                        </Text>
+                        <GenderAge
+                          gender={ride.rider.details.gender}
+                          dob={ride.rider.details.dob}
+                        />
+                        {ride.rider.ratings?.average != null && (
+                          <View className="mt-0.5 flex-row items-center gap-1">
+                            <Text className="text-xs text-amber-400">★</Text>
+                            <Text className="text-xs font-semibold text-slate-400">
+                              {ride.rider.ratings.average.toFixed(1)}
+                            </Text>
+                            <Text className="text-xs text-slate-600">
+                              ({ride.rider.ratings.totalRatings})
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <View className="ml-3 items-end">
+                      <Text className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                        Est. Fare
+                      </Text>
+                      <Text className="text-2xl font-extrabold tracking-tight text-emerald-600">
+                        {formatFare(ride.fare)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <RouteCard pickup={ride.pickup} destination={ride.destination} />
+
+                  <View className="my-2 flex-row items-center justify-between gap-2">
+                    {/* Arrived button */}
+                    {isRideOpen && isDriverNearby && (
+                      <View className="flex-1">
+                        <Button
+                          className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
+                          disabled={loading === 'driverArrived'}
+                          onPress={handleDriverArrived}>
+                          <MapPinCheck size={20} color="#fff" />
+                          <Text className="text-[17px] font-bold tracking-tight text-white">
+                            I've Arrived
                           </Text>
-                          <Text className="text-xs text-slate-600">
-                            ({ride.rider.ratings.totalRatings})
+                        </Button>
+                      </View>
+                    )}
+
+                    {/* Start Ride button */}
+                    {isDriverArrivedStatus && (
+                      <View className="flex-1">
+                        <Button
+                          className="items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
+                          disabled={loading === 'starting'}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/ride/startRide',
+                              params: { driverId, rideId: id },
+                            })
+                          }>
+                          <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                            ▶ Start Ride
                           </Text>
-                        </View>
+                        </Button>
+                      </View>
+                    )}
+
+                    {/* Complete / Cancel */}
+                    <View className="flex-1">
+                      {ride.hasReachedDestination && ride.status === 'Active' ? (
+                        <Button
+                          className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
+                          disabled={loading === 'completing'}
+                          onPress={handleCompleteRide}>
+                          <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                            {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
+                          </Text>
+                        </Button>
+                      ) : (
+                        <Button
+                          onPress={() => setCancelStep('reason')}
+                          disabled={loading === 'canceling'}
+                          variant="destructive"
+                          className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
+                          <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+                          <Text className="text-sm font-semibold text-red-600">
+                            {ride.status === 'Active' ? 'End Ride' : 'Cancel Ride'}
+                          </Text>
+                        </Button>
                       )}
                     </View>
                   </View>
-                  <View className="ml-3 items-end">
-                    <Text className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                      Est. Fare
-                    </Text>
-                    <Text className="text-2xl font-extrabold tracking-tight text-emerald-600">
-                      {formatFare(ride.fare)}
-                    </Text>
-                  </View>
                 </View>
-
-                <RouteCard pickup={ ride.pickup } destination={ ride.destination } />
-
-                <View className="my-2 flex-row gap-2 justify-between items-center">
-                  {/* Arrived button */}
-                  {isRideOpen && isDriverNearby && (
-                    <View className="flex-1">
-                      <Button
-                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
-                        disabled={loading === 'driverArrived'}
-                        onPress={handleDriverArrived}>
-                        <MapPinCheck size={20} color="#fff" />
-                        <Text className="text-[17px] font-bold tracking-tight text-white">
-                          I've Arrived
-                        </Text>
-                      </Button>
-                    </View>
-                  )}
-
-                  {/* Start Ride button */}
-                  {isDriverArrivedStatus && (
-                    <View className="flex-1">
-                      <Button
-                        className="items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
-                        disabled={loading === 'starting'}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/ride/startRide',
-                            params: { driverId, rideId: id },
-                          })
-                        }>
-                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                          ▶ Start Ride
-                        </Text>
-                      </Button>
-                    </View>
-                  )}
-
-                  {/* Complete / Cancel */}
-                  <View className="flex-1">
-                    {(ride.hasReachedDestionation && ride.status === "Active") ? (
-                      <Button
-                        className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
-                        disabled={loading === 'completing'}
-                        onPress={handleCompleteRide}>
-                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                          {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
-                        </Text>
-                      </Button>
-                    ) : (
-                      <Button
-                        onPress={() => setCancelStep('reason')}
-                        disabled={loading === 'canceling'}
-                        variant="destructive"
-                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
-                        <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
-                          <Text className="text-sm font-semibold text-red-600">
-                          {ride.status === 'Active'
-                            ? 'End Ride'
-                            : 'Cancel Ride'}
-                        </Text>
-                      </Button>
-                    )}
-                  </View>
-                </View>
-              </View>
-            ))};
-              
+              )}
+              ;
             </Animated.View>
           )}
         </BottomSheetScrollView>
@@ -948,21 +1007,18 @@ export default function Ride() {
       {rideCanceled && <RideCanceled riderCancelReason={riderCancelReason} />}
     </View>
   );
-};
+}
 
 function DriverChangedAlert() {
   return (
     <AlertDialog defaultOpen>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-destructive">
-            Ride Reassigned
-          </AlertDialogTitle>
+          <AlertDialogTitle className="text-destructive">Ride Reassigned</AlertDialogTitle>
 
           <AlertDialogDescription>
-            This ride has been reassigned to another driver by the rider. 
-            You will no longer receive updates for this trip. Return to the 
-            home screen to view new ride requests.
+            This ride has been reassigned to another driver by the rider. You will no longer receive
+            updates for this trip. Return to the home screen to view new ride requests.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -971,11 +1027,8 @@ function DriverChangedAlert() {
             className="w-full"
             onPress={() => {
               router.back();
-            }}
-          >
-            <Text className="text-center text-white">
-              Back to Ride Requests
-            </Text>
+            }}>
+            <Text className="text-center text-white">Back to Ride Requests</Text>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -986,29 +1039,24 @@ function DriverChangedAlert() {
 function RideCanceled({
   riderCancelReason,
 }: {
-  riderCancelReason: Ride["rideReasons"][number] | undefined;
+  riderCancelReason: Ride['rideReasons'][number] | undefined;
 }) {
   return (
     <AlertDialog defaultOpen>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-destructive">
-            Ride Canceled
-          </AlertDialogTitle>
+          <AlertDialogTitle className="text-destructive">Ride Canceled</AlertDialogTitle>
 
           {riderCancelReason && (
             <View className="flex-row gap-1 rounded-xl bg-destructive/10 p-2">
               <Text>Reason:</Text>
-              <Text className="font-bold text-destructive">
-                {riderCancelReason.reason}
-              </Text>
+              <Text className="font-bold text-destructive">{riderCancelReason.reason}</Text>
             </View>
           )}
 
           <AlertDialogDescription>
-            The rider has canceled this ride request. You will no longer
-            receive updates for this trip. Return to the home screen to view
-            new ride requests.
+            The rider has canceled this ride request. You will no longer receive updates for this
+            trip. Return to the home screen to view new ride requests.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -1017,11 +1065,8 @@ function RideCanceled({
             className="w-full"
             onPress={() => {
               router.back();
-            }}
-          >
-            <Text className="text-center text-white">
-              Back to Ride Requests
-            </Text>
+            }}>
+            <Text className="text-center text-white">Back to Ride Requests</Text>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

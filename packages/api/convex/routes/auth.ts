@@ -5,8 +5,9 @@ import {
   mutation,
 } from "../_generated/server";
 import { MAX_ATTEMPTS, OTP_EXPIRY_MS } from "../CONSTANTS";
+import { internal } from "../_generated/api";
 
-const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const upsertOtpSession = internalMutation({
   args: {
@@ -120,10 +121,10 @@ export const getUserByPhone = internalQuery({
 export const deleteSession = mutation({
   args: { sessionToken: v.string() },
   handler: async (ctx, { sessionToken }) => {
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionToken", (q) => q.eq("sessionToken", sessionToken))
-      .first();
+    const session = await ctx.runQuery(internal.routes.auth.getSessionByToken, {
+      sessionToken,
+    });
+    if (session === null) return;
     if (session) await ctx.db.delete(session._id);
   },
 });

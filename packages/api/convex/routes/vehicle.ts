@@ -17,24 +17,24 @@ export const getVehicleByDriverId = query({
 
     const rcImageKey = vehicle.rcImageKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: vehicle.rcImageKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: vehicle.rcImageKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     const insuranceImageKey = vehicle.insuranceImageKey
       ? await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({
-          Bucket: process.env.MINIO_BUCKET,
-          Key: vehicle.insuranceImageKey,
-        }),
-        { expiresIn: 300 },
-      )
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: vehicle.insuranceImageKey,
+          }),
+          { expiresIn: 300 },
+        )
       : undefined;
 
     return { ...vehicle, rcImageKey, insuranceImageKey };
@@ -75,12 +75,12 @@ export const addVehicle = mutation({
     const existingVehicle = await ctx.db
       .query("vehicle")
       .withIndex("by_registrationNumber", (q) =>
-        q.eq("registrationNumber", args.registrationNumber)
+        q.eq("registrationNumber", args.registrationNumber),
       )
       .first();
 
     if (existingVehicle) {
-      throw new Error("Vehicle already exists");
+      throw new ConvexError("Vehicle already exists");
     }
 
     const userExistingVehicle = await ctx.db
@@ -92,10 +92,9 @@ export const addVehicle = mutation({
 
     const newVehicle = await ctx.db.insert("vehicle", {
       ...args,
-      isVerified:
-        organization.isVehicleRCVerificationRequired
-          ? "Pending"
-          : "Verified",
+      isVerified: organization.isVehicleRCVerificationRequired
+        ? "Pending"
+        : "Verified",
     });
 
     return newVehicle;
@@ -118,11 +117,13 @@ export const updateVehicle = mutation({
   handler: async (ctx, args) => {
     const { id, ...input } = args;
     const vehicle = await ctx.db.get(args.id);
-    
     if (vehicle === null) throw new ConvexError("Vehicle not found");
 
+    if (args.seatingCapacity < 2 || args.seatingCapacity > 50)
+      throw new ConvexError("Invalid seating capacity");
+
     const driver = await ctx.db.get(vehicle.ownerId);
-    
+
     if (driver === null) throw new ConvexError("Driver not found");
 
     const organization = await ctx.db.get(driver.organizationId);
@@ -130,20 +131,25 @@ export const updateVehicle = mutation({
     if (organization === null)
       throw new ConvexError("Driver not assigned to any organization");
 
-    if (organization.canDriverEditVehicle === false && vehicle.isVerified === "Verified")
+    if (
+      organization.canDriverEditVehicle === false &&
+      vehicle.isVerified === "Verified"
+    )
       throw new ConvexError("Vehicle can't be updated");
 
     if (organization.isVehicleRCVerificationRequired && !input.rcImageKey)
       throw new ConvexError("Vehicle RC is required");
-    if (organization.isVehicleInsuranceImageRequired && !input.insuranceImageKey)
+    if (
+      organization.isVehicleInsuranceImageRequired &&
+      !input.insuranceImageKey
+    )
       throw new ConvexError("Vehicle insurance is required");
 
     await ctx.db.patch(vehicle._id, {
       ...input,
-      isVerified:
-        organization.isVehicleRCVerificationRequired
-          ? "Pending"
-          : "Verified",
+      isVerified: organization.isVehicleRCVerificationRequired
+        ? "Pending"
+        : "Verified",
       rcImageKey: organization.isVehicleRCVerificationRequired
         ? input.rcImageKey
         : undefined,

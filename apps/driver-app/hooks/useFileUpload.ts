@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAction } from 'convex/react';
 import { api } from '@tutem/api';
 import { useAuth } from './useAuth';
+import { ConvexError } from 'convex/values';
 
 type UploadState = {
   isUploading: boolean;
@@ -31,7 +32,7 @@ export function useFileUpload() {
       const extension = fileUri.split('.').pop() || 'jpg';
 
       if (!sessionToken) {
-        throw new Error("No active session token");
+        throw new ConvexError('No active session token');
       }
 
       const { url: presignedUrl, key } = await getPresignedUrl({
@@ -47,7 +48,7 @@ export function useFileUpload() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Couldn't upload image");
+        throw new ConvexError("Couldn't upload image");
       }
 
       setState({ isUploading: false, error: null });

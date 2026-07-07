@@ -2,6 +2,7 @@ import { METERS_IN_KM } from '@/constants';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { differenceInYears } from 'date-fns';
+import { ConvexError } from 'convex/values';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -59,7 +60,7 @@ export function isNearby(
 
 export const getAge = (birthDate: Date): string => {
   if (!(birthDate instanceof Date) || isNaN(birthDate.getTime())) {
-    throw new Error('Invalid date provided');
+    throw new ConvexError('Invalid date provided');
   }
 
   const age = differenceInYears(new Date(), birthDate);

@@ -15,7 +15,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
-  AlertDialogCancel,
 } from '@tutem/ui';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
@@ -29,10 +28,7 @@ import { useEffect, useState, useRef } from 'react';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getDriverChannel } from '@/lib/ably';
 import { fetchRoute } from '@/lib/maps';
-import { useColorScheme } from 'nativewind';
 import ErrorScreen from '@/components/ErrorScreen';
-import PulseDot from '@/components/PulseDot';
-import LiveTimer from '@/components/LiveTimer';
 import * as Location from 'expo-location';
 import { mapStyle } from '@/constants/mapStyles';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
@@ -55,12 +51,6 @@ import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
 // types
 
 type Cords = { latitude: number; longitude: number };
-
-type RouteResult = {
-  polyline: Cords[];
-  distance: { text: string; value: number };
-  duration: string;
-} | null;
 
 type Route = {
   polyline: Cords[];
@@ -87,7 +77,7 @@ const CANCEL_REASONS_ACTIVE = [
 ];
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideById>>;
-type NearbyDriver = FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number];
+type NearbyDriver = FunctionReturnType<typeof api.actions.nearbyDrivers.getNearbyDrivers>[number];
 type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
 // helpers
@@ -153,7 +143,7 @@ export default function RideRequest() {
     chargableDistance: number;
     remainingDistance: number;
     penaltyAmount: number;
-    hasReachedDestionation: boolean;
+    hasReachedDestination: boolean;
   } | null>(null);
 
   const [riderLocation, setRiderLocation] = useState<Cords | null>(null);
@@ -184,7 +174,7 @@ export default function RideRequest() {
 
   const animatedIndex = useSharedValue(1);
 
-  const getNearbyDriversAction = useAction(api.actions.actions.getNearbyDrivers);
+  const getNearbyDriversAction = useAction(api.actions.nearbyDrivers.getNearbyDrivers);
   const changeDriver = useAction(api.actions.ride.changeDriver);
 
   const fetchDrivers = async () => {
@@ -192,7 +182,7 @@ export default function RideRequest() {
     setIsSearchingDrivers(true);
     try {
       const drivers = await getNearbyDriversAction({
-        sessionToken: sessionToken || "",
+        sessionToken: sessionToken || '',
         pickup: {
           latitude: ride.pickup.latitude,
           longitude: ride.pickup.longitude,
@@ -232,7 +222,11 @@ export default function RideRequest() {
           ? null
           : driverLocation === null
             ? null
-            : await calculateRiderCancelRideCharges({ sessionToken: sessionToken || "", rideId: id, driverLocation });
+            : await calculateRiderCancelRideCharges({
+                sessionToken: sessionToken || '',
+                rideId: id,
+                driverLocation,
+              });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error: any) {
@@ -251,7 +245,7 @@ export default function RideRequest() {
     setCancelling(true);
     try {
       await riderCancelRide({
-        sessionToken: sessionToken || "",
+        sessionToken: sessionToken || '',
         rideId: id,
         riderId: ride.riderId,
         reason: selectedReason,
@@ -291,7 +285,7 @@ export default function RideRequest() {
     setChangingDriver(true);
     try {
       await changeDriver({
-        sessionToken: sessionToken || "",
+        sessionToken: sessionToken || '',
         rideId: ride._id,
         riderId: ride.riderId,
         driverId: selectedDriver.driver._id,
@@ -1290,8 +1284,8 @@ export default function RideRequest() {
                     </View>
                   </View>
 
-                  {/* Penalty row (only when hasReachedDestionation === false) */}
-                  {!canceledRideCharges.hasReachedDestionation &&
+                  {/* Penalty row (only when hasReachedDestination === false) */}
+                  {!canceledRideCharges.hasReachedDestination &&
                     canceledRideCharges.penaltyAmount > 0 && (
                       <View className="flex-row items-center justify-between px-5 pt-3">
                         <View className="flex-row items-center gap-2.5">

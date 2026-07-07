@@ -70,7 +70,6 @@ export default function Register() {
   });
 
   const phoneNumber = phoneParam ?? authPhone ?? '';
-  const displayPhone = phoneNumber.startsWith('+91') ? phoneNumber.slice(3) : phoneNumber;
 
   const onSubmit = handleSubmit(async (data: z.infer<typeof formSchema>) => {
     try {
@@ -84,7 +83,7 @@ export default function Register() {
       const convexUserId = await addUser({
         ...data,
         dob: String(data.dob),
-        phoneNumber: displayPhone,
+        phoneNumber: phoneNumber,
         expoPushToken: expoPushToken ?? undefined,
       });
 
@@ -182,7 +181,7 @@ export default function Register() {
           <View className="relative">
             <Input
               inputMode="tel"
-              value={displayPhone}
+              value={phoneNumber}
               editable={false}
               className="pl-14 opacity-60"
             />

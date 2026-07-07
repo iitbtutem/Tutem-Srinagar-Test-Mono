@@ -32,7 +32,10 @@ export default function Feedback() {
   const router = useRouter();
   const toast = useToast();
 
-  const ride = useQuery(api.routes.rides.getRiderCurrentRideById, rideId ? { id: rideId } : 'skip');
+  const ride = useQuery(
+    api.routes.rides.getDriverCurrentRideById,
+    rideId ? { id: rideId } : 'skip'
+  );
 
   const submitFeedback = useMutation(api.routes.rides.submitRating);
 
@@ -66,6 +69,7 @@ export default function Feedback() {
       await submitFeedback({
         rideId,
         raterType: 'Driver',
+        raterId: ride.driverId,
         score,
         comment: comment.trim() || undefined,
       });
@@ -131,7 +135,6 @@ export default function Feedback() {
           <Text className="text-title text-lg font-semibold">
             {`${rider.userDetails.firstName} ${rider.userDetails?.lastName ?? ''}`}
           </Text>
-          <Text className="mt-0.5 text-sm text-zinc-400">{ride.vehicle?.model ?? 'Vehicle'}</Text>
         </View>
       </View>
 

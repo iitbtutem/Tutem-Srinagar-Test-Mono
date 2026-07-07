@@ -12,7 +12,7 @@ import {
 import { api, Id } from '@tutem/api';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, ScrollView, View } from 'react-native';
+import { Image, ScrollView, View } from 'react-native';
 import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
 import { useRouter } from 'expo-router';
@@ -25,7 +25,7 @@ export default function Payment() {
   const { sessionToken } = useAuth();
 
   const ride = useQuery(
-    api.routes.rides.getRide,
+    api.routes.rides.getDriverRide,
     rideId && sessionToken ? { id: rideId, sessionToken } : 'skip'
   );
 
@@ -95,7 +95,7 @@ export default function Payment() {
       </Card>
 
       {/* QR Code Card */}
-      {ride.driver.paymentQrCodeKey && (
+      {ride.driverPaymentQrCodeKey && (
         <Card className="overflow-hidden rounded-2xl border border-primary">
           <CardHeader className="px-5 pb-3 pt-5">
             <View className="flex-row items-center gap-2">
@@ -117,7 +117,7 @@ export default function Payment() {
             <View className="items-center">
               <View className="mb-4 rounded-2xl bg-white p-3 shadow-lg shadow-black/30">
                 <Image
-                  source={{ uri: ride.driver.paymentQrCodeKey }}
+                  source={{ uri: ride.driverPaymentQrCodeKey }}
                   className="h-72 w-72 rounded-xl"
                   resizeMode="contain"
                 />
@@ -130,7 +130,7 @@ export default function Payment() {
         </Card>
       )}
 
-      {!ride.driver.paymentQrCodeKey && (
+      {!ride.driverPaymentQrCodeKey && (
         <Text className="mb-4 mt-5 text-center text-xs leading-5 text-zinc-600">
           Cash payments are always accepted.{'\n'}QR code enables contactless UPI collection. Add QR
           code in your profile to offer digital payment option to passengers.

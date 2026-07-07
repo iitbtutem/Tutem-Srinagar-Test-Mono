@@ -64,6 +64,7 @@ export default function Feedback() {
       await submitFeedback({
         rideId,
         raterType: 'Rider',
+        raterId: ride.riderId,
         score,
         comment: comment.trim() || undefined,
       });

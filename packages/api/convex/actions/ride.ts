@@ -97,6 +97,13 @@ export const changeDriver = action({
       },
     );
 
+    const previousDriverPushToken = await ctx.runQuery(
+      internal.routes.driver.getDriverPushTokenInternal,
+      {
+        id: args.driverId,
+      },
+    );
+
     const driver = await ctx.runQuery(
       internal.routes.driver.getDriverInternal,
       {
@@ -104,11 +111,18 @@ export const changeDriver = action({
       },
     );
 
+    if (previousDriverPushToken)
+      await sendNotification({
+        pushTokens: [previousDriverPushToken],
+        title: "Ride Canceled 🚖",
+        body: "Your current ride has been canceled by rider. You can now a accept new ride request.",
+      });
+
     if (driver.expoPushToken && ride.requestStatus === "Accepted")
       await sendNotification({
         pushTokens: [driver.expoPushToken],
-        title: "Ride Canceled 🚖",
-        body: "Your current ride has been canceled by rider. You can now a accept new ride request.",
+        title: "New Ride Request 🚖",
+        body: "You have received a new ride request. Open the app to view trip details and accept it.",
       });
   },
 });
@@ -161,7 +175,7 @@ export const calculateRiderCancelRideCharges = action({
     chargableDistance: number;
     remainingDistance: number;
     penaltyAmount: number;
-    hasReachedDestionation: boolean;
+    hasReachedDestination: boolean;
   }> => {
     await validateSession(ctx, args.sessionToken);
 
@@ -177,7 +191,7 @@ export const calculateRiderCancelRideCharges = action({
     const settings = await ctx.runQuery(
       internal.routes.settings.rideSettingsInternal,
     );
-    const penaltyAmount = settings.cancellationPenalty ?? 50;
+    const penaltyAmount = settings?.cancellationPenalty ?? 50;
 
     // chargableDistance = distanceCovered (no arrivedRadius threshold for rider)
     const chargableDistanceInMts = Math.max(
@@ -187,8 +201,8 @@ export const calculateRiderCancelRideCharges = action({
 
     let calculatedFare: number;
 
-    if (!ride.hasReachedDestionation) {
-      if (chargableDistanceInMts <= settings.arrivedDistance) {
+    if (!ride.hasReachedDestination) {
+      if (chargableDistanceInMts <= (settings?.arrivedDistance ?? 100)) {
         calculatedFare = penaltyAmount;
       } else if (chargableDistanceInMts < orgRate.baseDistance) {
         calculatedFare = orgRate.baseDistanceRate + penaltyAmount;
@@ -220,7 +234,7 @@ export const calculateRiderCancelRideCharges = action({
       chargableDistance: chargableDistanceInMts,
       remainingDistance: remainingDistanceInMts,
       penaltyAmount,
-      hasReachedDestionation: ride.hasReachedDestionation,
+      hasReachedDestination: ride.hasReachedDestination,
     };
   },
 });
@@ -264,7 +278,7 @@ export const riderCancelRide = action({
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
       );
-      const penaltyAmount = settings.cancellationPenalty ?? 50;
+      const penaltyAmount = settings?.cancellationPenalty ?? 50;
 
       const chargableDistanceInMts = Math.max(
         0,
@@ -272,8 +286,8 @@ export const riderCancelRide = action({
       );
 
       let fare: number;
-      if (!ride.hasReachedDestionation) {
-        if (chargableDistanceInMts < settings.arrivedDistance) {
+      if (!ride.hasReachedDestination) {
+        if (chargableDistanceInMts < (settings?.arrivedDistance ?? 100)) {
           fare = penaltyAmount;
         } else if (chargableDistanceInMts < orgRate.baseDistance) {
           fare = orgRate.baseDistanceRate + penaltyAmount;
@@ -378,7 +392,7 @@ export const calculateDriverCancelRideCharges = action({
     const settings = await ctx.runQuery(
       internal.routes.settings.rideSettingsInternal,
     );
-    const arrivedRadiusInMts = settings.arrivedDistance;
+    const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 
     const distanceCoveredInMts = Math.max(
       0,
@@ -445,7 +459,7 @@ export const driverCancelRide = action({
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
       );
-      const arrivedRadiusInMts = settings.arrivedDistance;
+      const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 
       const orgRate = organizationRates.find(
         (rate) => rate.vehicleClass === driver.vehicle?.class,
@@ -662,7 +676,7 @@ export const completeRide = action({
     const settings = await ctx.runQuery(
       internal.routes.settings.rideSettingsInternal,
     );
-    const arrivedRadiusInMts = settings.arrivedDistance;
+    const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 
     const orgRate = organizationRates.find(
       (rate) => rate.vehicleClass === driver.vehicle?.class,

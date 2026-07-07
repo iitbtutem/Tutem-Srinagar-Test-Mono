@@ -336,7 +336,11 @@ export const RideRequests = memo(
       }
       setActionLoading('accept');
       try {
-        await acceptRide({ sessionToken: sessionToken || "", driverId: driver.driverDetails._id, rideId });
+        await acceptRide({
+          sessionToken: sessionToken || '',
+          driverId: driver.driverDetails._id,
+          rideId,
+        });
         showToast({
           title: 'Ride Accepted',
           description: 'Ride accepted successfully',
@@ -354,7 +358,11 @@ export const RideRequests = memo(
       if (!driver?.driverDetails) return;
       setActionLoading('reject');
       try {
-        await rejectRide({ sessionToken: sessionToken || "", driverId: driver.driverDetails._id, rideId });
+        await rejectRide({
+          sessionToken: sessionToken || '',
+          driverId: driver.driverDetails._id,
+          rideId,
+        });
         showToast({ title: 'Ride Rejected', description: 'Ride rejected', type: 'success' });
       } catch (e) {
         console.error(e);
@@ -390,7 +398,13 @@ export const RideRequests = memo(
           {/* MAP BLOCK - fixed height when rides exist, taller when no rides */}
           <View
             style={{
-              height: currentRide ? SCREEN_HEIGHT * 0.5 : hasRides ? MAP_HEIGHT : MAP_HEIGHT * 2,
+              height: !vehicle
+                ? SCREEN_HEIGHT * 0.65
+                : currentRide
+                  ? SCREEN_HEIGHT * 0.5
+                  : hasRides
+                    ? MAP_HEIGHT
+                    : MAP_HEIGHT * 2,
             }}
             className="relative">
             <MapView

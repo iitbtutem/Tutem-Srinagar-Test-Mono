@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAddressFromCoords } from '@/lib/maps';
+import { ConvexError } from 'convex/values';
 
 export function useAddressFromCoords(latitude?: number, longitude?: number) {
   const [address, setAddress] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function useAddressFromCoords(latitude?: number, longitude?: number) {
         const result = await getAddressFromCoords(latitude!, longitude!);
         if (isMounted) setAddress(result);
       } catch (err) {
-        if (isMounted) setError(err instanceof Error ? err : new Error('Unknown error'));
+        if (isMounted) setError(err instanceof Error ? err : new ConvexError('Unknown error'));
       } finally {
         if (isMounted) setLoading(false);
       }

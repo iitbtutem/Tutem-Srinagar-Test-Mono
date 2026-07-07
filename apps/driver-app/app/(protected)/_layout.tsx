@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { useDriver } from '@/hooks/useDriver';
 import { Stack } from 'expo-router';
@@ -11,13 +10,11 @@ export default function ProtectedLayout() {
   const protectedGuard = !!sessionToken && !!user;
 
   return (
-    <SafeAreaView edges={["bottom"]} className='flex-1' >
+    <SafeAreaView edges={['bottom']} className="flex-1">
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={protectedGuard && user?.driverDetails !== null}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="editProfile"
-          />
+          <Stack.Screen name="editProfile" />
           <Stack.Screen
             name="createVehicle"
             options={{

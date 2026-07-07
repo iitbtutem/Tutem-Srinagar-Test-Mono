@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { ConvexError } from 'convex/values';
 
 export default async function registerForPushNotificationsAsync() {
   if (Platform.OS === 'android') {
@@ -21,12 +22,12 @@ export default async function registerForPushNotificationsAsync() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      throw new Error('Permission not granted to get push token for push notification!');
+      throw new ConvexError('Permission not granted to get push token for push notification!');
     }
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
     if (!projectId) {
-      throw new Error('Project ID not found');
+      throw new ConvexError('Project ID not found');
     }
     try {
       const pushTokenString = (
@@ -37,9 +38,9 @@ export default async function registerForPushNotificationsAsync() {
       console.log(pushTokenString);
       return pushTokenString;
     } catch (e: unknown) {
-      throw new Error(`${e}`);
+      throw new ConvexError(`${e}`);
     }
   } else {
-    throw new Error('Must use physical device for push notifications');
+    throw new ConvexError('Must use physical device for push notifications');
   }
 }

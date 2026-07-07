@@ -1,6 +1,6 @@
 "use node";
 
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { NearbyDriverResult } from "../routes/rides";
@@ -54,20 +54,20 @@ export const getNearbyDrivers = action({
     const ABLY_API_KEY =
       process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;
     if (!ABLY_API_KEY) {
-      throw new Error("ABLY_API_KEY not configured in Convex environment");
+      throw new ConvexError(
+        "ABLY_API_KEY not configured in Convex environment",
+      );
     }
     const ABLY_URL = process.env.ABLY_URL || process.env.EXPO_PUBLIC_ABLY_URL;
     if (!ABLY_URL) {
-      throw new Error("ABLY_URL not configured in Convex environment");
+      throw new ConvexError("ABLY_URL not configured in Convex environment");
     }
-
-    console.log("Action called ");
 
     try {
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
       );
-      const NearByRadius = settings.nearbyRadius / METERS_IN_KM;
+      const NearByRadius = (settings?.nearbyRadius ?? 3) / METERS_IN_KM;
 
       const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
       const response = await fetch(ABLY_URL, {

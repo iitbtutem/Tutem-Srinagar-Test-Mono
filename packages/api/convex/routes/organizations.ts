@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { VEHICLE_CLASS } from "../CONSTANTS";
 import { isPointInsidePolygon } from "../helpers/maps";
@@ -11,18 +11,59 @@ export const createOrganization = mutation({
     isLicenseVerficationRequired: v.boolean(),
     isVehicleRCVerificationRequired: v.boolean(),
     isVehicleInsuranceImageRequired: v.boolean(),
-    canDriverEditLicesnse: v.boolean(),
+    canDriverEditLicense: v.boolean(),
     canDriverEditVehicle: v.boolean(),
+    polygon: v.optional(
+      v.array(
+        v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+      ),
+    ),
+    boundingBox: v.optional(
+      v.object({
+        north: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        south: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        east: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        west: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("organization")
+      .filter((q) => q.eq(q.field("name"), args.name))
+      .first();
+    if (existing) {
+      throw new ConvexError("Organization already exists");
+    }
+
     const id = await ctx.db.insert("organization", {
       name: args.name,
       address: args.address,
       isLicenseVerficationRequired: args.isLicenseVerficationRequired,
       isVehicleRCVerificationRequired: args.isVehicleRCVerificationRequired,
-      canDriverEditLicesnse: args.canDriverEditLicesnse,
+      canDriverEditLicense: args.canDriverEditLicense,
       canDriverEditVehicle: args.canDriverEditVehicle,
       isVehicleInsuranceImageRequired: args.isVehicleInsuranceImageRequired,
+      polygon: args.polygon,
+      boundingBox: args.boundingBox,
     });
     return id;
   },
@@ -41,7 +82,7 @@ export const getNearbyOrganization = query({
     driverLocation: v.object({
       latitude: v.number(),
       longitude: v.number(),
-    })
+    }),
   },
 
   handler: async (ctx, args) => {
@@ -52,29 +93,41 @@ export const getNearbyOrganization = query({
           q.eq(q.field("boundingBox"), undefined),
           q.and(
             // latitude
-            q.gte(q.field("boundingBox.north.latitude"), args.driverLocation.latitude),
-            q.lte(q.field("boundingBox.south.latitude"), args.driverLocation.latitude),
+            q.gte(
+              q.field("boundingBox.north.latitude"),
+              args.driverLocation.latitude,
+            ),
+            q.lte(
+              q.field("boundingBox.south.latitude"),
+              args.driverLocation.latitude,
+            ),
 
             // longitude
-            q.gte(q.field("boundingBox.east.longitude"), args.driverLocation.longitude),
-            q.lte(q.field("boundingBox.west.longitude"), args.driverLocation.longitude)
-          )
-        )
+            q.gte(
+              q.field("boundingBox.east.longitude"),
+              args.driverLocation.longitude,
+            ),
+            q.lte(
+              q.field("boundingBox.west.longitude"),
+              args.driverLocation.longitude,
+            ),
+          ),
+        ),
       )
       .collect();
-      
-    const organizations =
-      candidateOrganizations.filter((org) => {
-        // If no polygon, allow by default
-        if ((!org.boundingBox && !org.polygon) || !org.polygon || org.polygon.length < 3) {
-          return true;
-        }
 
-        return isPointInsidePolygon(
-          args.driverLocation,
-          org.polygon
-        );
-      });
+    const organizations = candidateOrganizations.filter((org) => {
+      // If no polygon, allow by default
+      if (
+        (!org.boundingBox && !org.polygon) ||
+        !org.polygon ||
+        org.polygon.length < 3
+      ) {
+        return true;
+      }
+
+      return isPointInsidePolygon(args.driverLocation, org.polygon);
+    });
 
     return organizations;
   },
@@ -98,22 +151,58 @@ export const updateOrganization = mutation({
     address: v.optional(v.string()),
     isLicenseVerficationRequired: v.optional(v.boolean()),
     isVehicleRCVerificationRequired: v.optional(v.boolean()),
-    canDriverEditLicesnse: v.optional(v.boolean()),
+    isVehicleInsuranceImageRequired: v.optional(v.boolean()),
+    canDriverEditLicense: v.optional(v.boolean()),
     canDriverEditVehicle: v.optional(v.boolean()),
+    polygon: v.optional(
+      v.array(
+        v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+      ),
+    ),
+    boundingBox: v.optional(
+      v.object({
+        north: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        south: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        east: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+
+        west: v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        }),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
-    const { id, ...fields } = args;
+    const { id, polygon, boundingBox, ...fields } = args;
 
     const existing = await ctx.db.get(id);
     if (!existing) {
-      throw new Error(`Organization with id ${id} not found`);
+      throw new ConvexError(`Organization with id ${id} not found`);
     }
 
     const updates = Object.fromEntries(
-      Object.entries(fields).filter(([_, v]) => v !== undefined)
+      Object.entries(fields).filter(([_, v]) => v !== undefined),
     );
 
-    await ctx.db.patch(id, updates);
+    await ctx.db.patch(id, {
+      ...updates,
+      polygon: polygon,
+      boundingBox: boundingBox,
+    });
     return await ctx.db.get(id);
   },
 });
@@ -126,9 +215,23 @@ export const deleteOrganization = mutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing) {
-      throw new Error(`Organization with id ${args.id} not found`);
+      throw new ConvexError(`Organization with id ${args.id} not found`);
     }
     await ctx.db.delete(args.id);
+    await ctx.db
+      .query("organizationsRate")
+      .filter((q) => q.eq(q.field("organizationId"), args.id))
+      .collect()
+      .then((rates) =>
+        Promise.all(rates.map((rate) => ctx.db.delete(rate._id))),
+      );
+    await ctx.db
+      .query("driver")
+      .filter((q) => q.eq(q.field("organizationId"), args.id))
+      .collect()
+      .then((drivers) =>
+        Promise.all(drivers.map((driver) => ctx.db.delete(driver._id))),
+      );
     return { success: true, id: args.id };
   },
 });
@@ -144,6 +247,21 @@ export const createOrganizationRate = mutation({
     organizationId: v.id("organization"),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("organizationsRate")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("organizationId"), args.organizationId),
+          q.eq(q.field("vehicleClass"), args.vehicleClass),
+        ),
+      )
+      .first();
+
+    if (existing) {
+      throw new ConvexError(
+        "Organization rate already exists for this organization and vehicle class",
+      );
+    }
     const id = await ctx.db.insert("organizationsRate", {
       vehicleClass: args.vehicleClass,
       baseDistance: args.baseDistance,
@@ -165,7 +283,7 @@ export const getOrganizationRates = query({
     return await ctx.db
       .query("organizationsRate")
       .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
+        q.eq("organizationId", args.organizationId),
       )
       .collect();
   },
@@ -191,7 +309,7 @@ export const getOrganizationRateByVehicleClass = query({
     const rates = await ctx.db
       .query("organizationsRate")
       .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
+        q.eq("organizationId", args.organizationId),
       )
       .filter((q) => q.eq(q.field("vehicleClass"), args.vehicleClass))
       .first();
@@ -204,7 +322,7 @@ export const updateOrganizationRate = mutation({
   args: {
     id: v.id("organizationsRate"),
     vehicleClass: v.optional(
-      v.union(...VEHICLE_CLASS.map((type) => v.literal(type)))
+      v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),
     ),
     baseDistance: v.optional(v.number()),
     baseDistanceRate: v.optional(v.number()),
@@ -216,12 +334,12 @@ export const updateOrganizationRate = mutation({
 
     const existing = await ctx.db.get(id);
     if (!existing) {
-      throw new Error(`Organization rate with id ${id} not found`);
+      throw new ConvexError(`Organization rate with id ${id} not found`);
     }
 
     // Only patch fields that were provided
     const updates = Object.fromEntries(
-      Object.entries(fields).filter(([_, v]) => v !== undefined)
+      Object.entries(fields).filter(([_, v]) => v !== undefined),
     );
 
     await ctx.db.patch(id, updates);
@@ -237,7 +355,7 @@ export const deleteOrganizationRate = mutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing) {
-      throw new Error(`Organization rate with id ${args.id} not found`);
+      throw new ConvexError(`Organization rate with id ${args.id} not found`);
     }
     await ctx.db.delete(args.id);
     return { success: true, id: args.id };
@@ -253,14 +371,17 @@ export const deleteAllOrganizationRates = mutation({
     const rates = await ctx.db
       .query("organizationsRate")
       .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
+        q.eq("organizationId", args.organizationId),
       )
-      .collect();
+      .collect()
+      .then(async (rates) => {
+        await Promise.all(rates.map((rate) => ctx.db.delete(rate._id)));
+        return rates;
+      });
 
     return rates;
   },
 });
-
 
 export const getOrganizationRatesInternal = internalQuery({
   args: {
@@ -270,9 +391,9 @@ export const getOrganizationRatesInternal = internalQuery({
     const rates = await ctx.db
       .query("organizationsRate")
       .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
+        q.eq("organizationId", args.organizationId),
       )
       .collect();
     return rates;
-  }
-})
+  },
+});

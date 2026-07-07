@@ -530,7 +530,7 @@ export default function Profile() {
             </View>
 
             {/* Edit button */}
-            {(driver.driverDetails?.organization?.canDriverEditLicesnse ||
+            {(driver.driverDetails?.organization?.canDriverEditLicense ||
               driver.driverDetails?.isLicenseVerified !== 'Verified') && (
               <TouchableOpacity
                 onPress={() => {

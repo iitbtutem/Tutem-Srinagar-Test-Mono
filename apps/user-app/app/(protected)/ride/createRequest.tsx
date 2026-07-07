@@ -1,23 +1,13 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import uuid from 'react-native-uuid';
 import Constants from 'expo-constants';
-import {
-  View,
-  TouchableOpacity,
-  Keyboard,
-  ActivityIndicator,
-  BackHandler,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, Keyboard, ActivityIndicator, BackHandler } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import BottomSheet, { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// import * as Location from 'expo-location';
-import { useColorScheme } from 'nativewind';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { mapStyle } from '@/constants/mapStyles';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -102,7 +92,7 @@ function SheetLayer({ children, animatedIndex, visibleFrom = 0, visibleUntil }: 
 
 // NearbyDriversPanel
 type NearbyDriver = NonNullable<
-  FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number]
+  FunctionReturnType<typeof api.actions.nearbyDrivers.getNearbyDrivers>[number]
 >;
 
 type NearbyDriversPanelProps = {
@@ -133,7 +123,6 @@ function NearbyDriversPanel({
   isSearchingDrivers,
 }: NearbyDriversPanelProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
-  console.log('DRIVERS', drivers);
 
   return (
     <View className="mb-6 px-4 pt-2">
@@ -360,7 +349,7 @@ export default function WhereTo() {
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
 
-  const getNearbyDriversAction = useAction(api.actions.actions.getNearbyDrivers);
+  const getNearbyDriversAction = useAction(api.actions.nearbyDrivers.getNearbyDrivers);
 
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);
@@ -403,7 +392,7 @@ export default function WhereTo() {
         setIsSearchingDrivers(true);
         try {
           const drivers = await getNearbyDriversAction({
-            sessionToken: sessionToken || "",
+            sessionToken: sessionToken || '',
             pickup: {
               latitude: pickupLat,
               longitude: pickupLon,
@@ -727,7 +716,7 @@ export default function WhereTo() {
       if (destination === null) throw new Error('Please select destination');
 
       const rideId = await bookRide({
-        sessionToken: sessionToken || "",
+        sessionToken: sessionToken || '',
         riderId: rider.riderDetails._id,
         driverId: selectedDriver.driver._id,
         pickup: {

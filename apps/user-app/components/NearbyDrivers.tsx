@@ -17,7 +17,7 @@ const VEHICLE_ICONS = {
 
 // NearbyDrivers
 type NearbyDriver = NonNullable<
-  FunctionReturnType<typeof api.actions.actions.getNearbyDrivers>[number]
+  FunctionReturnType<typeof api.actions.nearbyDrivers.getNearbyDrivers>[number]
 >;
 
 type NearbyDriversProps = {

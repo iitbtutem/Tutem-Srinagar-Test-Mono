@@ -121,12 +121,6 @@ export default function EditProfile() {
     },
   });
 
-  const displayPhone = phoneNumber
-    ? phoneNumber.startsWith('+91')
-      ? phoneNumber.slice(3)
-      : phoneNumber
-    : '';
-
   const selectedOrgId = useWatch({
     control,
     name: 'organizationId',
@@ -358,7 +352,7 @@ export default function EditProfile() {
               <View className="relative">
                 <Input
                   inputMode="tel"
-                  value={displayPhone}
+                  value={phoneNumber}
                   editable={false}
                   className="pl-14 opacity-60"
                 />

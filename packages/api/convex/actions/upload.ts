@@ -1,4 +1,4 @@
-"use node"
+"use node";
 
 import { action } from "../_generated/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -11,7 +11,7 @@ export const getPresignedUrl = action({
   args: {
     sessionToken: v.string(),
     key: v.string(),
-    contentType: v.string()
+    contentType: v.string(),
   },
   handler: async (ctx, args) => {
     // Validate session
@@ -25,7 +25,7 @@ export const getPresignedUrl = action({
       ContentType: args.contentType,
     });
 
-    // Generate the presigned URL valid for 1 hour
+    // Generate the presigned URL valid for 5 minutes
     const url = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
     return { url, key: args.key };

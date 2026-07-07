@@ -1,10 +1,14 @@
+import { ConvexError } from "convex/values";
+
 export async function getAddressFromCoords(cords: {
-  latitude: number,
-  longitude: number,
+  latitude: number;
+  longitude: number;
 }): Promise<string> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    throw new Error("Google maps apikey not configured in Convex environment");
+    throw new ConvexError(
+      "Google maps apikey not configured in Convex environment",
+    );
   }
 
   if (!apiKey) {
@@ -38,7 +42,9 @@ export async function fetchRoute(
   console.log("Fetch route called …");
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    throw new Error("Google maps apikey not configured in Convex environment");
+    throw new ConvexError(
+      "Google maps apikey not configured in Convex environment",
+    );
   }
 
   if (!apiKey) {
@@ -92,7 +98,7 @@ function decodePolyline(t: string) {
     points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
   }
   return points;
-};
+}
 
 // utils/geo.ts
 
@@ -114,35 +120,25 @@ export type BoundingBox = {
  */
 export function getDistanceInMeters(
   point1: Coordinate,
-  point2: Coordinate
+  point2: Coordinate,
 ): number {
   const EARTH_RADIUS_IN_METERS = 6371e3;
 
   const lat1 = degreesToRadians(point1.latitude);
   const lat2 = degreesToRadians(point2.latitude);
 
-  const deltaLat = degreesToRadians(
-    point2.latitude - point1.latitude
-  );
+  const deltaLat = degreesToRadians(point2.latitude - point1.latitude);
 
-  const deltaLng = degreesToRadians(
-    point2.longitude - point1.longitude
-  );
+  const deltaLng = degreesToRadians(point2.longitude - point1.longitude);
 
   const a =
-    Math.sin(deltaLat / 2) *
-      Math.sin(deltaLat / 2) +
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
     Math.cos(lat1) *
       Math.cos(lat2) *
       Math.sin(deltaLng / 2) *
       Math.sin(deltaLng / 2);
 
-  const c =
-    2 *
-    Math.atan2(
-      Math.sqrt(a),
-      Math.sqrt(1 - a)
-    );
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return EARTH_RADIUS_IN_METERS * c;
 }
@@ -152,7 +148,7 @@ export function getDistanceInMeters(
  */
 export function isPointInsideBoundingBox(
   point: Coordinate,
-  boundingBox: BoundingBox
+  boundingBox: BoundingBox,
 ): boolean {
   return (
     point.latitude >= boundingBox.south &&
@@ -165,13 +161,9 @@ export function isPointInsideBoundingBox(
 /**
  * Generates a bounding box from polygon coordinates.
  */
-export function getBoundingBoxFromPolygon(
-  polygon: Coordinate[]
-): BoundingBox {
+export function getBoundingBoxFromPolygon(polygon: Coordinate[]): BoundingBox {
   if (polygon.length === 0) {
-    throw new Error(
-      "Polygon must contain at least one coordinate."
-    );
+    throw new ConvexError("Polygon must contain at least one coordinate.");
   }
 
   let north = polygon[0].latitude;
@@ -211,7 +203,7 @@ export function getBoundingBoxFromPolygon(
  */
 export function isPointInsidePolygon(
   point: Coordinate,
-  polygon: Coordinate[]
+  polygon: Coordinate[],
 ): boolean {
   if (polygon.length < 3) {
     return false;
@@ -222,11 +214,7 @@ export function isPointInsidePolygon(
 
   let inside = false;
 
-  for (
-    let i = 0, j = polygon.length - 1;
-    i < polygon.length;
-    j = i++
-  ) {
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const xi = polygon[i].longitude;
     const yi = polygon[i].latitude;
 
@@ -234,11 +222,7 @@ export function isPointInsidePolygon(
     const yj = polygon[j].latitude;
 
     const intersects =
-      yi > y !== yj > y &&
-      x <
-        ((xj - xi) * (y - yi)) /
-          (yj - yi) +
-          xi;
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
 
     if (intersects) {
       inside = !inside;
@@ -255,29 +239,20 @@ export function isPointInsidePolygon(
 export function isPointInsidePolygonWithBoundingBox(
   point: Coordinate,
   polygon: Coordinate[],
-  boundingBox?: BoundingBox
+  boundingBox?: BoundingBox,
 ): boolean {
-  const box =
-    boundingBox ??
-    getBoundingBoxFromPolygon(polygon);
+  const box = boundingBox ?? getBoundingBoxFromPolygon(polygon);
 
-  if (
-    !isPointInsideBoundingBox(point, box)
-  ) {
+  if (!isPointInsideBoundingBox(point, box)) {
     return false;
   }
 
-  return isPointInsidePolygon(
-    point,
-    polygon
-  );
+  return isPointInsidePolygon(point, polygon);
 }
 
 /**
  * Converts degrees to radians.
  */
-function degreesToRadians(
-  degrees: number
-): number {
+function degreesToRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }

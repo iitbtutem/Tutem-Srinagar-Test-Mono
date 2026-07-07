@@ -48,7 +48,6 @@ export function HomeScreenHeader({ user }: { user: User }) {
 
 function ProfileDropdown({ user }: { user: User }) {
   const { signOut } = useAuthUser();
-  const logout = useMutation(api.routes.rider.logout);
 
   const handleLogout = async () => {
     if (
@@ -58,9 +57,6 @@ function ProfileDropdown({ user }: { user: User }) {
     )
       return;
 
-    const riderId = user.riderDetails._id;
-
-    await logout({ riderId });
     await signOut();
     router.replace('/(auth)/signin');
   };

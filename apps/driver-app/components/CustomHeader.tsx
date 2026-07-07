@@ -1,12 +1,11 @@
 import { Feather, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
 import { useAuth } from '@/hooks/useAuth';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +104,6 @@ function ProfileDropdown({
 
   const handleLogout = async () => {
     await signOut();
-    router.replace('/(auth)/signin');
   };
 
   if (user === null) return;

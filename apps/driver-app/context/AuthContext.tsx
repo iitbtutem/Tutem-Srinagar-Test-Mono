@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 
 const KEY_SESSION_TOKEN = 'auth_sessionToken';
 const KEY_PHONE = 'auth_phoneNumber';
@@ -43,23 +44,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restoreSession();
   }, []);
 
-  const signIn = useCallback(async (token: string, phone: string) => {
+  const signIn = useCallback(async (token: string, phoneNumber: string) => {
     await Promise.all([
       SecureStore.setItemAsync(KEY_SESSION_TOKEN, token),
-      SecureStore.setItemAsync(KEY_PHONE, phone),
+      SecureStore.setItemAsync(KEY_PHONE, phoneNumber),
     ]);
     setSessionToken(token);
-    setPhoneNumber(phone);
+    setPhoneNumber(phoneNumber);
   }, []);
 
   /** Clears local state only. Pair with the backend `logout` mutation call in useAuth. */
   const signOut = useCallback(async () => {
+    setSessionToken(null);
+    setPhoneNumber(null);
+    router.replace('/signin');
     await Promise.all([
       SecureStore.deleteItemAsync(KEY_SESSION_TOKEN),
       SecureStore.deleteItemAsync(KEY_PHONE),
     ]);
-    setSessionToken(null);
-    setPhoneNumber(null);
   }, []);
 
   return (

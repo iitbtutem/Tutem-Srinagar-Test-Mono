@@ -49,7 +49,7 @@ export default defineSchema({
     genderMatching: v.boolean(),
   })
     .index("by_user", ["userId"])
-    .index("by_organizition", ["organizationId"]),
+    .index("by_organization", ["organizationId"]),
 
   // Organizations
   organization: defineTable({
@@ -58,7 +58,7 @@ export default defineSchema({
     isLicenseVerficationRequired: v.boolean(),
     isVehicleRCVerificationRequired: v.boolean(),
     isVehicleInsuranceImageRequired: v.boolean(),
-    canDriverEditLicesnse: v.boolean(),
+    canDriverEditLicense: v.boolean(),
     canDriverEditVehicle: v.boolean(),
     polygon: v.optional(
       v.array(
@@ -134,7 +134,7 @@ export default defineSchema({
     riderId: v.id("rider"),
     driverId: v.id("driver"),
     fare: v.number(),
-    hasReachedDestionation: v.boolean(),
+    hasReachedDestination: v.boolean(),
     status: v.union(
       v.literal("Open"),
       v.literal("Active"),

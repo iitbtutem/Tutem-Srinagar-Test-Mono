@@ -18,7 +18,7 @@ function generateOtp(): string {
 
 export const sendOtp = action({
   args: {
-    phoneNumber: v.string(), // full international format e.g. "+919876543210"
+    phoneNumber: v.string(),
   },
   handler: async (ctx, { phoneNumber }) => {
     const otp = generateOtp();
@@ -34,7 +34,7 @@ export const sendOtp = action({
     });
 
     const smsData = {
-      phone_number: phoneNumber,
+      phone_number: `+91${phoneNumber}`,
       message_type: "registration_otp",
       otp,
     };

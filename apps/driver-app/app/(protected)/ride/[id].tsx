@@ -14,7 +14,7 @@ import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
 
-type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRide>>;
+type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverRide>>;
 
 // helpers
 
@@ -347,7 +347,10 @@ export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
   const { sessionToken } = useAuth();
 
-  const ride = useQuery(api.routes.rides.getRide, sessionToken ? { id, sessionToken } : 'skip');
+  const ride = useQuery(
+    api.routes.rides.getDriverRide,
+    sessionToken ? { id, sessionToken } : 'skip'
+  );
 
   if (ride === undefined) {
     return <Loader subtitle="Loading ride details..." />;

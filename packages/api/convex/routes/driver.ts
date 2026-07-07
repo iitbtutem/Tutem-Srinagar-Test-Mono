@@ -162,7 +162,7 @@ export const registerAsDriver = authenticatedMutation({
     });
     await ctx.db.insert("userPermission", {
       userId: ctx.user._id,
-      permission: "Rider",
+      permission: "Driver",
     });
   },
 });
@@ -319,6 +319,17 @@ export const getDriver = query({
   },
 });
 
+export const getDriverPushTokenInternal = internalQuery({
+  args: {
+    id: v.id("driver"),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.id);
+    if (driver === null) throw new ConvexError("Invalid Driver");
+    return driver.expoPushToken;
+  },
+});
+
 export const getDriverInternal = internalQuery({
   args: {
     id: v.id("driver"),
@@ -368,7 +379,7 @@ export const updateDriver = authenticatedMutation({
       args.licenseImageFrontKey !== driver.licenseImageFrontKey ||
       args.licenseImageBackKey !== driver.licenseImageBackKey;
 
-    if (!organization.canDriverEditLicesnse && licenseDetailsChanged)
+    if (!organization.canDriverEditLicense && licenseDetailsChanged)
       throw new ConvexError("license details cannot be updated");
 
     const isLicenseVerified =
@@ -470,7 +481,7 @@ export const updateLicense = mutation({
       throw new ConvexError("Driver doesn't belong to any organisation");
 
     if (
-      !organisation.canDriverEditLicesnse &&
+      !organisation.canDriverEditLicense &&
       driver.isLicenseVerified === "Verified"
     )
       throw new ConvexError("Can't update license details");
@@ -512,8 +523,10 @@ export const toggleAvailability = mutation({
           q.or(
             q.and(
               q.eq(q.field("status"), "Open"),
-              q.eq(q.field("requestStatus"), "Pending"),
-              q.eq(q.field("requestStatus"), "Accepted"),
+              q.or(
+                q.eq(q.field("requestStatus"), "Pending"),
+                q.eq(q.field("requestStatus"), "Accepted"),
+              ),
             ),
             q.eq(q.field("status"), "Active"),
           ),

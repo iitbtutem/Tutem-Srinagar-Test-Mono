@@ -39,12 +39,11 @@ export default function Signin() {
   const handleContinue = async ({ phoneNumber }: z.infer<typeof phoneSchema>) => {
     setLoading(true);
     try {
-      const fullPhone = `+91${phoneNumber}`;
-      await sendOtp({ phoneNumber: fullPhone });
+      await sendOtp({ phoneNumber });
 
       router.push({
         pathname: '/otp',
-        params: { phoneNumber: fullPhone },
+        params: { phoneNumber },
       });
     } catch (err: any) {
       showToast({
