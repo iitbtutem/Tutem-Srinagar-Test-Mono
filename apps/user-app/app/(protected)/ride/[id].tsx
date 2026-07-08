@@ -1,9 +1,7 @@
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { useQuery } from 'convex/react';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { ScrollView, View, Text } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-native';
+import { MapPin, Clock, DollarSign, Star, Gauge } from 'lucide-react-native';
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';
@@ -13,6 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GenderAge } from '@tutem/ui';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
+import { useAuthenticatedQuery } from '@/lib/customApi';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderRide>>;
 
@@ -320,12 +319,8 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
 
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
-  const { sessionToken } = useAuthUser();
 
-  const ride = useQuery(
-    api.routes.rides.getRiderRide,
-    id && sessionToken ? { id, sessionToken } : 'skip'
-  );
+  const ride = useAuthenticatedQuery(api.routes.rides.getRiderRide, id ? { id } : 'skip');
 
   if (ride === undefined) {
     return (
