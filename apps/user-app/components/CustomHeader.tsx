@@ -2,7 +2,7 @@ import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
 import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Link, router } from 'expo-router';
 import {
@@ -47,7 +47,7 @@ export function HomeScreenHeader({ user }: { user: User }) {
 }
 
 function ProfileDropdown({ user }: { user: User }) {
-  const { signOut } = useAuthUser();
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     if (

@@ -18,7 +18,7 @@ import {
 } from '@tutem/ui';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
-import { useQuery, useAction } from 'convex/react';
+import { useAction } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { View, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,7 +43,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
 import { distanceFormat, formatFare } from '../../../../driver-app/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { BasicHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
@@ -121,9 +122,12 @@ export default function RideRequest() {
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
 
-  const ride = useQuery(api.routes.rides.getRiderCurrentRideById, id ? { id } : 'skip');
+  const ride = useAuthenticatedQuery(
+    api.routes.rides.getRiderCurrentRideById,
+    id ? { id } : 'skip'
+  );
   const riderCancelRide = useAction(api.actions.ride.riderCancelRide);
   const calculateRiderCancelRideCharges = useAction(
     api.actions.ride.calculateRiderCancelRideCharges

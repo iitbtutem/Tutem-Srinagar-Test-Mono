@@ -426,7 +426,7 @@ export const removeProfilePictureKey = authenticatedMutation({
   },
 });
 
-export const getDriverPaymentQrImage = query({
+export const getDriverPaymentQrImage = authenticatedQuery({
   args: {
     driverId: v.id("driver"),
   },

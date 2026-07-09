@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
 export default function RootScreen() {
-  const { isAuthenticated, isLoaded } = useAuthUser();
+  const { isAuthenticated, isLoaded } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {

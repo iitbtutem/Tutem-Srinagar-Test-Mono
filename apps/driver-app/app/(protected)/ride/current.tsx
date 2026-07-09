@@ -1,5 +1,6 @@
 import { api, Id } from '@tutem/api';
-import { useQuery, useAction, useMutation } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -189,11 +190,8 @@ export default function Ride() {
   const mapRef = useRef<MapView>(null);
   const activeSheetRef = useRef<BottomSheet>(null);
 
-  const ride = useQuery(
-    api.routes.rides.getDriverRide,
-    id && sessionToken ? { id, sessionToken } : 'skip'
-  );
-  const settings = useQuery(api.routes.settings.rideSettings);
+  const ride = useAuthenticatedQuery(api.routes.rides.getDriverRide, id ? { id } : 'skip');
+  const settings = useAuthenticatedQuery(api.routes.settings.rideSettings);
   const driverArrived = useAction(api.actions.ride.driverArrived);
   const completeRide = useAction(api.actions.ride.completeRide);
   const cancelRide = useAction(api.actions.ride.driverCancelRide);
@@ -201,7 +199,10 @@ export default function Ride() {
     api.actions.ride.calculateDriverCancelRideCharges
   );
   const hasReachedDestination = useMutation(api.routes.rides.hasReachedDestination);
-  const vehicle = useQuery(api.routes.vehicle.getVehicleByDriverId, ride ? { driverId } : 'skip');
+  const vehicle = useAuthenticatedQuery(
+    api.routes.vehicle.getVehicleByDriverId,
+    ride ? { driverId } : 'skip'
+  );
 
   const arrivedRadiusInMts = settings?.arrivedDistance ?? 100;
 

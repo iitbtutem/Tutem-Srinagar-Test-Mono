@@ -1,8 +1,12 @@
-import { ConvexError, v } from "convex/values";
-import { internalQuery, query } from "../_generated/server";
-import { authenticatedMutation } from "../helpers/sessionFunctions";
+import { v } from "convex/values";
+import { internalQuery } from "../_generated/server";
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+} from "../helpers/sessionFunctions";
 
-export const rideSettings = query({
+export const rideSettings = authenticatedQuery({
+  args: {},
   handler: async (ctx) => {
     const settings = await ctx.db.query("rideSettings").first();
 

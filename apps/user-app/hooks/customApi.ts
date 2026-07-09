@@ -1,4 +1,4 @@
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useMemo } from 'react';
 import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
@@ -11,16 +11,19 @@ export function useAuthenticatedQuery<Query extends FunctionReference<'query'>>(
     FunctionArgs<Query>
   >
 ): FunctionReturnType<Query> | undefined {
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
 
-  return useQuery(query, (args === 'skip' ? 'skip' : { ...args, sessionToken }) as any);
+  return useQuery(
+    query,
+    (args === 'skip' || !sessionToken ? 'skip' : { ...args, sessionToken }) as any
+  );
 }
 
 export function useAuthenticatedMutation<Mutation extends FunctionReference<'mutation'>>(
   mutation: Mutation
 ): (args?: WithoutSessionToken<FunctionArgs<Mutation>>) => Promise<FunctionReturnType<Mutation>> {
   const mutationFn = useMutation(mutation);
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
 
   return useMemo(() => {
     return async (args = {} as WithoutSessionToken<FunctionArgs<Mutation>>) => {
@@ -36,10 +39,11 @@ export function useAuthenticatedAction<Action extends FunctionReference<'action'
   action: Action
 ): (args?: WithoutSessionToken<FunctionArgs<Action>>) => Promise<FunctionReturnType<Action>> {
   const actionFn = useAction(action);
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
 
   return useMemo(() => {
     return async (args = {} as WithoutSessionToken<FunctionArgs<Action>>) => {
+      if (!sessionToken) throw new Error('No session token');
       return actionFn({
         ...args,
         sessionToken,

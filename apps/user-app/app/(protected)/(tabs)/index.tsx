@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { useQuery } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { api, Id } from '@tutem/api';
 import { useRider } from '@/hooks/useRider';
 
@@ -76,7 +76,7 @@ export default function HomeScreen() {
 
   const [showRideDialog, setShowRideDialog] = useState(false);
 
-  const currentRide = useQuery(
+  const currentRide = useAuthenticatedQuery(
     api.routes.rides.getRiderCurrentRideByRiderId,
     user && user.riderDetails ? { riderId: user.riderDetails._id } : 'skip'
   );

@@ -28,7 +28,7 @@ import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useRider } from '@/hooks/useRider';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Avatar,
   AvatarFallback,
@@ -296,7 +296,7 @@ function NearbyDriversPanel({
 
 export default function WhereTo() {
   const { rider } = useRider();
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
   const bookRide = useAction(api.actions.ride.bookRide);
 
   const { showToast } = useToast();

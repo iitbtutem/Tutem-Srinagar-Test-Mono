@@ -1,11 +1,12 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation } from "../_generated/server";
+import { authenticatedQuery } from "../helpers/sessionFunctions";
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from "../CONSTANTS";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 
-export const getVehicleByDriverId = query({
+export const getVehicleByDriverId = authenticatedQuery({
   args: { driverId: v.id("driver") },
   handler: async (ctx, args) => {
     const vehicle = await ctx.db

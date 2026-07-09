@@ -24,7 +24,7 @@ import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { Feather } from '@expo/vector-icons';
 import { BasicHeader } from '@/components/CustomHeader';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 
 const formSchema = z.object({
   firstName: z
@@ -49,7 +49,7 @@ export default function EditProfile() {
     gender: 'Male' | 'Female' | 'Other';
   }>();
 
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);

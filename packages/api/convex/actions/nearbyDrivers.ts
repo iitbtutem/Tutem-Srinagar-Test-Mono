@@ -67,7 +67,8 @@ export const getNearbyDrivers = action({
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
       );
-      const NearByRadius = (settings?.nearbyRadius ?? 3) / METERS_IN_KM;
+
+      const NearByRadius = settings ? settings.nearbyRadius / METERS_IN_KM : 3;
 
       const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
       const response = await fetch(ABLY_URL, {
@@ -111,7 +112,7 @@ export const getNearbyDrivers = action({
           driver.longitude,
         );
 
-        const isNearby = dist <= NearByRadius;
+        const isNearby = dist <= NearByRadius / METERS_IN_KM;
 
         return isNearby ? [driver] : [];
       });

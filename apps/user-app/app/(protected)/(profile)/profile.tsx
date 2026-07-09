@@ -1,5 +1,5 @@
 import ErrorScreen from '@/components/ErrorScreen';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useRider } from '@/hooks/useRider';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
@@ -42,7 +42,7 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 export default function Profile() {
   const [image, setImage] = useState('');
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
-  const { signOut } = useAuthUser();
+  const { signOut } = useAuth();
   const router = useRouter();
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
@@ -359,7 +359,7 @@ function ImagePickerDialog({
   scrollDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
   const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
   const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
   const { uploadFile } = useFileUpload();

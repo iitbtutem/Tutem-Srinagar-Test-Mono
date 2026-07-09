@@ -1,6 +1,6 @@
 import { Text, Button, Loader } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useQuery } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, View } from 'react-native';
@@ -16,7 +16,10 @@ export default function PaymentQrCard() {
   const [uploading, setUploading] = useState(false);
   const { uploadFile } = useFileUpload();
 
-  const driverPaymentQrImage = useQuery(api.routes.driver.getDriverPaymentQrImage, { driverId });
+  const driverPaymentQrImage = useAuthenticatedQuery(
+    api.routes.driver.getDriverPaymentQrImage,
+    driverId ? { driverId } : 'skip'
+  );
 
   const updatePaymentQrCode = useMutation(api.routes.driver.updatePaymentQrCode);
 
@@ -63,18 +66,20 @@ export default function PaymentQrCard() {
   if (driverPaymentQrImage === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Loader subtitle='Loading payment details...' />
+        <Loader subtitle="Loading payment details..." />
       </View>
     );
   }
 
   return (
-    <View className='flex-1 bg-white/50 px-4 py-6'>
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: "Payment QR Code",
-        header: (props) => <BasicHeader {...props} />, 
-      }} />
+    <View className="flex-1 bg-white/50 px-4 py-6">
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Payment QR Code',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
       <View className="overflow-hidden">
         <View className="flex-row items-center gap-2 pb-3">
           <View className="rounded-xl bg-orange-500/10 p-2">
@@ -93,11 +98,13 @@ export default function PaymentQrCard() {
 
         <View className="px-3 pb-5 pt-4">
           {/* QR Code Display - always mounted, hidden when no QR */}
-          <View style={{ display: driverPaymentQrImage ? 'flex' : 'none' }} className="items-center">
+          <View
+            style={{ display: driverPaymentQrImage ? 'flex' : 'none' }}
+            className="items-center">
             <View className="mb-4 rounded-2xl bg-white p-3 shadow-lg shadow-black/30">
               <Image
                 source={{ uri: driverPaymentQrImage ?? '' }}
-                className="w-full aspect-square rounded-xl"
+                className="aspect-square w-full rounded-xl"
                 resizeMode="contain"
               />
             </View>
@@ -105,7 +112,7 @@ export default function PaymentQrCard() {
               onPress={handlePickImage}
               disabled={uploading}
               variant={'default'}
-              className='w-full rounded-2xl'>
+              className="w-full rounded-2xl">
               <Pencil size={15} color="#ffffff" strokeWidth={2} />
               <Text className="text-sm font-medium">
                 {uploading ? 'Uploading…' : 'Change QR Code'}
@@ -129,9 +136,7 @@ export default function PaymentQrCard() {
               disabled={uploading}
               className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-amber-500 active:bg-amber-400">
               <Upload size={16} color="#1c1917" strokeWidth={2.5} />
-              <Text className="text-sm font-bold text-amber-950">
-                Upload from Gallery
-              </Text>
+              <Text className="text-sm font-bold text-amber-950">Upload from Gallery</Text>
             </Button>
           </View>
         </View>

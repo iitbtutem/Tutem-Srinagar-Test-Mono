@@ -10,23 +10,21 @@ import {
   Loader,
 } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useQuery } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Image, ScrollView, View } from 'react-native';
 import { QrCode, IndianRupee, CheckCircle2 } from 'lucide-react-native';
 import { distanceFormat, formatFare, getTimeBetweenFormatted } from '@/lib/utils';
 import { useRouter } from 'expo-router';
 import { BasicHeader } from '@/components/CustomHeader';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function Payment() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();
   const router = useRouter();
-  const { sessionToken } = useAuth();
 
-  const ride = useQuery(
+  const ride = useAuthenticatedQuery(
     api.routes.rides.getDriverRide,
-    rideId && sessionToken ? { id: rideId, sessionToken } : 'skip'
+    rideId ? { id: rideId } : 'skip'
   );
 
   if (ride === undefined) {

@@ -5,7 +5,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/CustomToast';
 import { useState } from 'react';
 import { useAction } from 'convex/react';
@@ -23,7 +23,7 @@ export default function Signin() {
   const router = useRouter();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isLoaded } = useAuthUser();
+  const { isAuthenticated, isLoaded } = useAuth();
 
   const sendOtp = useAction(api.actions.auth.sendOtp);
 

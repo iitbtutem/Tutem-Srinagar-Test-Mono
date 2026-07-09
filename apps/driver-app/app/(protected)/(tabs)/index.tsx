@@ -1,6 +1,6 @@
 import { useDriver } from '@/hooks/useDriver';
 import { api, Id } from '@tutem/api';
-import { useQuery, useAction } from 'convex/react';
+import { useAction } from 'convex/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
@@ -18,6 +18,7 @@ import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 
 // Types
 
@@ -56,7 +57,7 @@ function SheetSection({ title, children }: { title: string; children: React.Reac
 export default function Home() {
   const { driver } = useDriver();
 
-  const currentRide = useQuery(
+  const currentRide = useAuthenticatedQuery(
     api.routes.rides.getDriverCurrentRideByDriverId,
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
   );
@@ -267,12 +268,12 @@ export const RideRequests = memo(
     const { sessionToken } = useAuth();
     const driverLocation = useDriverLiveLocation();
 
-    const vehicle = useQuery(
+    const vehicle = useAuthenticatedQuery(
       api.routes.vehicle.getVehicleByDriverId,
       driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
     );
 
-    const rideRequests = useQuery(
+    const rideRequests = useAuthenticatedQuery(
       api.routes.rides.getRideRequests,
       driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
     );

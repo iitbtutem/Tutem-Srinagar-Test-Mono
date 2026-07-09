@@ -33,6 +33,8 @@ export const sendOtp = action({
       hashedOtp,
     });
 
+    console.log("OTP : ", otp)
+
     const smsData = {
       phone_number: `+91${phoneNumber}`,
       message_type: "registration_otp",

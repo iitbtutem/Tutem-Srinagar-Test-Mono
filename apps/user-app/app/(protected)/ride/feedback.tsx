@@ -1,7 +1,8 @@
 import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
@@ -30,7 +31,10 @@ export default function Feedback() {
   const router = useRouter();
   const toast = useToast();
 
-  const ride = useQuery(api.routes.rides.getRiderCurrentRideById, rideId ? { id: rideId } : 'skip');
+  const ride = useAuthenticatedQuery(
+    api.routes.rides.getRiderCurrentRideById,
+    rideId ? { id: rideId } : 'skip'
+  );
 
   const submitFeedback = useMutation(api.routes.rides.submitRating);
 

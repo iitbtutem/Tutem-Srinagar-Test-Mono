@@ -3,29 +3,21 @@ import { useQuery, useMutation, useAction } from 'convex/react';
 import { useMemo } from 'react';
 import type { FunctionReference, FunctionArgs, FunctionReturnType } from 'convex/server';
 
-// Strips `sessionToken` from the args the caller needs to provide,
-// since `useAuthenticated*` injects it automatically.
 type WithoutSessionToken<T> = Omit<T, 'sessionToken'>;
-
-// ─── Query ──────────────────────────────────────────────────────────────────
 
 export function useAuthenticatedQuery<Query extends FunctionReference<'query'>>(
   query: Query,
-  args: WithoutSessionToken<FunctionArgs<Query>> | 'skip' = {} as WithoutSessionToken<FunctionArgs<Query>>
+  args: WithoutSessionToken<FunctionArgs<Query>> | 'skip' = {} as WithoutSessionToken<
+    FunctionArgs<Query>
+  >
 ): FunctionReturnType<Query> | undefined {
   const { sessionToken } = useAuth();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // `useQuery` internally types its second param as OptionalRestArgsOrSkip<Query>
-  // (a complex conditional tuple). TypeScript can't unify our union through that
-  // constraint, so we cast here. Type safety is enforced at the call site above.
   return useQuery(
     query,
-    (args === 'skip' ? 'skip' : { ...args, sessionToken }) as any
+    (args === 'skip' || !sessionToken ? 'skip' : { ...args, sessionToken }) as any
   );
 }
-
-// ─── Mutation ────────────────────────────────────────────────────────────────
 
 export function useAuthenticatedMutation<Mutation extends FunctionReference<'mutation'>>(
   mutation: Mutation
@@ -43,8 +35,6 @@ export function useAuthenticatedMutation<Mutation extends FunctionReference<'mut
   }, [mutationFn, sessionToken]);
 }
 
-// ─── Action ──────────────────────────────────────────────────────────────────
-
 export function useAuthenticatedAction<Action extends FunctionReference<'action'>>(
   action: Action
 ): (args?: WithoutSessionToken<FunctionArgs<Action>>) => Promise<FunctionReturnType<Action>> {
@@ -53,6 +43,7 @@ export function useAuthenticatedAction<Action extends FunctionReference<'action'
 
   return useMemo(() => {
     return async (args = {} as WithoutSessionToken<FunctionArgs<Action>>) => {
+      if (!sessionToken) throw new Error('No session token');
       return actionFn({
         ...args,
         sessionToken,

@@ -636,7 +636,7 @@ export const acceptRideInternal = internalMutation({
   },
 });
 
-export const getRiderCurrentRideById = query({
+export const getRiderCurrentRideById = authenticatedQuery({
   args: {
     id: v.id("ride"),
   },
@@ -718,7 +718,7 @@ export const getRiderCurrentRideById = query({
   },
 });
 
-export const getRiderCurrentRideByRiderId = query({
+export const getRiderCurrentRideByRiderId = authenticatedQuery({
   args: {
     riderId: v.id("rider"),
   },
@@ -890,7 +890,7 @@ export const getRiderHistory = query({
   },
 });
 
-export const getDriverCurrentRideById = query({
+export const getDriverCurrentRideById = authenticatedQuery({
   args: {
     id: v.id("ride"),
   },
@@ -953,7 +953,7 @@ export const getDriverCurrentRideById = query({
   },
 });
 
-export const getDriverCurrentRideByDriverId = query({
+export const getDriverCurrentRideByDriverId = authenticatedQuery({
   args: {
     driverId: v.id("driver"),
   },
@@ -1233,7 +1233,7 @@ export const getRiderRide = authenticatedQuery({
   },
 });
 
-export const getRideRequests = query({
+export const getRideRequests = authenticatedQuery({
   args: {
     driverId: v.id("driver"),
   },

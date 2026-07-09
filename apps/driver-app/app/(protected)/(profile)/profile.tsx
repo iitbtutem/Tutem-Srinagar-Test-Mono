@@ -3,8 +3,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDriver } from '@/hooks/useDriver';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
-import type { Id } from '@tutem/api';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -56,7 +56,7 @@ export default function Profile() {
   const vehicleBottomSheetRef = useRef<BottomSheet>(null);
 
   const { driver } = useDriver();
-  const vehicle = useQuery(
+  const vehicle = useAuthenticatedQuery(
     api.routes.vehicle.getVehicleByDriverId,
     driver && driver.driverDetails?._id ? { driverId: driver.driverDetails._id } : 'skip'
   );

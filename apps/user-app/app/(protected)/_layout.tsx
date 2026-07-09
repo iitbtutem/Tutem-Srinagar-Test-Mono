@@ -1,10 +1,10 @@
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useRider } from '@/hooks/useRider';
 import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProtectedLayout() {
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
   const { rider } = useRider();
 
   const protectedGuard = !!sessionToken && !!rider;

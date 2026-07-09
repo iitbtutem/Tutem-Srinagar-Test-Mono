@@ -11,7 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GenderAge } from '@tutem/ui';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
-import { useAuthenticatedQuery } from '@/lib/customApi';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 
 type Ride = NonNullable<FunctionReturnType<typeof api.routes.rides.getRiderRide>>;
 

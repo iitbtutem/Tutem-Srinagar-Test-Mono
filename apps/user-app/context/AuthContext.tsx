@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPhoneNumber(phone);
   }, []);
 
-  /** Clears local state only. Pair with the backend `logout` mutation call in useAuthUser. */
+  /** Clears local state only. Pair with the backend `logout` mutation call in useAuth. */
   const signOut = useCallback(async () => {
     await Promise.all([
       SecureStore.deleteItemAsync(KEY_SESSION_TOKEN),

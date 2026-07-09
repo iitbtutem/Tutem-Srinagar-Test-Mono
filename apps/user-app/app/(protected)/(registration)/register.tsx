@@ -22,7 +22,7 @@ import { api } from '@tutem/api';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useRider } from '@/hooks/useRider';
 import { Feather } from '@expo/vector-icons';
 import { useNotification } from '@/context/NotificationContext';
@@ -42,7 +42,7 @@ export default function Register() {
   const { phoneNumber: phoneParam } = useLocalSearchParams<{ phoneNumber: string }>();
 
   const router = useRouter();
-  const { phoneNumber: authPhone, signIn } = useAuthUser();
+  const { phoneNumber: authPhone, signIn } = useAuth();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const lastNameRef = useRef<TextInput>(null);

@@ -1,7 +1,7 @@
 import React, { Component, type ReactNode } from 'react';
 import { ConvexError } from 'convex/values';
 import { router } from 'expo-router';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -66,7 +66,7 @@ class QueryErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 }
 
 export default function AuthErrorBoundary({ children }: { children: ReactNode }) {
-  const { signOut } = useAuthUser();
+  const { signOut } = useAuth();
 
   return <QueryErrorBoundary onSessionError={signOut}>{children}</QueryErrorBoundary>;
 }

@@ -2,7 +2,7 @@ import { useToast } from '@/components/CustomToast';
 import { Text, Button, Loader, Avatar, AvatarImage, AvatarFallback, GenderAge } from '@tutem/ui';
 import { useNotification } from '@/context/NotificationContext';
 import { useRider } from '@/hooks/useRider';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { api } from '@tutem/api';
 import { useMutation } from 'convex/react';
 import { Redirect } from 'expo-router';
@@ -14,7 +14,7 @@ export default function RegisterAsRider() {
   const { expoPushToken } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { sessionToken } = useAuthUser();
+  const { sessionToken } = useAuth();
   const { rider, isLoading: riderIsLoading } = useRider();
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 

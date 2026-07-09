@@ -10,7 +10,8 @@ import {
   Loader,
 } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
@@ -32,7 +33,7 @@ export default function Feedback() {
   const router = useRouter();
   const toast = useToast();
 
-  const ride = useQuery(
+  const ride = useAuthenticatedQuery(
     api.routes.rides.getDriverCurrentRideById,
     rideId ? { id: rideId } : 'skip'
   );

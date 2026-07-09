@@ -1,14 +1,11 @@
 import { api } from '@tutem/api';
-import { useQuery } from 'convex/react';
-import { useAuth } from './useAuth';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 
 export function useDriver() {
-  const { sessionToken } = useAuth();
-
-  const driver = useQuery(api.routes.driver.getUser, sessionToken ? { sessionToken } : 'skip');
+  const driver = useAuthenticatedQuery(api.routes.driver.getUser);
 
   return {
-    driver: !sessionToken ? null : driver,
-    isLoading: !sessionToken ? false : driver === undefined,
+    driver,
+    isLoading: driver === undefined,
   };
 }

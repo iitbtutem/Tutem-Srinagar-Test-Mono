@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, TextInput, TextInputKeyPressEvent, View } from 'react-native';
 import { useToast } from '@/components/CustomToast';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuth } from '@/hooks/useAuth';
 import { useAction } from 'convex/react';
 import { api } from '@tutem/api';
 
@@ -18,7 +18,7 @@ export default function OtpScreen() {
   const router = useRouter();
   const inputRef = useRef<(TextInput | null)[]>([]);
   const { showToast } = useToast();
-  const { signIn } = useAuthUser();
+  const { signIn } = useAuth();
 
   const verifyOtpAction = useAction(api.actions.auth.verifyOtp);
   const sendOtpAction = useAction(api.actions.auth.sendOtp);

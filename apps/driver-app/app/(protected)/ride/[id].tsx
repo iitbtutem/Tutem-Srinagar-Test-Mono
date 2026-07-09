@@ -1,6 +1,5 @@
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { useQuery } from 'convex/react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 import { ScrollView, View, Text, ActivityIndicator } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-native';
@@ -345,12 +344,8 @@ function RatingsSection({ ratings }: { ratings: Ride['ratings'] }) {
 
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: Id<'ride'> }>();
-  const { sessionToken } = useAuth();
 
-  const ride = useQuery(
-    api.routes.rides.getDriverRide,
-    sessionToken ? { id, sessionToken } : 'skip'
-  );
+  const ride = useAuthenticatedQuery(api.routes.rides.getDriverRide, id ? { id } : 'skip');
 
   if (ride === undefined) {
     return <Loader subtitle="Loading ride details..." />;

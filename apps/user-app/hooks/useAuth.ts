@@ -4,10 +4,10 @@ import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
 import { ConvexError } from 'convex/values';
 
-export function useAuthUser() {
+export function useAuth() {
   const authState = useContext(AuthContext);
   if (!authState) {
-    throw new ConvexError('useAuthUser must be used inside <AuthProvider>');
+    throw new ConvexError('useAuth must be used inside <AuthProvider>');
   }
 
   const {

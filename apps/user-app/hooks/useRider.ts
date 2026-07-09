@@ -1,14 +1,11 @@
 import { api } from '@tutem/api';
-import { useQuery } from 'convex/react';
-import { useAuthUser } from './useAuthUser';
+import { useAuthenticatedQuery } from '@/hooks/customApi';
 
 export function useRider() {
-  const { sessionToken } = useAuthUser();
-
-  const rider = useQuery(api.routes.rider.getRider, sessionToken ? { sessionToken } : 'skip');
+  const rider = useAuthenticatedQuery(api.routes.rider.getRider);
 
   return {
-    rider: !sessionToken ? null : rider,
-    isLoading: !sessionToken ? false : rider === undefined,
+    rider,
+    isLoading: rider === undefined,
   };
 }
