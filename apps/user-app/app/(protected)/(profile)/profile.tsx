@@ -5,6 +5,7 @@ import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
 import { useMutation } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -47,8 +48,8 @@ export default function Profile() {
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
   const { rider, isLoading: riderIsLoading } = useRider();
-  const logout = useMutation(api.routes.rider.logout);
-  const toggleGenderMatching = useMutation(api.routes.rider.toggleGenderMatching);
+  const logout = useAuthenticatedMutation(api.routes.rider.logout);
+  const toggleGenderMatching = useAuthenticatedMutation(api.routes.rider.toggleGenderMatching);
 
   const handleLogout = async (riderId: Id<'rider'> | undefined) => {
     if (riderId !== undefined) await logout({ riderId });
@@ -360,8 +361,8 @@ function ImagePickerDialog({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { sessionToken } = useAuth();
-  const uploadProfilePicture = useMutation(api.routes.rider.uploadProfilePicture);
-  const removeProfilePictureKey = useMutation(api.routes.rider.removeProfilePictureKey);
+  const uploadProfilePicture = useAuthenticatedMutation(api.routes.rider.uploadProfilePicture);
+  const removeProfilePictureKey = useAuthenticatedMutation(api.routes.rider.removeProfilePictureKey);
   const { uploadFile } = useFileUpload();
 
   const handleUpload = async (newImgUri: string) => {
@@ -370,14 +371,14 @@ function ImagePickerDialog({
     if (newImgUri === '') return;
     setImageUri(newImgUri);
     const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
-    await uploadProfilePicture({ sessionToken, profilePictureKey });
+    await uploadProfilePicture({ profilePictureKey });
   };
 
   const handleDelete = async () => {
     setIsOpen(false);
     if (!sessionToken) return;
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ sessionToken });
+    await removeProfilePictureKey();
     setImageUri('');
   };
 

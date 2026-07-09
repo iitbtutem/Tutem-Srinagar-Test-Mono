@@ -19,6 +19,7 @@ import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
 import { useMutation } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { useToast } from '@/components/CustomToast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
@@ -93,7 +94,7 @@ export default function EditVehicle() {
   const isVehicleRCVerificationRequired = isRcRequired === 'true' ? true : false;
   const isVehicleInsuranceImageRequired = isInsuranceImageRequired === 'true' ? true : false;
 
-  const updateVehicle = useMutation(api.routes.vehicle.updateVehicle);
+  const updateVehicle = useAuthenticatedMutation(api.routes.vehicle.updateVehicle);
 
   const modelRef = useRef<TextInput>(null);
   const colorRef = useRef<TextInput>(null);

@@ -1,6 +1,6 @@
 import { Text, Button, Loader } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useAuthenticatedQuery } from '@/hooks/customApi';
+import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, View } from 'react-native';
@@ -21,7 +21,7 @@ export default function PaymentQrCard() {
     driverId ? { driverId } : 'skip'
   );
 
-  const updatePaymentQrCode = useMutation(api.routes.driver.updatePaymentQrCode);
+  const updatePaymentQrCode = useAuthenticatedMutation(api.routes.driver.updatePaymentQrCode);
 
   const handlePickImage = useCallback(async () => {
     if (!driverId) return;

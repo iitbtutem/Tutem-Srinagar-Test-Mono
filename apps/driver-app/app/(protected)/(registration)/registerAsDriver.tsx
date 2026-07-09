@@ -21,6 +21,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/botto
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -68,7 +69,7 @@ export default function RegisterAsRider() {
   const licenseRef = useRef<TextInput>(null);
 
   const { driver, isLoading: driverIsLoading } = useDriver();
-  const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
+  const registerAsDriver = useAuthenticatedMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(
     api.routes.organizations.getNearbyOrganization,
     initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
@@ -160,14 +161,16 @@ export default function RegisterAsRider() {
         data.licenseImageFrontKey,
         `licenses/${driver._id}-front`
       );
-      const uploadedBackKey = await uploadFile(data.licenseImageBackKey, `licenses/${driver._id}-back`);
+      const uploadedBackKey = await uploadFile(
+        data.licenseImageBackKey,
+        `licenses/${driver._id}-back`
+      );
 
       const { licenseImageBackKey, licenseImageFrontKey, ...restData } = data;
 
       await registerAsDriver({
         ...restData,
         organizationId: data.organizationId as Id<'organization'>,
-        sessionToken: sessionToken,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
         expoPushToken: expoPushToken ?? undefined,

@@ -14,6 +14,7 @@ import { TextInput } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { useMutation } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api, Id } from '@tutem/api';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { Stack } from 'expo-router';
@@ -45,7 +46,7 @@ export default function EditLicense() {
     requiresLicenseImg: string;
   }>();
   
-  const updateLicense = useMutation(api.routes.driver.updateLicense);
+  const updateLicense = useAuthenticatedMutation(api.routes.driver.updateLicense);
   const requiresLicenseImage = requiresLicenseImg === 'true' ? true : false;
 
   const {

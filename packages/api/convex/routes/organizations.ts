@@ -1,10 +1,11 @@
 import { ConvexError, v } from "convex/values";
-import { internalQuery, mutation, query } from "../_generated/server";
+import { internalQuery, query } from "../_generated/server";
 import { VEHICLE_CLASS } from "../CONSTANTS";
 import { isPointInsidePolygon } from "../helpers/maps";
+import { authenticatedMutation } from "../helpers/sessionFunctions";
 
 // CREATE ORGANISATION
-export const createOrganization = mutation({
+export const createOrganization = authenticatedMutation({
   args: {
     name: v.string(),
     address: v.string(),
@@ -144,7 +145,7 @@ export const getOrganizationById = query({
 });
 
 // UPDATE ORGANIZATION
-export const updateOrganization = mutation({
+export const updateOrganization = authenticatedMutation({
   args: {
     id: v.id("organization"),
     name: v.optional(v.string()),
@@ -208,7 +209,7 @@ export const updateOrganization = mutation({
 });
 
 // DELETE ORGANIZATION
-export const deleteOrganization = mutation({
+export const deleteOrganization = authenticatedMutation({
   args: {
     id: v.id("organization"),
   },
@@ -237,7 +238,7 @@ export const deleteOrganization = mutation({
 });
 
 // INSERT ORGAINIZATION RATE
-export const createOrganizationRate = mutation({
+export const createOrganizationRate = authenticatedMutation({
   args: {
     vehicleClass: v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),
     baseDistance: v.number(),
@@ -318,7 +319,7 @@ export const getOrganizationRateByVehicleClass = query({
 });
 
 // UPDATE ORGANIZATION RATE
-export const updateOrganizationRate = mutation({
+export const updateOrganizationRate = authenticatedMutation({
   args: {
     id: v.id("organizationsRate"),
     vehicleClass: v.optional(
@@ -348,7 +349,7 @@ export const updateOrganizationRate = mutation({
 });
 
 // DELETE SINGLE ORGANIZATION RATE
-export const deleteOrganizationRate = mutation({
+export const deleteOrganizationRate = authenticatedMutation({
   args: {
     id: v.id("organizationsRate"),
   },
@@ -363,7 +364,7 @@ export const deleteOrganizationRate = mutation({
 });
 
 // DELETE ALL rates for an organization
-export const deleteAllOrganizationRates = mutation({
+export const deleteAllOrganizationRates = authenticatedMutation({
   args: {
     organizationId: v.id("organization"),
   },

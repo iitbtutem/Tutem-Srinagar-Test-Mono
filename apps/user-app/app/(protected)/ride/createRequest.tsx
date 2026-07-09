@@ -23,12 +23,11 @@ import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { cn, distanceFormat, formatFare } from '@/lib/utils';
-import { useAction } from 'convex/react';
+import { useAuthenticatedAction } from '@/hooks/customApi';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
 import { useRider } from '@/hooks/useRider';
-import { useAuth } from '@/hooks/useAuth';
 import {
   Avatar,
   AvatarFallback,
@@ -296,8 +295,7 @@ function NearbyDriversPanel({
 
 export default function WhereTo() {
   const { rider } = useRider();
-  const { sessionToken } = useAuth();
-  const bookRide = useAction(api.actions.ride.bookRide);
+  const bookRide = useAuthenticatedAction(api.actions.ride.bookRide);
 
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -349,7 +347,7 @@ export default function WhereTo() {
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
 
-  const getNearbyDriversAction = useAction(api.actions.nearbyDrivers.getNearbyDrivers);
+  const getNearbyDriversAction = useAuthenticatedAction(api.actions.nearbyDrivers.getNearbyDrivers);
 
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);
@@ -392,7 +390,6 @@ export default function WhereTo() {
         setIsSearchingDrivers(true);
         try {
           const drivers = await getNearbyDriversAction({
-            sessionToken: sessionToken || '',
             pickup: {
               latitude: pickupLat,
               longitude: pickupLon,
@@ -716,7 +713,6 @@ export default function WhereTo() {
       if (destination === null) throw new Error('Please select destination');
 
       const rideId = await bookRide({
-        sessionToken: sessionToken || '',
         riderId: rider.riderDetails._id,
         driverId: selectedDriver.driver._id,
         pickup: {

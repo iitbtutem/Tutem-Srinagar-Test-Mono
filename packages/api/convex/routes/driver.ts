@@ -30,7 +30,7 @@ export const login = mutation({
   },
 });
 
-export const logout = mutation({
+export const logout = authenticatedMutation({
   args: {
     sessionToken: v.string(),
   },
@@ -447,7 +447,7 @@ export const getDriverPaymentQrImage = authenticatedQuery({
   },
 });
 
-export const updatePaymentQrCode = mutation({
+export const updatePaymentQrCode = authenticatedMutation({
   args: {
     driverId: v.id("driver"),
     paymentQrCodeKey: v.optional(v.string()),
@@ -463,7 +463,7 @@ export const updatePaymentQrCode = mutation({
   },
 });
 
-export const updateLicense = mutation({
+export const updateLicense = authenticatedMutation({
   args: {
     driverId: v.id("driver"),
     number: v.string(),
@@ -507,7 +507,7 @@ export const updateLicense = mutation({
   },
 });
 
-export const toggleAvailability = mutation({
+export const toggleAvailability = authenticatedMutation({
   args: {
     id: v.id("driver"),
   },
@@ -546,7 +546,7 @@ export const toggleAvailability = mutation({
   },
 });
 
-export const toggleGenderMatching = mutation({
+export const toggleGenderMatching = authenticatedMutation({
   args: {
     id: v.id("driver"),
   },

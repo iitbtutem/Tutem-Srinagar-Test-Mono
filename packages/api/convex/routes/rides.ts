@@ -1,12 +1,10 @@
 import { ConvexError, v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { internalMutation, internalQuery, query } from "../_generated/server";
 import {
-  internalMutation,
-  internalQuery,
-  mutation,
-  query,
-} from "../_generated/server";
-import { authenticatedQuery } from "../helpers/sessionFunctions";
+  authenticatedMutation,
+  authenticatedQuery,
+} from "../helpers/sessionFunctions";
 import { Doc } from "../_generated/dataModel";
 import { TWENTY_FOUR_HOURS, METERS_IN_KM } from "../CONSTANTS";
 import { s3Client } from "../s3";
@@ -169,7 +167,6 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
     const nearbyDriversWithDetails = drivers.filter((d) => d !== null);
 
-    console.log("nearbyDriversWithDetails", nearbyDriversWithDetails);
     return nearbyDriversWithDetails;
   },
 });
@@ -1511,7 +1508,7 @@ export const startRideInternal = internalMutation({
   },
 });
 
-export const hasReachedDestination = mutation({
+export const hasReachedDestination = authenticatedMutation({
   args: {
     rideId: v.id("ride"),
     driverId: v.id("driver"),
@@ -1583,7 +1580,7 @@ export const completeRideInternal = internalMutation({
   },
 });
 
-export const submitRating = mutation({
+export const submitRating = authenticatedMutation({
   args: {
     rideId: v.id("ride"),
     raterType: v.union(v.literal("Rider"), v.literal("Driver")),
@@ -1687,7 +1684,7 @@ export const getRiderRatings = query({
   },
 });
 
-export const updateRating = mutation({
+export const updateRating = authenticatedMutation({
   args: {
     ratingId: v.id("ratings"),
     raterType: v.union(v.literal("Rider"), v.literal("Driver")),

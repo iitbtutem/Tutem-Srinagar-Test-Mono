@@ -58,6 +58,8 @@ export const bookRide = action({
   handler: async (ctx, args): Promise<Id<"ride">> => {
     await validateSession(ctx, args.sessionToken);
 
+    console.log("book ride after authentication");
+
     const ride = await ctx.runMutation(internal.routes.rides.bookRideInternal, {
       riderId: args.riderId,
       driverId: args.driverId,

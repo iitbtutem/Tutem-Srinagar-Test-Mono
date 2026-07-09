@@ -8,7 +8,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export const registerExpoPushToken = mutation({
+export const registerExpoPushToken = authenticatedMutation({
   args: {
     riderId: v.id("rider"),
     expoPushToken: v.string(),
@@ -23,7 +23,7 @@ export const registerExpoPushToken = mutation({
   },
 });
 
-export const logout = mutation({
+export const logout = authenticatedMutation({
   args: {
     riderId: v.id("rider"),
   },
@@ -181,7 +181,7 @@ export const removeProfilePictureKey = authenticatedMutation({
   },
 });
 
-export const toggleGenderMatching = mutation({
+export const toggleGenderMatching = authenticatedMutation({
   args: {
     id: v.id("rider"),
   },

@@ -43,8 +43,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/CustomToast';
 import { distanceFormat, formatFare } from '../../../../driver-app/lib/utils';
 import useThemeColors from '@/hooks/useColorScheme';
-import { useAuth } from '@/hooks/useAuth';
-import { useAuthenticatedQuery } from '@/hooks/customApi';
+import { useAuthenticatedQuery, useAuthenticatedAction } from '@/hooks/customApi';
 import { BasicHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
@@ -122,14 +121,13 @@ export default function RideRequest() {
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
-  const { sessionToken } = useAuth();
 
   const ride = useAuthenticatedQuery(
     api.routes.rides.getRiderCurrentRideById,
     id ? { id } : 'skip'
   );
-  const riderCancelRide = useAction(api.actions.ride.riderCancelRide);
-  const calculateRiderCancelRideCharges = useAction(
+  const riderCancelRide = useAuthenticatedAction(api.actions.ride.riderCancelRide);
+  const calculateRiderCancelRideCharges = useAuthenticatedAction(
     api.actions.ride.calculateRiderCancelRideCharges
   );
 
@@ -178,15 +176,14 @@ export default function RideRequest() {
 
   const animatedIndex = useSharedValue(1);
 
-  const getNearbyDriversAction = useAction(api.actions.nearbyDrivers.getNearbyDrivers);
-  const changeDriver = useAction(api.actions.ride.changeDriver);
+  const getNearbyDriversAction = useAuthenticatedAction(api.actions.nearbyDrivers.getNearbyDrivers);
+  const changeDriver = useAuthenticatedAction(api.actions.ride.changeDriver);
 
   const fetchDrivers = async () => {
     if (!ride) return;
     setIsSearchingDrivers(true);
     try {
       const drivers = await getNearbyDriversAction({
-        sessionToken: sessionToken || '',
         pickup: {
           latitude: ride.pickup.latitude,
           longitude: ride.pickup.longitude,
@@ -227,7 +224,6 @@ export default function RideRequest() {
           : driverLocation === null
             ? null
             : await calculateRiderCancelRideCharges({
-                sessionToken: sessionToken || '',
                 rideId: id,
                 driverLocation,
               });
@@ -249,7 +245,6 @@ export default function RideRequest() {
     setCancelling(true);
     try {
       await riderCancelRide({
-        sessionToken: sessionToken || '',
         rideId: id,
         riderId: ride.riderId,
         reason: selectedReason,
@@ -289,7 +284,6 @@ export default function RideRequest() {
     setChangingDriver(true);
     try {
       await changeDriver({
-        sessionToken: sessionToken || '',
         rideId: ride._id,
         riderId: ride.riderId,
         driverId: selectedDriver.driver._id,

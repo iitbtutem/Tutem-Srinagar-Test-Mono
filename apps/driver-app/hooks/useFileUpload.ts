@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAction } from 'convex/react';
+import { useAuthenticatedAction } from './customApi';
 import { api } from '@tutem/api';
 import { useAuth } from './useAuth';
 import { ConvexError } from 'convex/values';
@@ -10,7 +10,7 @@ type UploadState = {
 };
 
 export function useFileUpload() {
-  const getPresignedUrl = useAction(api.actions.upload.getPresignedUrl);
+  const getPresignedUrl = useAuthenticatedAction(api.actions.upload.getPresignedUrl);
   const { sessionToken } = useAuth();
 
   const [state, setState] = useState<UploadState>({
@@ -36,7 +36,6 @@ export function useFileUpload() {
       }
 
       const { url: presignedUrl, key } = await getPresignedUrl({
-        sessionToken,
         key: `${fileKey}-${Date.now()}.${extension}`,
         contentType: blob.type,
       });

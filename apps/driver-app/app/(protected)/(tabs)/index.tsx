@@ -1,6 +1,5 @@
 import { useDriver } from '@/hooks/useDriver';
 import { api, Id } from '@tutem/api';
-import { useAction } from 'convex/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
@@ -18,7 +17,7 @@ import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
-import { useAuthenticatedQuery } from '@/hooks/customApi';
+import { useAuthenticatedQuery, useAuthenticatedAction } from '@/hooks/customApi';
 
 // Types
 
@@ -277,8 +276,8 @@ export const RideRequests = memo(
       api.routes.rides.getRideRequests,
       driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
     );
-    const acceptRide = useAction(api.actions.ride.acceptRideAction);
-    const rejectRide = useAction(api.actions.ride.rejectRide);
+    const acceptRide = useAuthenticatedAction(api.actions.ride.acceptRideAction);
+    const rejectRide = useAuthenticatedAction(api.actions.ride.rejectRide);
 
     // Map & location
     const mapRef = useRef<MapView>(null);
@@ -338,7 +337,6 @@ export const RideRequests = memo(
       setActionLoading('accept');
       try {
         await acceptRide({
-          sessionToken: sessionToken || '',
           driverId: driver.driverDetails._id,
           rideId,
         });
@@ -360,7 +358,6 @@ export const RideRequests = memo(
       setActionLoading('reject');
       try {
         await rejectRide({
-          sessionToken: sessionToken || '',
           driverId: driver.driverDetails._id,
           rideId,
         });

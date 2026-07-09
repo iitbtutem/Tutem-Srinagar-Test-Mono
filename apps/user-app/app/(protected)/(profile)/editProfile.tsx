@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { useMutation } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api } from '@tutem/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
@@ -55,7 +56,7 @@ export default function EditProfile() {
   const phoneRef = useRef<TextInput>(null);
   const dobRef = useRef<CustomDatePickerHandle>(null);
 
-  const updateUser = useMutation(api.routes.rider.updateRider);
+  const updateUser = useAuthenticatedMutation(api.routes.rider.updateRider);
 
   const {
     handleSubmit,
@@ -77,7 +78,7 @@ export default function EditProfile() {
       setIsSubmitting(true);
       const { dob, gender, ...rest } = data;
 
-      await updateUser({ ...rest, sessionToken });
+      await updateUser({ ...rest });
 
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 

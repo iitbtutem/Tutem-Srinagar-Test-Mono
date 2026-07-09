@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { useMutation, useAction } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api } from '@tutem/api';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
@@ -49,7 +50,7 @@ export default function Register() {
   const dobRef = useRef<CustomDatePickerHandle>(null);
 
   const addUser = useMutation(api.routes.rider.addRider);
-  const registerExpoPushToken = useMutation(api.routes.rider.registerExpoPushToken);
+  const registerExpoPushToken = useAuthenticatedMutation(api.routes.rider.registerExpoPushToken);
   const createSession = useAction(api.actions.auth.createSessionForUser);
   const { rider, isLoading: riderIsLoading } = useRider();
 

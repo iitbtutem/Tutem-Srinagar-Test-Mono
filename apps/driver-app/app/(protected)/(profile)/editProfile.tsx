@@ -20,7 +20,8 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { api } from '@tutem/api';
 import type { Id } from '@tutem/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery } from 'convex/react';
+import { useQuery } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import ErrorScreen from '@/components/ErrorScreen';
@@ -36,7 +37,6 @@ import { BasicHeader } from '@/components/CustomHeader';
 import { subYears } from 'date-fns';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { useDriver } from '@/hooks/useDriver';
-import { useAuth } from '@/hooks/useAuth';
 
 const formSchema = z.object({
   firstName: z
@@ -81,7 +81,6 @@ export default function EditProfile() {
       organizationId: string;
     }>();
 
-  const { sessionToken } = useAuth();
   const { driver, isLoading: isLoadingDriver } = useDriver();
 
   const lastNameRef = useRef<TextInput>(null);
@@ -94,7 +93,7 @@ export default function EditProfile() {
     api.routes.organizations.getNearbyOrganization,
     initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
   );
-  const updateDriver = useMutation(api.routes.driver.updateDriver);
+  const updateDriver = useAuthenticatedMutation(api.routes.driver.updateDriver);
 
   useEffect(() => {
     if (driverLocation && !initialLocationFetched) {
@@ -175,7 +174,7 @@ export default function EditProfile() {
         return;
       }
 
-      if (!sessionToken || !driver) {
+      if (!driver) {
         showToast({ title: 'Error', description: 'User not found', type: 'error' });
         return;
       }
@@ -192,7 +191,6 @@ export default function EditProfile() {
       const { dob, gender, ...rest } = data;
       await updateDriver({
         ...rest,
-        sessionToken: sessionToken,
         organizationId: data.organizationId as Id<'organization'>,
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,

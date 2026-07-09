@@ -4,7 +4,7 @@ import { useDriver } from '@/hooks/useDriver';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
 import { useMutation } from 'convex/react';
-import { useAuthenticatedQuery } from '@/hooks/customApi';
+import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -796,8 +796,8 @@ function ImagePickerDialog({
   const { sessionToken } = useAuth();
 
   const { uploadFile } = useFileUpload();
-  const uploadProfilePicture = useMutation(api.routes.driver.uploadProfilePicture);
-  const removeProfilePictureKey = useMutation(api.routes.driver.removeProfilePictureKey);
+  const uploadProfilePicture = useAuthenticatedMutation(api.routes.driver.uploadProfilePicture);
+  const removeProfilePictureKey = useAuthenticatedMutation(api.routes.driver.removeProfilePictureKey);
 
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);
@@ -806,7 +806,7 @@ function ImagePickerDialog({
       if (newImgUri === '') return;
       setImageUri(newImgUri);
       const profilePictureKey = await uploadFile(newImgUri, `profilePicture/${userId}`);
-      await uploadProfilePicture({ sessionToken: sessionToken || '', profilePictureKey });
+      await uploadProfilePicture({ profilePictureKey });
     } catch (error) {
       console.log('Error uploading profile picture:', error);
     }
@@ -816,7 +816,7 @@ function ImagePickerDialog({
     setIsOpen(false);
     if (!sessionToken) return;
     if (profilePictureKey === undefined) return;
-    await removeProfilePictureKey({ sessionToken });
+    await removeProfilePictureKey();
   };
 
   const uploadBtnOpacity = useAnimatedStyle(() => {

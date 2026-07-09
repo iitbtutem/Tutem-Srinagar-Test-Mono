@@ -5,6 +5,7 @@ import { useCountdown } from '@/hooks/useCountdown';
 import { useAuth } from '@/hooks/useAuth';
 import { api, Id } from '@tutem/api';
 import { useAction } from 'convex/react';
+import { useAuthenticatedAction } from '@/hooks/customApi';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { TextInput, TextInputKeyPressEvent, View } from 'react-native';
@@ -27,8 +28,8 @@ export default function startRide() {
   const { showToast } = useToast();
   const inputRef = useRef<(TextInput | null)[]>([]);
 
-  const startRide = useAction(api.actions.ride.startRide);
-  const generateRideOtp = useAction(api.actions.ride.generateRideOtp)
+  const startRide = useAuthenticatedAction(api.actions.ride.startRide);
+  const generateRideOtp = useAuthenticatedAction(api.actions.ride.generateRideOtp)
 
   const handleChange = (value: string, index: number) => {
     const newValue = value.trim();
@@ -60,7 +61,7 @@ export default function startRide() {
         return;
       }
       console.log(otp, " OTP")
-      await startRide({ sessionToken: sessionToken || "", driverId, rideId, otp: Number(otp) });
+      await startRide({ driverId, rideId, otp: Number(otp) });
       showToast({ title: 'Ride Started', description: 'Have a safe trip!', type: 'success' });
       router.back();
     } catch (e: any) {
@@ -73,7 +74,7 @@ export default function startRide() {
 
   const resendOtp = async () => {
     try {
-      await generateRideOtp({ sessionToken: sessionToken || "", rideId })
+      await generateRideOtp({ rideId })
       reset();
     } catch (error: any) {
       console.log(`error: ${error}`)

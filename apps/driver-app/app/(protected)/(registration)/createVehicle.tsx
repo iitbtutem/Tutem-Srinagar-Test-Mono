@@ -20,6 +20,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
 import { useDriver } from '@/hooks/useDriver';
 import { useMutation } from 'convex/react';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { useToast } from '@/components/CustomToast';
 import { Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -66,7 +67,7 @@ export default function CreateVehicle() {
   const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const { driver } = useDriver();
-  const addVehicle = useMutation(api.routes.vehicle.addVehicle);
+  const addVehicle = useAuthenticatedMutation(api.routes.vehicle.addVehicle);
 
   const modelRef = useRef<TextInput>(null);
   const colorRef = useRef<TextInput>(null);
