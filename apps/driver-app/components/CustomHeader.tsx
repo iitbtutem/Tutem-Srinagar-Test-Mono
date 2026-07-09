@@ -19,19 +19,19 @@ import {
   Text,
   Switch,
 } from '@tutem/ui';
-import { useMutation } from 'convex/react';
 import { useState } from 'react';
 import { useToast } from './CustomToast';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { QrCode } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
+import { useAuthenticatedMutation } from '@/hooks/customApi';
 
 type User = FunctionReturnType<typeof api.routes.driver.getUser>;
 
 export default function HomeScreenHeader({ user }: { user: User }) {
   const { showToast } = useToast();
 
-  const toggleAvailability = useMutation(api.routes.driver.toggleAvailability);
+  const toggleAvailability = useAuthenticatedMutation(api.routes.driver.toggleAvailability);
   const [genderMatching, setGenderMatching] = useState<boolean>(false);
 
   if (!user) return;
@@ -108,7 +108,7 @@ function ProfileDropdown({
 
   if (user === null) return;
 
-  const toggleGenderMatching = useMutation(api.routes.driver.toggleGenderMatching);
+  const toggleGenderMatching = useAuthenticatedMutation(api.routes.driver.toggleGenderMatching);
 
   const toggleGenderMatch = async () => {
     if (user.driverDetails === null) return;

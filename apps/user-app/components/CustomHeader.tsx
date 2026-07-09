@@ -4,7 +4,7 @@ import { FunctionReturnType } from 'convex/server';
 import { api } from '@tutem/api';
 import { useAuth } from '@/hooks/useAuth';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +58,6 @@ function ProfileDropdown({ user }: { user: User }) {
       return;
 
     await signOut();
-    router.replace('/(auth)/signin');
   };
 
   if (user === null) return;

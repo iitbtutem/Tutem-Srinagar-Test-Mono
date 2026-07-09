@@ -48,13 +48,11 @@ export default function Profile() {
   const { iconColor, iconBackgroundColor } = useThemeColors();
 
   const { rider, isLoading: riderIsLoading } = useRider();
-  const logout = useAuthenticatedMutation(api.routes.rider.logout);
+
   const toggleGenderMatching = useAuthenticatedMutation(api.routes.rider.toggleGenderMatching);
 
   const handleLogout = async (riderId: Id<'rider'> | undefined) => {
-    if (riderId !== undefined) await logout({ riderId });
     await signOut();
-    router.replace('/signin');
   };
 
   const handleUploadImage = (imageUri: string): void => {
@@ -362,7 +360,9 @@ function ImagePickerDialog({
   const [isOpen, setIsOpen] = useState(false);
   const { sessionToken } = useAuth();
   const uploadProfilePicture = useAuthenticatedMutation(api.routes.rider.uploadProfilePicture);
-  const removeProfilePictureKey = useAuthenticatedMutation(api.routes.rider.removeProfilePictureKey);
+  const removeProfilePictureKey = useAuthenticatedMutation(
+    api.routes.rider.removeProfilePictureKey
+  );
   const { uploadFile } = useFileUpload();
 
   const handleUpload = async (newImgUri: string) => {

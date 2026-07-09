@@ -3,6 +3,7 @@ import { useContext } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@tutem/api';
 import { ConvexError } from 'convex/values';
+import { router } from 'expo-router';
 
 export function useAuth() {
   const authState = useContext(AuthContext);
@@ -21,14 +22,12 @@ export function useAuth() {
 
   const deleteSessionMutation = useMutation(api.routes.auth.deleteSession);
   const signOut = async () => {
-    if (sessionToken) {
-      try {
-        await deleteSessionMutation({ sessionToken });
-      } catch {
-        // Clear local state even if backend call fails
-      }
-    }
+    const tokenToDelete = sessionToken;
     await localSignOut();
+    router.replace('/signin');
+    if (tokenToDelete) {
+      deleteSessionMutation({ sessionToken: tokenToDelete }).catch(() => {});
+    }
   };
 
   return {

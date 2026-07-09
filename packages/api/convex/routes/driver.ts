@@ -30,7 +30,7 @@ export const login = mutation({
   },
 });
 
-export const logout = authenticatedMutation({
+export const logout = mutation({
   args: {
     sessionToken: v.string(),
   },
@@ -51,6 +51,8 @@ export const logout = authenticatedMutation({
       isAvailableForRide: false,
       expoPushToken: undefined,
     });
+
+    if (session) await ctx.db.delete(session._id);
   },
 });
 

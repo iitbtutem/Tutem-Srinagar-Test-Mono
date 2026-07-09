@@ -121,6 +121,7 @@ export const getUserByPhone = internalQuery({
 export const deleteSession = mutation({
   args: { sessionToken: v.string() },
   handler: async (ctx, { sessionToken }) => {
+    console.log("Session in deleteSession : ::: ", sessionToken);
     const session = await ctx.runQuery(internal.routes.auth.getSessionByToken, {
       sessionToken,
     });

@@ -62,18 +62,7 @@ export default function Profile() {
   );
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      router.replace('/signin');
-    } catch (error) {
-      console.error('Error during logout:', error);
-      showToast({
-        type: 'error',
-        title: 'Logout Failed',
-        description: 'An error occurred while logging out. Please try again.',
-        position: 'bottom',
-      });
-    }
+    await signOut();
   };
 
   const handleUploadImage = (imageUri: string): void => {
@@ -797,7 +786,9 @@ function ImagePickerDialog({
 
   const { uploadFile } = useFileUpload();
   const uploadProfilePicture = useAuthenticatedMutation(api.routes.driver.uploadProfilePicture);
-  const removeProfilePictureKey = useAuthenticatedMutation(api.routes.driver.removeProfilePictureKey);
+  const removeProfilePictureKey = useAuthenticatedMutation(
+    api.routes.driver.removeProfilePictureKey
+  );
 
   const handleUpload = async (newImgUri: string) => {
     setIsOpen(false);

@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { router } from 'expo-router';
 
 const KEY_SESSION_TOKEN = 'auth_sessionToken';
 const KEY_PHONE = 'auth_phoneNumber';
@@ -57,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setSessionToken(null);
     setPhoneNumber(null);
-    router.replace('/signin');
     await Promise.all([
       SecureStore.deleteItemAsync(KEY_SESSION_TOKEN),
       SecureStore.deleteItemAsync(KEY_PHONE),
