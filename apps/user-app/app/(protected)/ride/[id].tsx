@@ -334,7 +334,8 @@ export default function RideDetailScreen() {
 
   const rideStatus = STATUS_STYLES[ride.status];
 
-  const showFeedbackBtn = ride.ratings.find((el) => el.raterType === 'Rider');
+  const riderRating = ride.ratings.some((el) => el.raterType === 'Rider');
+  const showFeedbackBtn = !riderRating && (ride.status === 'Completed' || ride.status === 'Abort');
 
   return (
     <>
@@ -437,7 +438,7 @@ export default function RideDetailScreen() {
             <RatingsSection ratings={ride.ratings} />
           </Animated.View>
         )}
-        {!showFeedbackBtn && (
+        {showFeedbackBtn && (
           <>
             <Button
               onPress={() => router.push(`/ride/feedback?rideId=${ride._id}`)}

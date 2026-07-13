@@ -49,7 +49,7 @@ export const getNearbyDrivers = action({
   },
   handler: async (ctx, args): Promise<ReturnValue> => {
     // Validate session
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     const ABLY_API_KEY =
       process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;

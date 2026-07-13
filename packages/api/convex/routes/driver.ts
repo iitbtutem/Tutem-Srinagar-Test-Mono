@@ -1,8 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
 import {
-  authenticatedQuery,
-  authenticatedMutation,
+  driverQuery,
+  driverMutation,
 } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
@@ -128,7 +128,7 @@ export const addDriver = mutation({
   },
 });
 
-export const registerAsDriver = authenticatedMutation({
+export const registerAsDriver = driverMutation({
   args: {
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
@@ -169,7 +169,7 @@ export const registerAsDriver = authenticatedMutation({
   },
 });
 
-export const getUser = authenticatedQuery({
+export const getUser = driverQuery({
   args: {},
   handler: async (ctx) => {
     const driver = await ctx.db
@@ -251,7 +251,7 @@ export const getUser = authenticatedQuery({
   },
 });
 
-export const getDriver = query({
+export const getDriver = driverQuery({
   args: {
     id: v.id("driver"),
   },
@@ -349,7 +349,7 @@ export const getDriverInternal = internalQuery({
   },
 });
 
-export const updateDriver = authenticatedMutation({
+export const updateDriver = driverMutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
@@ -408,7 +408,7 @@ export const updateDriver = authenticatedMutation({
   },
 });
 
-export const uploadProfilePicture = authenticatedMutation({
+export const uploadProfilePicture = driverMutation({
   args: {
     profilePictureKey: v.optional(v.string()),
   },
@@ -419,7 +419,7 @@ export const uploadProfilePicture = authenticatedMutation({
   },
 });
 
-export const removeProfilePictureKey = authenticatedMutation({
+export const removeProfilePictureKey = driverMutation({
   args: {},
   handler: async (ctx) => {
     await ctx.db.patch(ctx.user._id, {
@@ -428,7 +428,7 @@ export const removeProfilePictureKey = authenticatedMutation({
   },
 });
 
-export const getDriverPaymentQrImage = authenticatedQuery({
+export const getDriverPaymentQrImage = driverQuery({
   args: {
     driverId: v.id("driver"),
   },
@@ -449,7 +449,7 @@ export const getDriverPaymentQrImage = authenticatedQuery({
   },
 });
 
-export const updatePaymentQrCode = authenticatedMutation({
+export const updatePaymentQrCode = driverMutation({
   args: {
     driverId: v.id("driver"),
     paymentQrCodeKey: v.optional(v.string()),
@@ -465,7 +465,7 @@ export const updatePaymentQrCode = authenticatedMutation({
   },
 });
 
-export const updateLicense = authenticatedMutation({
+export const updateLicense = driverMutation({
   args: {
     driverId: v.id("driver"),
     number: v.string(),
@@ -509,7 +509,7 @@ export const updateLicense = authenticatedMutation({
   },
 });
 
-export const toggleAvailability = authenticatedMutation({
+export const toggleAvailability = driverMutation({
   args: {
     id: v.id("driver"),
   },
@@ -548,7 +548,7 @@ export const toggleAvailability = authenticatedMutation({
   },
 });
 
-export const toggleGenderMatching = authenticatedMutation({
+export const toggleGenderMatching = driverMutation({
   args: {
     id: v.id("driver"),
   },

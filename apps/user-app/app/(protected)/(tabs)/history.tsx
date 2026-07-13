@@ -6,15 +6,17 @@ import { RideHistoryCard as RideCard, RideCardSkeleton } from '@/components/Ride
 import { Text } from '@tutem/ui';
 import Rides from '@/assets/svgs/rides';
 import { router } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 
 const PAGE_SIZE = 10;
 
 export default function History() {
   const { rider: user } = useRider();
+  const { sessionToken } = useAuth();
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.routes.rides.getRiderHistory,
-    user && user.riderDetails ? { riderId: user.riderDetails._id } : 'skip',
+    user?.riderDetails && sessionToken ? { riderId: user.riderDetails._id, sessionToken } : 'skip',
     { initialNumItems: PAGE_SIZE }
   );
 

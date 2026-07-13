@@ -3,12 +3,13 @@ import { mutation } from "../_generated/server";
 import {
   authenticatedQuery,
   authenticatedMutation,
+  riderMutation,
 } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export const registerExpoPushToken = authenticatedMutation({
+export const registerExpoPushToken = riderMutation({
   args: {
     riderId: v.id("rider"),
     expoPushToken: v.string(),
@@ -89,7 +90,7 @@ export const addRider = mutation({
   },
 });
 
-export const registerAsRider = authenticatedMutation({
+export const registerAsRider = riderMutation({
   args: {
     expoPushToken: v.optional(v.string()),
   },
@@ -141,7 +142,7 @@ export const getRider = authenticatedQuery({
   },
 });
 
-export const updateRider = authenticatedMutation({
+export const updateRider = riderMutation({
   args: {
     firstName: v.string(),
     lastName: v.optional(v.string()),
@@ -161,7 +162,7 @@ export const updateRider = authenticatedMutation({
   },
 });
 
-export const uploadProfilePicture = authenticatedMutation({
+export const uploadProfilePicture = riderMutation({
   args: {
     profilePictureKey: v.optional(v.string()),
   },
@@ -172,7 +173,7 @@ export const uploadProfilePicture = authenticatedMutation({
   },
 });
 
-export const removeProfilePictureKey = authenticatedMutation({
+export const removeProfilePictureKey = riderMutation({
   args: {},
   handler: async (ctx) => {
     await ctx.db.patch(ctx.user._id, {
@@ -181,7 +182,7 @@ export const removeProfilePictureKey = authenticatedMutation({
   },
 });
 
-export const toggleGenderMatching = authenticatedMutation({
+export const toggleGenderMatching = riderMutation({
   args: {
     id: v.id("rider"),
   },

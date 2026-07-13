@@ -1,14 +1,11 @@
 import { ConvexError, v } from "convex/values";
-import {
-  authenticatedMutation,
-  authenticatedQuery,
-} from "../helpers/sessionFunctions";
+import { driverMutation, driverQuery } from "../helpers/sessionFunctions";
 import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from "../CONSTANTS";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 
-export const getVehicleByDriverId = authenticatedQuery({
+export const getVehicleByDriverId = driverQuery({
   args: { driverId: v.id("driver") },
   handler: async (ctx, args) => {
     const vehicle = await ctx.db
@@ -44,7 +41,7 @@ export const getVehicleByDriverId = authenticatedQuery({
   },
 });
 
-export const addVehicle = authenticatedMutation({
+export const addVehicle = driverMutation({
   args: {
     registrationNumber: v.string(),
     model: v.string(),
@@ -104,7 +101,7 @@ export const addVehicle = authenticatedMutation({
   },
 });
 
-export const updateVehicle = authenticatedMutation({
+export const updateVehicle = driverMutation({
   args: {
     id: v.id("vehicle"),
     registrationNumber: v.string(),

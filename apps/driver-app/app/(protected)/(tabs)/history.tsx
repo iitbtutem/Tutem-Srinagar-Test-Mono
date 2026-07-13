@@ -6,15 +6,19 @@ import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard, RideCardSkeleton } from '../../../components/RideCard';
 import RideSvg from '@/assets/svgs/rides';
 import { router } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 
 const PAGE_SIZE = 10;
 
 export default function History() {
   const { driver: user } = useDriver();
+  const { sessionToken } = useAuth();
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.routes.rides.getDriverHistory,
-    user && user.driverDetails ? { driverId: user.driverDetails._id } : 'skip',
+    user?.driverDetails && sessionToken
+      ? { driverId: user.driverDetails._id, sessionToken }
+      : 'skip',
     { initialNumItems: PAGE_SIZE }
   );
 

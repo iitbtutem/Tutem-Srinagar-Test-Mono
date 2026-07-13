@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   internalMutation,
   internalQuery,
@@ -133,6 +133,14 @@ export const deleteSession = mutation({
 export const getUserByIdInternal = internalQuery({
   args: { userId: v.id("user") },
   handler: async (ctx, { userId }) => {
-    return ctx.db.get(userId);
+    const user = await ctx.db.get(userId);
+    if (user === null) throw new ConvexError("User not found");
+
+    const permissions = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    return { ...user, permissions: permissions.map((p) => p.permission) };
   },
 });

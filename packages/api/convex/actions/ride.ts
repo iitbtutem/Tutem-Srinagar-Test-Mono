@@ -16,7 +16,7 @@ export const acceptRideAction = action({
     rideId: v.id("ride"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.acceptRideInternal,
@@ -56,7 +56,7 @@ export const bookRide = action({
     expectedDuration: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"ride">> => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     console.log("book ride after authentication");
 
@@ -88,7 +88,7 @@ export const changeDriver = action({
     driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     const ride = await ctx.runMutation(
       internal.routes.rides.changeDriverInternal,
@@ -136,7 +136,7 @@ export const cancelRide = action({
     rideId: v.id("ride"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     const driverExpoPushToken = await ctx.runMutation(
       internal.routes.rides.cancelRideInternal,
@@ -179,7 +179,7 @@ export const calculateRiderCancelRideCharges = action({
     penaltyAmount: number;
     hasReachedDestination: boolean;
   }> => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     const { organizationRate: orgRate, ride } = await ctx.runQuery(
       internal.routes.rides.rideOrganizationRateInternal,
@@ -255,7 +255,7 @@ export const riderCancelRide = action({
     ),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Rider");
 
     const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
       id: args.rideId,
@@ -375,7 +375,7 @@ export const calculateDriverCancelRideCharges = action({
     chargableDistance: number;
     remainingDistance: number;
   }> => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const rideDetails = await ctx.runQuery(
       internal.routes.rides.getDetailsInternal,
@@ -433,7 +433,7 @@ export const driverCancelRide = action({
     }),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
       id: args.rideId,
@@ -529,7 +529,7 @@ export const rejectRide = action({
     rideId: v.id("ride"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.rejectRideInternal,
@@ -557,7 +557,7 @@ export const driverArrived = action({
     driverId: v.id("driver"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const crypto = require("crypto");
     const min = Math.pow(10, RIDE_OTP_SIZE - 1);
@@ -590,7 +590,7 @@ export const generateRideOtp = action({
     rideId: v.id("ride"),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const crypto = require("crypto");
     const otp = crypto.randomInt(1000, 10000);
@@ -622,7 +622,7 @@ export const startRide = action({
     otp: v.number(),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const riderExpoPushToken = await ctx.runMutation(
       internal.routes.rides.startRideInternal,
@@ -655,7 +655,7 @@ export const completeRide = action({
     }),
   },
   handler: async (ctx, args) => {
-    await validateSession(ctx, args.sessionToken);
+    await validateSession(ctx, args.sessionToken, "Driver");
 
     const ride = await ctx.runQuery(internal.routes.rides.getDetailsInternal, {
       id: args.rideId,

@@ -4,6 +4,9 @@ import { internalMutation, internalQuery, query } from "../_generated/server";
 import {
   authenticatedMutation,
   authenticatedQuery,
+  driverMutation,
+  driverQuery,
+  riderQuery,
 } from "../helpers/sessionFunctions";
 import { Doc } from "../_generated/dataModel";
 import { TWENTY_FOUR_HOURS, METERS_IN_KM } from "../CONSTANTS";
@@ -633,7 +636,7 @@ export const acceptRideInternal = internalMutation({
   },
 });
 
-export const getRiderCurrentRideById = authenticatedQuery({
+export const getRiderCurrentRideById = riderQuery({
   args: {
     id: v.id("ride"),
   },
@@ -715,7 +718,7 @@ export const getRiderCurrentRideById = authenticatedQuery({
   },
 });
 
-export const getRiderCurrentRideByRiderId = authenticatedQuery({
+export const getRiderCurrentRideByRiderId = riderQuery({
   args: {
     riderId: v.id("rider"),
   },
@@ -793,7 +796,7 @@ export const getRiderCurrentRideByRiderId = authenticatedQuery({
   },
 });
 
-export const getRiderHistory = query({
+export const getRiderHistory = riderQuery({
   args: {
     riderId: v.id("rider"),
     paginationOpts: paginationOptsValidator,
@@ -887,7 +890,7 @@ export const getRiderHistory = query({
   },
 });
 
-export const getDriverCurrentRideById = authenticatedQuery({
+export const getDriverCurrentRideById = driverQuery({
   args: {
     id: v.id("ride"),
   },
@@ -950,7 +953,7 @@ export const getDriverCurrentRideById = authenticatedQuery({
   },
 });
 
-export const getDriverCurrentRideByDriverId = authenticatedQuery({
+export const getDriverCurrentRideByDriverId = driverQuery({
   args: {
     driverId: v.id("driver"),
   },
@@ -1030,7 +1033,7 @@ export const getDriverCurrentRideByDriverId = authenticatedQuery({
   },
 });
 
-export const getDriverRide = authenticatedQuery({
+export const getDriverRide = driverQuery({
   args: {
     id: v.id("ride"),
   },
@@ -1139,7 +1142,7 @@ export const getDriverRide = authenticatedQuery({
   },
 });
 
-export const getRiderRide = authenticatedQuery({
+export const getRiderRide = riderQuery({
   args: {
     id: v.id("ride"),
   },
@@ -1230,7 +1233,7 @@ export const getRiderRide = authenticatedQuery({
   },
 });
 
-export const getRideRequests = authenticatedQuery({
+export const getRideRequests = driverQuery({
   args: {
     driverId: v.id("driver"),
   },
@@ -1312,7 +1315,7 @@ export const getRideRequests = authenticatedQuery({
   },
 });
 
-export const getDriverHistory = query({
+export const getDriverHistory = driverQuery({
   args: {
     driverId: v.id("driver"),
     paginationOpts: paginationOptsValidator,
@@ -1508,7 +1511,7 @@ export const startRideInternal = internalMutation({
   },
 });
 
-export const hasReachedDestination = authenticatedMutation({
+export const hasReachedDestination = driverMutation({
   args: {
     rideId: v.id("ride"),
     driverId: v.id("driver"),
@@ -1622,7 +1625,7 @@ export const submitRating = authenticatedMutation({
 });
 
 // Get both ratings for a single ride
-export const getRideRatings = query({
+export const getRideRatings = authenticatedQuery({
   args: {
     rideId: v.id("ride"),
   },
@@ -1635,7 +1638,7 @@ export const getRideRatings = query({
 });
 
 // Get all ratings received by a driver + their average
-export const getDriverRatings = query({
+export const getDriverRatings = authenticatedQuery({
   args: {
     driverId: v.id("driver"),
   },
@@ -1660,7 +1663,7 @@ export const getDriverRatings = query({
 });
 
 // Get all ratings received by a rider + their average
-export const getRiderRatings = query({
+export const getRiderRatings = authenticatedQuery({
   args: {
     riderId: v.id("rider"),
   },
