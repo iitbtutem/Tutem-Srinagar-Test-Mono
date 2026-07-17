@@ -134,12 +134,14 @@ export function RiderDetailPage({
       {/* Header */}
       <div className="flex justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => router.back()}
             className="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="page-title">{name}</h1>
             <p className="page-description">Rider Profile</p>
@@ -258,13 +260,14 @@ export function RiderDetailPage({
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 setRidesFilter("Completed");
                 setRidesPage(1);
                 setIsRidesDialogOpen(true);
               }}
-              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors focus:outline-none"
+              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors w-full h-auto flex flex-col"
             >
               <div className="text-2xl font-bold text-green-500">
                 {completedRides}
@@ -272,14 +275,15 @@ export function RiderDetailPage({
               <div className="text-xs text-muted-foreground mt-1">
                 Completed
               </div>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 setRidesFilter("Canceled");
                 setRidesPage(1);
                 setIsRidesDialogOpen(true);
               }}
-              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors focus:outline-none"
+              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors w-full h-auto flex flex-col"
             >
               <div className="text-2xl font-bold text-red-500">
                 {cancelledRides}
@@ -287,7 +291,7 @@ export function RiderDetailPage({
               <div className="text-xs text-muted-foreground mt-1">
                 Cancelled
               </div>
-            </button>
+            </Button>
           </div>
 
           {/* Info */}
@@ -348,16 +352,18 @@ export function RiderDetailPage({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Recent Rides</h3>
               {(rider.rideHistory?.length || 0) > 0 && (
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => {
                     setRidesFilter("All");
                     setRidesPage(1);
                     setIsRidesDialogOpen(true);
                   }}
-                  className="text-xs text-primary hover:underline font-medium cursor-pointer"
+                  className="text-xs text-primary font-medium p-0 h-auto"
                 >
                   View All ({rider.rideHistory?.length || 0})
-                </button>
+                </Button>
               )}
             </div>
             {!rider.rideHistory || rider.rideHistory.length === 0 ? (

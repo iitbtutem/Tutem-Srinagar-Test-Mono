@@ -11,6 +11,9 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type AdminUser = {
   _id: string;
@@ -87,7 +90,9 @@ function AdminColumns(
         const u = row.original;
         const name = `${u.firstName} ${u.lastName ?? ""}`.trim();
         return (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(u.permissionId, name);
@@ -95,7 +100,7 @@ function AdminColumns(
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 text-muted-foreground transition-colors"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
         );
       },
     },
@@ -153,10 +158,10 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <Label className="text-sm font-medium mb-1 block">
                 First Name
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("firstName")}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="John"
@@ -168,10 +173,10 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <Label className="text-sm font-medium mb-1 block">
                 Last Name
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("lastName")}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Doe"
@@ -180,10 +185,10 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">
+            <Label className="text-sm font-medium mb-1 block">
               Phone Number
-            </label>
-            <input
+            </Label>
+            <Input
               {...register("phoneNumber")}
               type="tel"
               className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -198,10 +203,10 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <Label className="text-sm font-medium mb-1 block">
                 Date of Birth
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("dob")}
                 type="date"
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -213,7 +218,7 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Gender</label>
+              <Label className="text-sm font-medium mb-1 block">Gender</Label>
               <select
                 {...register("gender")}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -231,23 +236,24 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
           </p>
 
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="flex-1 h-10 rounded-lg border border-border hover:bg-muted transition-colors text-sm"
+              className="flex-1 h-10"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 h-10 flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
               {isSubmitting ? "Creating…" : "Create Admin"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -299,20 +305,22 @@ function DeleteConfirmModal({
           </p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="flex-1 h-10 rounded-lg border border-border hover:bg-muted transition-colors text-sm"
+            className="flex-1 h-10"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="flex-1 h-10 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 h-10 flex items-center justify-center gap-2"
           >
             {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isDeleting ? "Removing…" : "Remove"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -379,13 +387,13 @@ export function AdminUsersPage({
               : "Loading…"}
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
           Add Admin
-        </button>
+        </Button>
       </div>
 
       <div className="card-glass p-4">

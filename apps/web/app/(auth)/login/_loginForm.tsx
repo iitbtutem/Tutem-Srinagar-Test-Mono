@@ -10,6 +10,9 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, Phone, Shield, ArrowRight, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const phoneSchema = z.object({
   phoneNumber: z
@@ -143,14 +146,15 @@ export function LoginForm() {
   if (step === "otp") {
     return (
       <div className="space-y-6">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setStep("phone")}
-          className="flex items-center gap-1 text-sm hover:text-foreground transition-colors"
+          className="flex items-center gap-1 text-sm hover:text-foreground transition-colors h-auto p-0"
           style={{ color: "var(--color-muted-foreground)" }}
         >
           <ChevronLeft className="h-4 w-4" />
           Back
-        </button>
+        </Button>
 
         <div className="space-y-2">
           <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
@@ -176,10 +180,10 @@ export function LoginForm() {
           className="space-y-4"
         >
           <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="otp">
+            <Label htmlFor="otp" className="text-sm font-medium">
               Verification Code
-            </label>
-            <input
+            </Label>
+            <Input
               id="otp"
               type="text"
               inputMode="numeric"
@@ -203,14 +207,10 @@ export function LoginForm() {
             )}
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: "var(--color-primary)",
-              color: "var(--color-primary-foreground)",
-            }}
+            className="w-full h-12 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -220,10 +220,11 @@ export function LoginForm() {
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onResendOtp}
             disabled={isLoading}
             className="w-full text-sm transition-colors"
@@ -236,7 +237,7 @@ export function LoginForm() {
             >
               Resend
             </span>
-          </button>
+          </Button>
         </form>
       </div>
     );
@@ -268,15 +269,15 @@ export function LoginForm() {
 
       <form onSubmit={phoneForm.handleSubmit(onSendOtp)} className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium" htmlFor="phoneNumber">
+          <Label htmlFor="phoneNumber" className="text-sm font-medium">
             Phone Number
-          </label>
+          </Label>
           <div className="relative">
             <Phone
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
               style={{ color: "var(--color-muted-foreground)" }}
             />
-            <input
+            <Input
               id="phoneNumber"
               type="tel"
               placeholder="+91 9876543210"
@@ -298,14 +299,10 @@ export function LoginForm() {
           )}
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-12 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{
-            backgroundColor: "var(--color-primary)",
-            color: "var(--color-primary-foreground)",
-          }}
+          className="w-full h-12 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -315,7 +312,7 @@ export function LoginForm() {
               <ArrowRight className="h-4 w-4" />
             </>
           )}
-        </button>
+        </Button>
       </form>
 
       <p

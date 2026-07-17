@@ -177,12 +177,14 @@ export function DriverDetailPage({
     <div className="space-y-5">
       <div className="flex justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => router.back()}
             className="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="page-title">{name}</h1>
             <p className="page-description">Driver Profile</p>
@@ -267,13 +269,14 @@ export function DriverDetailPage({
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 setRidesFilter("Completed");
                 setRidesPage(1);
                 setIsRidesDialogOpen(true);
               }}
-              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors focus:outline-none"
+              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors w-full h-auto flex flex-col"
             >
               <div className="text-2xl font-bold text-green-500">
                 {completedRides}
@@ -281,14 +284,15 @@ export function DriverDetailPage({
               <div className="text-xs text-muted-foreground mt-1">
                 Completed
               </div>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 setRidesFilter("Canceled");
                 setRidesPage(1);
                 setIsRidesDialogOpen(true);
               }}
-              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors focus:outline-none"
+              className="card-glass p-4 text-center cursor-pointer hover:bg-muted/10 transition-colors w-full h-auto flex flex-col"
             >
               <div className="text-2xl font-bold text-red-500">
                 {cancelledRides}
@@ -296,7 +300,7 @@ export function DriverDetailPage({
               <div className="text-xs text-muted-foreground mt-1">
                 Cancelled
               </div>
-            </button>
+            </Button>
           </div>
 
           {/* Personal info */}
@@ -380,31 +384,33 @@ export function DriverDetailPage({
               {driver.licenseImageFrontKey && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Front</p>
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setActiveImage(driver.licenseImageFrontKey)}
-                    className="w-full text-left focus:outline-none cursor-pointer"
+                    className="w-full text-left focus:outline-none cursor-pointer p-0 h-auto block"
                   >
                     <img
                       src={driver.licenseImageFrontKey}
                       alt="License front"
                       className="rounded-lg border border-border w-full h-32 object-cover hover:opacity-90 transition-opacity"
                     />
-                  </button>
+                  </Button>
                 </div>
               )}
               {driver.licenseImageBackKey && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Back</p>
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setActiveImage(driver.licenseImageBackKey)}
-                    className="w-full text-left focus:outline-none cursor-pointer"
+                    className="w-full text-left focus:outline-none cursor-pointer p-0 h-auto block"
                   >
                     <img
                       src={driver.licenseImageBackKey}
                       alt="License back"
                       className="rounded-lg border border-border w-full h-32 object-cover hover:opacity-90 transition-opacity"
                     />
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -472,16 +478,17 @@ export function DriverDetailPage({
                 {driver.vehicle.rcImageKey && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">RC</p>
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => setActiveImage(driver.vehicle.rcImageKey)}
-                      className="w-full text-left focus:outline-none cursor-pointer"
+                      className="w-full text-left focus:outline-none cursor-pointer p-0 h-auto block"
                     >
                       <img
                         src={driver.vehicle.rcImageKey}
                         alt="RC"
                         className="rounded-lg border border-border w-full h-28 object-cover hover:opacity-90 transition-opacity"
                       />
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {driver.vehicle.insuranceImageKey && (
@@ -489,18 +496,19 @@ export function DriverDetailPage({
                     <p className="text-xs text-muted-foreground mb-1">
                       Insurance
                     </p>
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() =>
                         setActiveImage(driver.vehicle.insuranceImageKey)
                       }
-                      className="w-full text-left focus:outline-none cursor-pointer"
+                      className="w-full text-left focus:outline-none cursor-pointer p-0 h-auto block"
                     >
                       <img
                         src={driver.vehicle.insuranceImageKey}
                         alt="Insurance"
                         className="rounded-lg border border-border w-full h-28 object-cover hover:opacity-90 transition-opacity"
                       />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -539,16 +547,18 @@ export function DriverDetailPage({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Recent Rides</h3>
               {(driver.rideHistory?.length || 0) > 0 && (
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => {
                     setRidesFilter("All");
                     setRidesPage(1);
                     setIsRidesDialogOpen(true);
                   }}
-                  className="text-xs text-primary hover:underline font-medium cursor-pointer"
+                  className="text-xs text-primary font-medium p-0 h-auto"
                 >
                   View All ({driver.rideHistory?.length || 0})
-                </button>
+                </Button>
               )}
             </div>
             {!driver.rideHistory || driver.rideHistory.length === 0 ? (

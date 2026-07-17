@@ -9,6 +9,9 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, Save, Settings2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const settingsSchema = z.object({
   nearbyRadius: z.coerce
@@ -39,17 +42,17 @@ function FieldGroup({
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
+      <Label htmlFor={id} className="text-sm font-medium">
         {label}
-      </label>
+      </Label>
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
       )}
       <div className="flex items-center gap-0">
-        <input
+        <Input
           id={id}
           type="number"
-          className="flex-1 h-10 px-3 rounded-l-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+          className="flex-1 h-10 px-3 rounded-l-lg rounded-r-none border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
           {...inputProps}
         />
         {suffix && (
@@ -204,10 +207,10 @@ export function SettingsPage() {
           </div>
 
           <div className="flex gap-3 pt-2 border-t border-border">
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+              className="flex items-center gap-2"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -215,14 +218,14 @@ export function SettingsPage() {
                 <Save className="h-4 w-4" />
               )}
               {isSubmitting ? "Saving…" : "Save Settings"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => reset()}
-              className="px-5 py-2.5 rounded-lg border border-border hover:bg-muted transition-colors text-sm"
             >
               Reset
-            </button>
+            </Button>
           </div>
         </form>
       )}

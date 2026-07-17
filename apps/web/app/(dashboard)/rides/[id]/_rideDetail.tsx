@@ -23,6 +23,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 function TimelineItem({
   label,
@@ -111,12 +112,14 @@ export function RideDetailPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => router.back()}
             className="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors print:hidden"
           >
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="page-title">Ride Details</h1>
             <p className="page-description">
@@ -126,13 +129,15 @@ export function RideDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={ride.status} />
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm print:hidden"
+            className="flex items-center gap-2 print:hidden"
           >
             <Printer className="h-4 w-4" />
             Print
-          </button>
+          </Button>
         </div>
       </div>
 

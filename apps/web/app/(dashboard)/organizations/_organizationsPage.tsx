@@ -932,8 +932,9 @@ export function OrgModal({ open, onOpenChange, orgToEdit }: OrgModalProps) {
                   >
                     {/* Tabs Header */}
                     <div className="grid grid-cols-2 p-1 bg-muted rounded-lg border border-border">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
                         onClick={() => setActiveGeofenceTab("boundingBox")}
                         disabled={noRestrictions}
                         className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all cursor-pointer ${
@@ -944,9 +945,10 @@ export function OrgModal({ open, onOpenChange, orgToEdit }: OrgModalProps) {
                       >
                         <Square className="h-3.5 w-3.5" />
                         Bounding Box
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
                         onClick={() => setActiveGeofenceTab("polygon")}
                         disabled={noRestrictions}
                         className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all cursor-pointer ${
@@ -957,7 +959,7 @@ export function OrgModal({ open, onOpenChange, orgToEdit }: OrgModalProps) {
                       >
                         <Hexagon className="h-3.5 w-3.5" />
                         Polygon Area
-                      </button>
+                      </Button>
                     </div>
 
                     {/* Bounding Box Inputs */}

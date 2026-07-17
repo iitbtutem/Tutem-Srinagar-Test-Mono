@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { Loader2, User, Save, Camera } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name required"),
@@ -151,11 +154,12 @@ export function ProfilePage() {
               getInitials(profile?.firstName ?? "A", profile?.lastName)
             )}
           </div>
-          <button
+          <Button
             type="button"
+            size="icon"
             onClick={handleUploadClick}
             disabled={isUploading}
-            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer animate-in fade-in zoom-in duration-200"
+            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full shadow-md cursor-pointer animate-in fade-in zoom-in duration-200"
             title="Upload profile picture"
           >
             {isUploading ? (
@@ -163,7 +167,7 @@ export function ProfilePage() {
             ) : (
               <Camera className="h-3.5 w-3.5" />
             )}
-          </button>
+          </Button>
           <input
             type="file"
             ref={fileInputRef}
@@ -193,10 +197,10 @@ export function ProfilePage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <Label className="text-sm font-medium mb-1 block">
                 First Name
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("firstName")}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -207,10 +211,10 @@ export function ProfilePage() {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <Label className="text-sm font-medium mb-1 block">
                 Last Name
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("lastName")}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -218,10 +222,10 @@ export function ProfilePage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">
+            <Label className="text-sm font-medium mb-1 block">
               Phone Number
-            </label>
-            <input
+            </Label>
+            <Input
               value={profile?.phoneNumber ?? ""}
               disabled
               className="w-full h-10 px-3 rounded-lg border border-input bg-muted text-sm text-muted-foreground cursor-not-allowed"
@@ -232,8 +236,8 @@ export function ProfilePage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">Gender</label>
-            <input
+            <Label className="text-sm font-medium mb-1 block">Gender</Label>
+            <Input
               value={profile?.gender ?? ""}
               disabled
               className="w-full h-10 px-3 rounded-lg border border-input bg-muted text-sm text-muted-foreground cursor-not-allowed"
@@ -241,10 +245,10 @@ export function ProfilePage() {
           </div>
 
           <div className="flex gap-3 pt-2 border-t border-border">
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer"
+              className="flex items-center gap-2"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -252,7 +256,7 @@ export function ProfilePage() {
                 <Save className="h-4 w-4" />
               )}
               {isSubmitting ? "Saving…" : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
