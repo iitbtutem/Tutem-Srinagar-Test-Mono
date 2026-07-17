@@ -49,6 +49,7 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     const { driversInfo } = args;
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
+    if (rider.isBlacklisted === true) throw new ConvexError("Rider is blacklisted");
     const riderUser = await ctx.db.get(rider.userId);
     if (riderUser === null) throw new ConvexError("Invalid user");
 
@@ -61,7 +62,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
 
         if (
           driverDetails === null ||
-          driverDetails.isAvailableForRide === false
+          driverDetails.isAvailableForRide === false ||
+          driverDetails.isBlacklisted === true
         )
           return null;
 
@@ -195,8 +197,10 @@ export const bookRideInternal = internalMutation({
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
+    if (rider.isBlacklisted === true) throw new ConvexError("Rider is blacklisted");
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Driver doesn't exist");
+    if (driver.isBlacklisted === true) throw new ConvexError("Driver is blacklisted");
 
     if (rider.userId === driver.userId)
       throw new ConvexError("Driver and rider cannot be same user");

@@ -17,6 +17,9 @@ export const login = mutation({
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) return;
+    if (driver.isBlacklisted === true) {
+      throw new ConvexError("Driver is blacklisted/blocked");
+    }
 
     const activeRide = await ctx.db
       .query("ride")
@@ -112,16 +115,17 @@ export const addDriver = mutation({
     await ctx.db.insert("driver", {
       userId: userId,
       organizationId: args.organizationId,
-      licenseImageBackKey: args.licenseImageBackKey,
-      licenseImageFrontKey: args.licenseImageFrontKey,
       licenseNumber: args.licenseNumber,
       isAvailableForRide: true,
       isOnline: true,
       isLicenseVerified: organization.isLicenseVerficationRequired
         ? "Pending"
         : "Verified",
-      expoPushToken: args.expoPushToken,
       genderMatching: false,
+      isBlacklisted: false,
+      ...(args.licenseImageBackKey !== undefined ? { licenseImageBackKey: args.licenseImageBackKey } : {}),
+      ...(args.licenseImageFrontKey !== undefined ? { licenseImageFrontKey: args.licenseImageFrontKey } : {}),
+      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
     });
 
     return userId;
@@ -153,14 +157,15 @@ export const registerAsDriver = driverMutation({
       licenseNumber: args.licenseNumber,
       isAvailableForRide: true,
       isOnline: true,
-      licenseImageFrontKey: args.licenseImageFrontKey,
-      licenseImageBackKey: args.licenseImageBackKey,
       isLicenseVerified: organization.isLicenseVerficationRequired
         ? "Pending"
         : "Verified",
       organizationId: args.organizationId,
-      expoPushToken: args.expoPushToken,
       genderMatching: false,
+      isBlacklisted: false,
+      ...(args.licenseImageFrontKey !== undefined ? { licenseImageFrontKey: args.licenseImageFrontKey } : {}),
+      ...(args.licenseImageBackKey !== undefined ? { licenseImageBackKey: args.licenseImageBackKey } : {}),
+      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
     });
     await ctx.db.insert("userPermission", {
       userId: ctx.user._id,
@@ -516,6 +521,9 @@ export const toggleAvailability = driverMutation({
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.id);
     if (driver === null) throw new ConvexError("Invalid user");
+    if (driver.isBlacklisted === true) {
+      throw new ConvexError("Driver is blacklisted and cannot toggle availability");
+    }
 
     if (driver.isOnline === true) {
       const rideRequests = await ctx.db

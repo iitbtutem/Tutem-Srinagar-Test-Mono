@@ -78,8 +78,9 @@ export const addRider = mutation({
     await ctx.db.insert("rider", {
       isVerified: "Pending",
       userId,
-      expoPushToken,
       genderMatching: false,
+      isBlacklisted: false,
+      ...(expoPushToken !== undefined ? { expoPushToken } : {}),
     });
     await ctx.db.insert("userPermission", {
       userId: userId,
@@ -105,8 +106,9 @@ export const registerAsRider = riderMutation({
     await ctx.db.insert("rider", {
       isVerified: "Pending",
       userId: ctx.user._id,
-      expoPushToken: args.expoPushToken,
       genderMatching: false,
+      isBlacklisted: false,
+      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
     });
     await ctx.db.insert("userPermission", {
       userId: ctx.user._id,

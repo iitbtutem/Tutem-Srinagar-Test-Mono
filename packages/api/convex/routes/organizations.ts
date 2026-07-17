@@ -75,9 +75,44 @@ export const createOrganization = adminMutation({
 
 // FETCH ALL ORGANISATIONS
 export const getAllOrganizations = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("organization").collect();
+  args: {
+    search: v.optional(v.string()),
+    licenseRequired: v.optional(v.array(v.string())),
+    rcRequired: v.optional(v.array(v.string())),
+    hasPolygon: v.optional(v.array(v.string())),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const orgs = await ctx.db.query("organization").collect();
+    
+    return orgs.filter((org) => {
+      if (args.search) {
+        const s = args.search.toLowerCase();
+        const matchesName = org.name?.toLowerCase().includes(s);
+        const matchesAddress = org.address?.toLowerCase().includes(s);
+        if (!matchesName && !matchesAddress) return false;
+      }
+      if (args.licenseRequired && args.licenseRequired.length > 0) {
+        const hasYes = args.licenseRequired.includes("Yes");
+        const hasNo = args.licenseRequired.includes("No");
+        if (hasYes && !hasNo && !org.isLicenseVerficationRequired) return false;
+        if (hasNo && !hasYes && org.isLicenseVerficationRequired) return false;
+      }
+      if (args.rcRequired && args.rcRequired.length > 0) {
+        const hasYes = args.rcRequired.includes("Yes");
+        const hasNo = args.rcRequired.includes("No");
+        if (hasYes && !hasNo && !org.isVehicleRCVerificationRequired) return false;
+        if (hasNo && !hasYes && org.isVehicleRCVerificationRequired) return false;
+      }
+      if (args.hasPolygon && args.hasPolygon.length > 0) {
+        const hasDefined = args.hasPolygon.includes("Defined");
+        const hasNone = args.hasPolygon.includes("None");
+        const orgHas = !!((org.polygon && org.polygon.length > 0) || org.boundingBox);
+        if (hasDefined && !hasNone && !orgHas) return false;
+        if (hasNone && !hasDefined && orgHas) return false;
+      }
+      return true;
+    });
   },
 });
 
@@ -282,6 +317,7 @@ export const createOrganizationRate = adminMutation({
 export const getOrganizationRates = query({
   args: {
     organizationId: v.id("organization"),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db

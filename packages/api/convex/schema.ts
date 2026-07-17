@@ -28,6 +28,7 @@ export default defineSchema({
     userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
+    isBlacklisted: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
   // Drivers
@@ -47,6 +48,7 @@ export default defineSchema({
     userId: v.id("user"),
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
+    isBlacklisted: v.optional(v.boolean()),
   })
     .index("by_user", ["userId"])
     .index("by_organization", ["organizationId"]),
