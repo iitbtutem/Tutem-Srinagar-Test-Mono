@@ -111,21 +111,44 @@ export const getSessionByToken = internalQuery({
 export const getUserByPhone = internalQuery({
   args: { phoneNumber: v.string() },
   handler: async (ctx, { phoneNumber }) => {
-    return ctx.db
+    const user = await ctx.db
       .query("user")
       .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", phoneNumber))
       .first();
+
+    if (!user) return null;
+
+    const userPermissions = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    return {
+      ...user,
+      userPermissions,
+    };
   },
 });
 
 export const deleteSession = mutation({
   args: { sessionToken: v.string() },
   handler: async (ctx, { sessionToken }) => {
-    console.log("Session in deleteSession : ::: ", sessionToken);
     const session = await ctx.runQuery(internal.routes.auth.getSessionByToken, {
       sessionToken,
     });
     if (session === null) return;
+
+    const rider = await ctx.db
+      .query("rider")
+      .withIndex("by_user", (q) => q.eq("userId", session.userId))
+      .first();
+
+    if (rider !== null) {
+      await ctx.db.patch(rider._id, {
+        expoPushToken: undefined,
+      });
+    }
+
     if (session) await ctx.db.delete(session._id);
   },
 });

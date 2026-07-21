@@ -59,7 +59,7 @@ export function LoginForm() {
 
   // Convex actions and mutations – called directly from client
   const sendOtp = useAction(api.actions.auth.sendOtp);
-  const verifyOtp = useAction(api.actions.auth.verifyOtp);
+  const verifyOtp = useAction(api.actions.auth.verifyOtpAdmin);
   const deleteSession = useMutation(api.routes.auth.deleteSession);
 
   const phoneForm = useForm<PhoneForm>({
@@ -92,12 +92,6 @@ export function LoginForm() {
     try {
       const result = await verifyOtp({ phoneNumber, otp: data.otp });
 
-      if (!result.userExists || !result.sessionToken) {
-        throw new Error(
-          "No account found for this phone number. Please contact an administrator.",
-        );
-      }
-
       const token = result.sessionToken as string;
 
       // Verify Admin permission directly before calling signIn
@@ -105,14 +99,8 @@ export function LoginForm() {
         await convex.query(api.routes.admin.getAdminProfile, {
           sessionToken: token,
         });
-      } catch (err) {
-        // Clean up the session we just created
-        try {
-          await deleteSession({ sessionToken: token });
-        } catch {
-          /* ignore */
-        }
-        throw new Error("Access denied. Only Admin users can sign in here.");
+      } catch (err: any) {
+        throw new Error(err ? err.data : "Login failed, please try again");
       }
 
       signIn(token);

@@ -31,10 +31,6 @@ export function useFileUpload() {
       const blob = await response.blob();
       const extension = fileUri.split('.').pop() || 'jpg';
 
-      if (!sessionToken) {
-        throw new ConvexError('No active session token');
-      }
-
       const { url: presignedUrl, key } = await getPresignedUrl({
         key: `${fileKey}-${Date.now()}.${extension}`,
         contentType: blob.type,

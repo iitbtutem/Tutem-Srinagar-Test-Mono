@@ -33,8 +33,6 @@ export const sendOtp = action({
       hashedOtp,
     });
 
-    console.log("OTP : ", otp)
-
     const smsData = {
       phone_number: `+91${phoneNumber}`,
       message_type: "registration_otp",
@@ -139,6 +137,84 @@ export const verifyOtp = action({
       userExists: false,
       sessionToken: null,
       userId: null,
+    };
+  },
+});
+
+export const verifyOtpAdmin = action({
+  args: {
+    phoneNumber: v.string(),
+    otp: v.string(),
+  },
+  handler: async (ctx, { phoneNumber, otp }) => {
+    const candidateHash = sha256(otp);
+    const session = await ctx.runQuery(internal.routes.auth.getOtpSession, {
+      phoneNumber,
+    });
+
+    if (!session) {
+      throw new ConvexError("Please request a new OTP.");
+    }
+
+    if (Date.now() > session.expiresAt) {
+      await ctx.runMutation(internal.routes.auth.deleteOtpSession, {
+        phoneNumber,
+      });
+      throw new ConvexError("OTP has expired. Please request a new one.");
+    }
+
+    if (candidateHash !== session.hashedOtp) {
+      await ctx.runMutation(internal.routes.auth.incrementAttempts, {
+        phoneNumber,
+      });
+
+      const attemptsLeft = OTP_ATTEMPTS - (session.attempts + 1);
+      if (attemptsLeft <= 0) {
+        throw new ConvexError(
+          "Too many incorrect attempts. Please request a new OTP.",
+        );
+      }
+
+      const message =
+        attemptsLeft <= 3
+          ? ` ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} remaining.`
+          : "";
+      throw new ConvexError(`Incorrect OTP.${message}`);
+    }
+
+    await ctx.runMutation(internal.routes.auth.deleteOtpSession, {
+      phoneNumber,
+    });
+
+    const ph = phoneNumber
+      ? phoneNumber.startsWith("+91")
+        ? phoneNumber.slice(3)
+        : phoneNumber
+      : "";
+
+    const user: any = await ctx.runQuery(internal.routes.auth.getUserByPhone, {
+      phoneNumber: ph,
+    });
+
+    if (!user) throw new ConvexError("User doesn't exist");
+    if (
+      !user.userPermissions.some(
+        (userPermission: any) => userPermission.permission === "Admin",
+      )
+    )
+      throw new ConvexError(
+        "Access denied. Only Admin users can sign in here.",
+      );
+
+    const sessionToken = randomUUID();
+    await ctx.runMutation(internal.routes.auth.createSession, {
+      userId: user._id,
+      phoneNumber,
+      sessionToken,
+    });
+    return {
+      sessionToken,
+      userId: user._id as string,
     };
   },
 });

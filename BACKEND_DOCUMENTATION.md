@@ -1,3 +1,10 @@
+---
+puppeteer:
+  format: A3
+  landscape: true
+  printBackground: true
+---
+
 # Project Backend Documentation
 
 ## Overview
