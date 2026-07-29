@@ -8,7 +8,7 @@ import {
   driverQuery,
   riderQuery,
 } from "../helpers/sessionFunctions";
-import { Doc } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import { TWENTY_FOUR_HOURS, METERS_IN_KM } from "../CONSTANTS";
 import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
@@ -983,6 +983,7 @@ export const getDriverCurrentRideByDriverId = driverQuery({
     if (rides.length === 0) return null;
 
     const ride = rides.find((r) => r.status === "Active") ?? rides[0];
+    if (!ride) return null;
 
     const rider = await ctx.db.get(ride.riderId);
     if (rider === null) return null;

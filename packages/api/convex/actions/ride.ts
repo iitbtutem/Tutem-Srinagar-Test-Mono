@@ -3,7 +3,7 @@
 import { action } from "../_generated/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
 import { fetchRoute, getAddressFromCoords } from "../helpers/maps";
 import { METERS_IN_KM, RIDE_OTP_SIZE } from "../CONSTANTS";
 import { sendNotification } from "../helpers/pushNotifications";
