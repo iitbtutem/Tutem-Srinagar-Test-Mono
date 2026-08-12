@@ -1,9 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
-import {
-  driverQuery,
-  driverMutation,
-} from "../helpers/sessionFunctions";
+import { driverQuery, driverMutation } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -29,6 +26,22 @@ export const login = mutation({
     await ctx.db.patch(driver._id, {
       expoPushToken: args.expoPushToken,
       isAvailableForRide: activeRide ? false : true,
+    });
+  },
+});
+
+export const registerExpoPushToken = driverMutation({
+  args: {
+    driverId: v.id("driver"),
+    expoPushToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const driver = await ctx.db.get(args.driverId);
+    if (driver === null) return;
+    if (driver.expoPushToken === args.expoPushToken) return;
+
+    await ctx.db.patch(driver._id, {
+      expoPushToken: args.expoPushToken,
     });
   },
 });
@@ -123,9 +136,15 @@ export const addDriver = mutation({
         : "Verified",
       genderMatching: false,
       isBlacklisted: false,
-      ...(args.licenseImageBackKey !== undefined ? { licenseImageBackKey: args.licenseImageBackKey } : {}),
-      ...(args.licenseImageFrontKey !== undefined ? { licenseImageFrontKey: args.licenseImageFrontKey } : {}),
-      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
+      ...(args.licenseImageBackKey !== undefined
+        ? { licenseImageBackKey: args.licenseImageBackKey }
+        : {}),
+      ...(args.licenseImageFrontKey !== undefined
+        ? { licenseImageFrontKey: args.licenseImageFrontKey }
+        : {}),
+      ...(args.expoPushToken !== undefined
+        ? { expoPushToken: args.expoPushToken }
+        : {}),
     });
 
     return userId;
@@ -163,9 +182,15 @@ export const registerAsDriver = driverMutation({
       organizationId: args.organizationId,
       genderMatching: false,
       isBlacklisted: false,
-      ...(args.licenseImageFrontKey !== undefined ? { licenseImageFrontKey: args.licenseImageFrontKey } : {}),
-      ...(args.licenseImageBackKey !== undefined ? { licenseImageBackKey: args.licenseImageBackKey } : {}),
-      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
+      ...(args.licenseImageFrontKey !== undefined
+        ? { licenseImageFrontKey: args.licenseImageFrontKey }
+        : {}),
+      ...(args.licenseImageBackKey !== undefined
+        ? { licenseImageBackKey: args.licenseImageBackKey }
+        : {}),
+      ...(args.expoPushToken !== undefined
+        ? { expoPushToken: args.expoPushToken }
+        : {}),
     });
     await ctx.db.insert("userPermission", {
       userId: ctx.user._id,
@@ -522,7 +547,9 @@ export const toggleAvailability = driverMutation({
     const driver = await ctx.db.get(args.id);
     if (driver === null) throw new ConvexError("Invalid user");
     if (driver.isBlacklisted === true) {
-      throw new ConvexError("Driver is blacklisted and cannot toggle availability");
+      throw new ConvexError(
+        "Driver is blacklisted and cannot toggle availability",
+      );
     }
 
     if (driver.isOnline === true) {

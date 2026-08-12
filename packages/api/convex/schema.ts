@@ -16,6 +16,8 @@ export default defineSchema({
     profilePictureKey: v.optional(v.string()),
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
+    lastEditedByAdminId: v.optional(v.id("user")),
+    lastEditedAt: v.optional(v.number()),
   }).index("by_phoneNumber", ["phoneNumber"]),
 
   //riders
@@ -29,6 +31,8 @@ export default defineSchema({
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
     isBlacklisted: v.optional(v.boolean()),
+    lastEditedByAdminId: v.optional(v.id("user")),
+    lastEditedAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
   // Drivers
@@ -49,6 +53,8 @@ export default defineSchema({
     expoPushToken: v.optional(v.string()),
     genderMatching: v.boolean(),
     isBlacklisted: v.optional(v.boolean()),
+    lastEditedByAdminId: v.optional(v.id("user")),
+    lastEditedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_organization", ["organizationId"]),
@@ -122,6 +128,8 @@ export default defineSchema({
     color: v.string(),
     seatingCapacity: v.number(),
     ownerId: v.id("driver"),
+    lastEditedByAdminId: v.optional(v.id("user")),
+    lastEditedAt: v.optional(v.number()),
   })
     .index("by_owner", ["ownerId"])
     .index("by_registrationNumber", ["registrationNumber"]),

@@ -8,7 +8,8 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge, OnlineBadge } from "@/components/ui/badge";
 import { formatDate, getInitials } from "@/lib/utils";
-import { Star, Eye } from "lucide-react";
+import { Star, Eye, Building2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type Driver = {
   _id: string;
@@ -170,8 +171,10 @@ const filterFields = [
 
 export function DriversPage({
   initialDrivers,
+  organizationFilter,
 }: {
   initialDrivers?: Driver[];
+  organizationFilter?: string;
 }) {
   const router = useRouter();
 
@@ -190,7 +193,12 @@ export function DriversPage({
     },
   ) as Driver[] | undefined;
 
-  const drivers = liveDrivers ?? (globalFilter || columnFilters.length > 0 ? undefined : initialDrivers);
+  const allDrivers = liveDrivers ?? (globalFilter || columnFilters.length > 0 ? undefined : initialDrivers);
+
+  // Apply organization filter if present
+  const drivers = organizationFilter
+    ? allDrivers?.filter((d: any) => d.organizationId === organizationFilter)
+    : allDrivers;
 
   return (
     <div>
@@ -202,6 +210,24 @@ export function DriversPage({
             : "Loading…"}
         </p>
       </div>
+
+      {organizationFilter && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-sm">
+          <Building2 className="h-4 w-4 text-orange-500 shrink-0" />
+          <span className="text-orange-700 dark:text-orange-300 font-medium">
+            Filtered by organization
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-6 px-2 text-orange-600 hover:text-orange-800 hover:bg-orange-500/20"
+            onClick={() => router.push("/drivers")}
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear filter
+          </Button>
+        </div>
+      )}
 
       <div className="card-glass p-4">
         <DataTable

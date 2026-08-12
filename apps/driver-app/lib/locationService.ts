@@ -49,10 +49,12 @@ export const startLocationTracking = async (credentials?: { driverId: string; us
       timeInterval: 10000,
       distanceInterval: 10,
       showsBackgroundLocationIndicator: true,
+      pausesUpdatesAutomatically: false,
       foregroundService: {
         notificationTitle: "You're Online",
         notificationBody: 'Location tracking is active for your rides.',
         notificationColor: '#10b981',
+        killServiceOnDestroy: false,
       },
     });
 
@@ -60,6 +62,14 @@ export const startLocationTracking = async (credentials?: { driverId: string; us
     return true;
   } catch (error) {
     console.error('Error starting location tracking:', error);
+    return false;
+  }
+};
+
+export const isLocationTrackingRunning = async (): Promise<boolean> => {
+  try {
+    return await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+  } catch {
     return false;
   }
 };

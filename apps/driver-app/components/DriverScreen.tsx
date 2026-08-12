@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert } from 'react-native';
 import { Text, Switch } from '@tutem/ui';
-import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
+import { startLocationTracking, stopLocationTracking, isLocationTrackingRunning } from '@/lib/locationService';
 import * as SecureStore from 'expo-secure-store';
 import { MapPin, Navigation } from 'lucide-react-native';
-import * as Location from 'expo-location';
-import { BACKGROUND_LOCATION_TASK } from '@/lib/tasks';
 import { useDriver } from '@/hooks/useDriver';
 
 export function DriverScreen() {
@@ -20,7 +18,7 @@ export function DriverScreen() {
     // Check if tracking is already active when component mounts
     const checkStatus = async () => {
       try {
-        const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+        const hasStarted = await isLocationTrackingRunning();
         setIsOnline(hasStarted);
       } catch (e) {
         console.error(e);

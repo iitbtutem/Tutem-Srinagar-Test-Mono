@@ -4,6 +4,7 @@ import { VEHICLE_CLASS } from "../CONSTANTS";
 import { isPointInsidePolygon } from "../helpers/maps";
 import {
   adminMutation,
+  adminQuery,
   authenticatedMutation,
 } from "../helpers/sessionFunctions";
 
@@ -74,17 +75,16 @@ export const createOrganization = adminMutation({
 });
 
 // FETCH ALL ORGANISATIONS
-export const getAllOrganizations = query({
+export const getAllOrganizations = adminQuery({
   args: {
     search: v.optional(v.string()),
     licenseRequired: v.optional(v.array(v.string())),
     rcRequired: v.optional(v.array(v.string())),
     hasPolygon: v.optional(v.array(v.string())),
-    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const orgs = await ctx.db.query("organization").collect();
-    
+
     return orgs.filter((org) => {
       if (args.search) {
         const s = args.search.toLowerCase();
@@ -173,7 +173,7 @@ export const getNearbyOrganization = query({
 });
 
 // FETCH SINGLE ORGANISATION by ID
-export const getOrganizationById = query({
+export const getOrganizationById = adminQuery({
   args: {
     id: v.id("organization"),
   },
@@ -314,10 +314,9 @@ export const createOrganizationRate = adminMutation({
 });
 
 // FETCH ALL ORGANIZATION RATES by organization
-export const getOrganizationRates = query({
+export const getOrganizationRates = adminQuery({
   args: {
     organizationId: v.id("organization"),
-    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -330,7 +329,7 @@ export const getOrganizationRates = query({
 });
 
 // FETCH SINGLE ORGANIZATION by ID
-export const getOrganizationRateById = query({
+export const getOrganizationRateById = adminQuery({
   args: {
     id: v.id("organizationsRate"),
   },
@@ -340,7 +339,7 @@ export const getOrganizationRateById = query({
 });
 
 // FETCH by organization + vehicle class
-export const getOrganizationRateByVehicleClass = query({
+export const getOrganizationRateByVehicleClass = adminQuery({
   args: {
     organizationId: v.id("organization"),
     vehicleClass: v.union(...VEHICLE_CLASS.map((type) => v.literal(type))),

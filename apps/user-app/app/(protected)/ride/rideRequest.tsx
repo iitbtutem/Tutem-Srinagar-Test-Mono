@@ -897,10 +897,10 @@ export default function RideRequest() {
           </View>
         </>
 
-        {/* Cancel button — Open or Driver Arrived */}
+        {/* Cancel button — Open, Driver Arrived, or Active (before destination reached) */}
         {(ride.status === 'Open' ||
           ride.status === 'Driver Arrived' ||
-          ride.status === 'Active') && (
+          (ride.status === 'Active' && !ride.hasReachedDestination)) && (
           <Button
             onPress={handleCancel}
             variant={'destructive'}

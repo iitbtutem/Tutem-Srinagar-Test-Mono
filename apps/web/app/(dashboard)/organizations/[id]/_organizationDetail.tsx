@@ -12,6 +12,7 @@ import {
   XCircle,
   Loader2,
   Edit,
+  Users,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
@@ -219,13 +220,23 @@ export function OrganizationDetailPage({
             <p className="page-description">Organization Details</p>
           </div>
         </div>
-        <Button
-          onClick={() => setShowEditModal(true)}
-          className="flex items-center gap-2"
-        >
-          <Edit className="h-4 w-4" />
-          Edit Organization
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/drivers?organization=${id}`)}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            View Drivers
+          </Button>
+          <Button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-2"
+          >
+            <Edit className="h-4 w-4" />
+            Edit Organization
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

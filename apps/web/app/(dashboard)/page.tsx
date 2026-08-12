@@ -17,13 +17,15 @@ export default async function HomePage() {
   let initialOrgs: any[] = [];
   let initialRides: any[] = [];
 
-  try {
-    initialOrgs = await fetchQuery(
-      api.routes.organizations.getAllOrganizations,
-      {},
-    );
-  } catch (err) {
-    console.error("Failed to fetch organizations server-side:", err);
+  if (sessionToken) {
+    try {
+      initialOrgs = await fetchQuery(
+        api.routes.organizations.getAllOrganizations,
+        { sessionToken },
+      );
+    } catch (err) {
+      console.error("Failed to fetch organizations server-side:", err);
+    }
   }
 
   if (sessionToken) {

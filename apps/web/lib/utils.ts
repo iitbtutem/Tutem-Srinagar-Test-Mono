@@ -32,6 +32,26 @@ export function formatDistance(meters: number) {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+export function calculateAge(dob: string): number {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/** Converts any parseable date string to YYYY-MM-DD for use as an <input type="date"> value. */
+export function toDateInputValue(dob: string | undefined | null): string {
+  if (!dob) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) return dob; // already YYYY-MM-DD
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().split("T")[0];
+}
+
 export function getInitials(firstName: string, lastName?: string) {
   const first = firstName?.[0]?.toUpperCase() ?? "";
   const last = lastName?.[0]?.toUpperCase() ?? "";

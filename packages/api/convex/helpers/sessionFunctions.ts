@@ -100,6 +100,9 @@ export const riderMutation = mutationWithPermission("Rider");
 export const adminQuery = queryWithPermission("Admin");
 export const adminMutation = mutationWithPermission("Admin");
 
+export const superAdminQuery = queryWithPermission("Super Admin");
+export const superAdminMutation = mutationWithPermission("Super Admin");
+
 export async function validateSession(
   ctx: ActionCtx,
   sessionToken: string,

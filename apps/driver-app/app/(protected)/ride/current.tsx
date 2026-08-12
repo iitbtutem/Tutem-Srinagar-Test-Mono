@@ -217,9 +217,22 @@ export default function Ride() {
       latitude: ride.destination.latitude,
       longitude: ride.destination.longitude,
     };
-    const cords: Cords = ride.status === 'Open' ? pickupCords : destCords;
-    const isDriverNearby = isNearby(driverLocation, cords, arrivedRadiusInMts);
-    if (isDriverNearby && routeState === null && !ride.hasReachedDestination) configRoute(cords);
+
+    if (ride.status === 'Active') {
+      const isNearDest = isNearby(driverLocation, destCords, arrivedRadiusInMts);
+      if (isNearDest && !ride.hasReachedDestination) {
+        if (cancelStep !== null) setCancelStep(null);
+        hasReachedDestination({ driverId, rideId: ride._id }).catch((err) => {
+          console.log('[current.tsx] hasReachedDestination error:', err);
+        });
+      }
+    } else {
+      const cords: Cords = ride.status === 'Open' ? pickupCords : destCords;
+      const isDriverNearby = isNearby(driverLocation, cords, arrivedRadiusInMts);
+      if (isDriverNearby && routeState === null) {
+        configRoute(cords);
+      }
+    }
   }, [driverLocation, ride?._id, ride?.status, ride?.hasReachedDestination]);
 
   async function configRoute(cords: Cords) {
@@ -409,9 +422,23 @@ export default function Ride() {
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';
+  
+  const pickupCords = { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude };
+  const destCords = { latitude: ride.destination.latitude, longitude: ride.destination.longitude };
+
+  const isDriverNearPickup = driverLocation
+    ? isNearby(driverLocation, pickupCords, arrivedRadiusInMts)
+    : false;
+
+  const isDriverNearDestination = driverLocation
+    ? isNearby(driverLocation, destCords, arrivedRadiusInMts)
+    : false;
+
+  const isDestinationReached = ride.hasReachedDestination || isDriverNearDestination;
+
   const isDriverNearby = routeState?.remainingDistance
     ? routeState.remainingDistance.value < arrivedRadiusInMts
-    : false;
+    : isDriverNearPickup;
 
   const driverChanged = ride.driverId !== driverId;
 
@@ -974,7 +1001,7 @@ export default function Ride() {
 
                     {/* Complete / Cancel */}
                     <View className="flex-1">
-                      {ride.hasReachedDestination && ride.status === 'Active' ? (
+                      {isDestinationReached && ride.status === 'Active' ? (
                         <Button
                           className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
                           disabled={loading === 'completing'}

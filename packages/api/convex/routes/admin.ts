@@ -3,6 +3,7 @@ import { query } from "../_generated/server";
 import {
   adminQuery,
   adminMutation,
+  superAdminMutation,
 } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
@@ -126,6 +127,9 @@ export const getRiderById = adminQuery({
       totalRatings: ratings.length,
       ratings,
       rideHistory: rides,
+      lastEditedByAdmin: rider.lastEditedByAdminId
+        ? await ctx.db.get(rider.lastEditedByAdminId)
+        : null,
     };
   },
 });
@@ -135,6 +139,13 @@ export const updateRiderAdmin = adminMutation({
     riderId: v.id("rider"),
     firstName: v.string(),
     lastName: v.optional(v.string()),
+    dob: v.string(),
+    gender: v.union(
+      v.literal("Male"),
+      v.literal("Female"),
+      v.literal("Other")
+    ),
+    phoneNumber: v.string(),
     isVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
@@ -145,12 +156,34 @@ export const updateRiderAdmin = adminMutation({
     const rider = await ctx.db.get(args.riderId);
     if (!rider) throw new ConvexError("Rider not found");
 
+    // Check phone number uniqueness if changed
+    const currentUser = await ctx.db.get(rider.userId);
+    if (currentUser && currentUser.phoneNumber !== args.phoneNumber) {
+      const existingUser = await ctx.db
+        .query("user")
+        .withIndex("by_phoneNumber", (q) =>
+          q.eq("phoneNumber", args.phoneNumber)
+        )
+        .first();
+      if (existingUser && existingUser._id !== rider.userId) {
+        throw new ConvexError("Phone number already in use by another user");
+      }
+    }
+
+    const now = Date.now();
     await ctx.db.patch(rider.userId, {
       firstName: args.firstName,
       lastName: args.lastName,
+      dob: args.dob,
+      gender: args.gender,
+      phoneNumber: args.phoneNumber,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: now,
     });
     await ctx.db.patch(rider._id, {
       isVerified: args.isVerified,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: now,
     });
   },
 });
@@ -365,6 +398,9 @@ export const getDriverById = adminQuery({
       totalRatings: ratings.length,
       ratings,
       rideHistory: rides,
+      lastEditedByAdmin: driver.lastEditedByAdminId
+        ? await ctx.db.get(driver.lastEditedByAdminId)
+        : null,
     };
   },
 });
@@ -374,6 +410,14 @@ export const updateDriverAdmin = adminMutation({
     driverId: v.id("driver"),
     firstName: v.string(),
     lastName: v.optional(v.string()),
+    dob: v.string(),
+    gender: v.union(
+      v.literal("Male"),
+      v.literal("Female"),
+      v.literal("Other")
+    ),
+    phoneNumber: v.string(),
+    licenseNumber: v.string(),
     isLicenseVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
@@ -384,12 +428,91 @@ export const updateDriverAdmin = adminMutation({
     const driver = await ctx.db.get(args.driverId);
     if (!driver) throw new ConvexError("Driver not found");
 
+    // Check phone number uniqueness if changed
+    const currentUser = await ctx.db.get(driver.userId);
+    if (currentUser && currentUser.phoneNumber !== args.phoneNumber) {
+      const existingUser = await ctx.db
+        .query("user")
+        .withIndex("by_phoneNumber", (q) =>
+          q.eq("phoneNumber", args.phoneNumber)
+        )
+        .first();
+      if (existingUser && existingUser._id !== driver.userId) {
+        throw new ConvexError("Phone number already in use by another user");
+      }
+    }
+
+    const now = Date.now();
     await ctx.db.patch(driver.userId, {
       firstName: args.firstName,
       lastName: args.lastName,
+      dob: args.dob,
+      gender: args.gender,
+      phoneNumber: args.phoneNumber,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: now,
     });
     await ctx.db.patch(driver._id, {
+      licenseNumber: args.licenseNumber,
       isLicenseVerified: args.isLicenseVerified,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: now,
+    });
+  },
+});
+
+export const updateDriverVehicleAdmin = adminMutation({
+  args: {
+    vehicleId: v.id("vehicle"),
+    model: v.string(),
+    type: v.union(
+      v.literal("Hatchback"),
+      v.literal("Sedan"),
+      v.literal("Suv"),
+      v.literal("Auto"),
+      v.literal("Bike")
+    ),
+    fuelType: v.union(
+      v.literal("Petrol"),
+      v.literal("Diesel"),
+      v.literal("EV")
+    ),
+    class: v.union(
+      v.literal("Bike"),
+      v.literal("Auto"),
+      v.literal("Cab")
+    ),
+    color: v.string(),
+    registrationNumber: v.string(),
+    seatingCapacity: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const vehicle = await ctx.db.get(args.vehicleId);
+    if (!vehicle) throw new ConvexError("Vehicle not found");
+
+    // Check registration number uniqueness if changed
+    if (vehicle.registrationNumber !== args.registrationNumber) {
+      const existing = await ctx.db
+        .query("vehicle")
+        .withIndex("by_registrationNumber", (q) =>
+          q.eq("registrationNumber", args.registrationNumber)
+        )
+        .first();
+      if (existing && existing._id !== vehicle._id) {
+        throw new ConvexError("Registration number already in use by another vehicle");
+      }
+    }
+
+    await ctx.db.patch(vehicle._id, {
+      model: args.model,
+      type: args.type,
+      fuelType: args.fuelType,
+      class: args.class,
+      color: args.color,
+      registrationNumber: args.registrationNumber,
+      seatingCapacity: args.seatingCapacity,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: Date.now(),
     });
   },
 });
@@ -565,14 +688,33 @@ export const getAllAdminUsers = adminQuery({
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const permissions = await ctx.db
-      .query("userPermission")
-      .filter((q) => q.eq(q.field("permission"), "Admin"))
-      .collect();
+    // Collect both Admin and Super Admin permission rows
+    const allPerms = await ctx.db.query("userPermission").collect();
+    const adminPerms = allPerms.filter(
+      (p) => p.permission === "Admin" || p.permission === "Super Admin"
+    );
+
+    // Build a unique set of users (a user may have both Admin and Super Admin rows)
+    const userMap = new Map<string, { adminPermId: string; isSuperAdmin: boolean }>();
+    for (const perm of adminPerms) {
+      const key = perm.userId as string;
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          adminPermId: perm._id as string,
+          isSuperAdmin: perm.permission === "Super Admin",
+        });
+      } else {
+        // If we later see a Super Admin row for the same user, update the flag
+        if (perm.permission === "Super Admin") {
+          userMap.get(key)!.isSuperAdmin = true;
+          userMap.get(key)!.adminPermId = perm._id as string;
+        }
+      }
+    }
 
     const results = await Promise.all(
-      permissions.map(async (perm) => {
-        const user = await ctx.db.get(perm.userId);
+      Array.from(userMap.entries()).map(async ([userId, meta]) => {
+        const user = await ctx.db.get(userId as any);
         if (!user) return null;
 
         const profilePictureUri = user.profilePictureKey
@@ -586,16 +728,11 @@ export const getAllAdminUsers = adminQuery({
             )
           : undefined;
 
-        const allPerms = await ctx.db
-          .query("userPermission")
-          .withIndex("by_user", (q) => q.eq("userId", user._id))
-          .collect();
-
         return {
           ...user,
           profilePictureKey: profilePictureUri,
-          permissionId: perm._id,
-          permissions: allPerms.map((p) => p.permission),
+          permissionId: meta.adminPermId,
+          isSuperAdmin: meta.isSuperAdmin,
         };
       })
     );
@@ -606,9 +743,8 @@ export const getAllAdminUsers = adminQuery({
       if (args.search) {
         const s = args.search.toLowerCase();
         const name = `${admin.firstName || ""} ${admin.lastName || ""}`.toLowerCase();
-        const email = (admin.email || "").toLowerCase();
         const phone = admin.phoneNumber || "";
-        if (!name.includes(s) && !email.includes(s) && !phone.includes(s)) {
+        if (!name.includes(s) && !phone.includes(s)) {
           return false;
         }
       }
@@ -617,7 +753,22 @@ export const getAllAdminUsers = adminQuery({
   },
 });
 
-export const createAdminUser = adminMutation({
+/** Returns the current logged-in admin's permissions list */
+export const getCurrentAdminPermissions = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const perms = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .collect();
+    return {
+      permissions: perms.map((p) => p.permission),
+      isSuperAdmin: perms.some((p) => p.permission === "Super Admin"),
+    };
+  },
+});
+
+export const createAdminUser = superAdminMutation({
   args: {
     phoneNumber: v.string(),
     firstName: v.string(),
@@ -628,8 +779,11 @@ export const createAdminUser = adminMutation({
       v.literal("Female"),
       v.literal("Other")
     ),
+    isSuperAdmin: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const targetPermission = args.isSuperAdmin ? "Super Admin" : "Admin";
+
     // Check if user with phone already exists
     const existingUser = await ctx.db
       .query("user")
@@ -639,21 +793,37 @@ export const createAdminUser = adminMutation({
       .first();
 
     if (existingUser) {
-      // Check if already has admin permission
+      // Check if already has this permission
+      const existingPerm = await ctx.db
+        .query("userPermission")
+        .withIndex("by_user", (q) => q.eq("userId", existingUser._id))
+        .filter((q) => q.eq(q.field("permission"), targetPermission))
+        .first();
+
+      if (existingPerm) {
+        throw new ConvexError(`User already has ${targetPermission} permission`);
+      }
+
+      // Ensure the user at minimum has Admin permission too
       const existingAdmin = await ctx.db
         .query("userPermission")
         .withIndex("by_user", (q) => q.eq("userId", existingUser._id))
         .filter((q) => q.eq(q.field("permission"), "Admin"))
         .first();
 
-      if (existingAdmin) {
-        throw new ConvexError("User already has Admin permission");
+      if (!existingAdmin) {
+        await ctx.db.insert("userPermission", {
+          userId: existingUser._id,
+          permission: "Admin",
+        });
       }
 
-      await ctx.db.insert("userPermission", {
-        userId: existingUser._id,
-        permission: "Admin",
-      });
+      if (args.isSuperAdmin) {
+        await ctx.db.insert("userPermission", {
+          userId: existingUser._id,
+          permission: "Super Admin",
+        });
+      }
 
       return existingUser._id;
     }
@@ -666,27 +836,126 @@ export const createAdminUser = adminMutation({
       phoneNumber: args.phoneNumber,
     });
 
-    await ctx.db.insert("userPermission", {
-      userId,
-      permission: "Admin",
-    });
+    // Always grant Admin
+    await ctx.db.insert("userPermission", { userId, permission: "Admin" });
+
+    // Optionally also grant Super Admin
+    if (args.isSuperAdmin) {
+      await ctx.db.insert("userPermission", { userId, permission: "Super Admin" });
+    }
 
     return userId;
   },
 });
 
-export const deleteAdminUser = adminMutation({
-  args: { permissionId: v.id("userPermission") },
+/** Promoted or demotes an existing admin user (Super Admin only) */
+export const updateAdminUser = superAdminMutation({
+  args: {
+    userId: v.id("user"),
+    firstName: v.string(),
+    lastName: v.optional(v.string()),
+    dob: v.string(),
+    gender: v.union(
+      v.literal("Male"),
+      v.literal("Female"),
+      v.literal("Other")
+    ),
+    phoneNumber: v.string(),
+    isSuperAdmin: v.boolean(),
+  },
   handler: async (ctx, args) => {
-    // Make sure we're not deleting the currently logged-in admin
-    const perm = await ctx.db.get(args.permissionId);
-    if (!perm) throw new ConvexError("Permission not found");
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new ConvexError("User not found");
 
-    if (perm.userId === ctx.user._id) {
-      throw new ConvexError("Cannot remove your own admin permission");
+    // Phone uniqueness check
+    if (user.phoneNumber !== args.phoneNumber) {
+      const existing = await ctx.db
+        .query("user")
+        .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
+        .first();
+      if (existing && existing._id !== args.userId) {
+        throw new ConvexError("Phone number already in use by another user");
+      }
     }
 
-    await ctx.db.delete(args.permissionId);
+    // Update user details
+    await ctx.db.patch(args.userId, {
+      firstName: args.firstName,
+      lastName: args.lastName,
+      dob: args.dob,
+      gender: args.gender,
+      phoneNumber: args.phoneNumber,
+      lastEditedByAdminId: ctx.user._id,
+      lastEditedAt: Date.now(),
+    });
+
+    // Handle Super Admin promotion / demotion
+    const superAdminPerm = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("permission"), "Super Admin"))
+      .first();
+
+    if (args.isSuperAdmin && !superAdminPerm) {
+      // Promote: grant Super Admin
+      await ctx.db.insert("userPermission", {
+        userId: args.userId,
+        permission: "Super Admin",
+      });
+    } else if (!args.isSuperAdmin && superAdminPerm) {
+      // Demote: ensure at least one other Super Admin remains
+      const superAdmins = await ctx.db
+        .query("userPermission")
+        .filter((q) => q.eq(q.field("permission"), "Super Admin"))
+        .collect();
+      if (superAdmins.length <= 1) {
+        throw new ConvexError(
+          "Cannot demote: at least one Super Admin must remain"
+        );
+      }
+      await ctx.db.delete(superAdminPerm._id);
+    }
+  },
+});
+
+export const deleteAdminUser = superAdminMutation({
+  args: { userId: v.id("user") },
+  handler: async (ctx, args) => {
+    if (args.userId === ctx.user._id) {
+      throw new ConvexError("Cannot remove your own admin access");
+    }
+
+    // Guard: if the target is a Super Admin, ensure at least one other Super Admin remains
+    const targetSuperAdminPerm = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("permission"), "Super Admin"))
+      .first();
+
+    if (targetSuperAdminPerm) {
+      const allSuperAdmins = await ctx.db
+        .query("userPermission")
+        .filter((q) => q.eq(q.field("permission"), "Super Admin"))
+        .collect();
+      if (allSuperAdmins.length <= 1) {
+        throw new ConvexError(
+          "Cannot delete the last Super Admin. Promote another admin first."
+        );
+      }
+    }
+
+    // Delete all Admin/Super Admin permissions for this user
+    const allPerms = await ctx.db
+      .query("userPermission")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    for (const perm of allPerms) {
+      if (perm.permission === "Admin" || perm.permission === "Super Admin") {
+        await ctx.db.delete(perm._id);
+      }
+    }
+
     return { success: true };
   },
 });

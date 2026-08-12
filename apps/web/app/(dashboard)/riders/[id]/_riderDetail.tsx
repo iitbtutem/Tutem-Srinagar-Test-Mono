@@ -8,12 +8,41 @@ import { api } from "@tutem/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/badge";
-import { formatDate, getInitials } from "@/lib/utils";
-import { Star, ArrowLeft, Phone, Calendar, Shield, MapPin } from "lucide-react";
+import {
+  formatDate,
+  getInitials,
+  calculateAge,
+  toDateInputValue,
+} from "@/lib/utils";
+import {
+  Star,
+  ArrowLeft,
+  Phone,
+  Calendar,
+  Shield,
+  MapPin,
+  Pencil,
+  User,
+  CheckCircle,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function RiderDetailPage({
   id,
@@ -32,10 +61,23 @@ export function RiderDetailPage({
 
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [isRidesDialogOpen, setIsRidesDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [ridesPage, setRidesPage] = useState(1);
   const [ridesFilter, setRidesFilter] = useState<
     "All" | "Completed" | "Canceled"
   >("All");
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "Male" as "Male" | "Female" | "Other",
+    phoneNumber: "",
+    isVerified: "Pending" as "Pending" | "Verified" | "Rejected",
+  });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   const completedRides =
     rider?.rideHistory?.filter((r: any) => r.status === "Completed").length ??
@@ -65,6 +107,9 @@ export function RiderDetailPage({
   );
   const verifyRiderMut = useAuthenticatedMutation(
     api.routes.admin.verifyRiderAdmin,
+  );
+  const updateRiderMut = useAuthenticatedMutation(
+    api.routes.admin.updateRiderAdmin,
   );
 
   const handleToggleBlacklist = async () => {
@@ -100,6 +145,46 @@ export function RiderDetailPage({
     }
   };
 
+  const openEditDialog = () => {
+    setEditForm({
+      firstName: rider.userDetails.firstName ?? "",
+      lastName: rider.userDetails.lastName ?? "",
+      dob: toDateInputValue(rider.userDetails.dob),
+      gender: rider.userDetails.gender ?? "Male",
+      phoneNumber: rider.userDetails.phoneNumber ?? "",
+      isVerified: rider.isVerified ?? "Pending",
+    });
+    setEditError(null);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    // Hard block: first name required
+    if (!editForm.firstName.trim()) {
+      setEditError("First name cannot be empty.");
+      return;
+    }
+
+    setEditError(null);
+    setEditSaving(true);
+    try {
+      await updateRiderMut({
+        riderId: rider._id,
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim() || undefined,
+        dob: editForm.dob,
+        gender: editForm.gender,
+        phoneNumber: editForm.phoneNumber,
+        isVerified: editForm.isVerified,
+      });
+      setIsEditDialogOpen(false);
+    } catch (err: any) {
+      setEditError(err?.message ?? "Failed to save changes");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   if (rider === undefined) {
     return (
       <div className="space-y-4">
@@ -129,10 +214,14 @@ export function RiderDetailPage({
   const name =
     `${rider.userDetails.firstName} ${rider.userDetails.lastName ?? ""}`.trim();
 
+  const lastEditedAdminName = rider.lastEditedByAdmin
+    ? `${rider.lastEditedByAdmin.firstName} ${rider.lastEditedByAdmin.lastName ?? ""}`.trim()
+    : null;
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex justify-between">
+      <div className="flex justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -147,24 +236,34 @@ export function RiderDetailPage({
             <p className="page-description">Rider Profile</p>
           </div>
         </div>
-        {/* Blacklist/Unblock Rider */}
-        {rider.isBlacklisted ? (
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 cursor-pointer"
-            onClick={handleToggleBlacklist}
+            className="cursor-pointer gap-2"
+            onClick={openEditDialog}
           >
-            Unblock Rider
+            <Pencil className="h-4 w-4" />
+            Edit Rider
           </Button>
-        ) : (
-          <Button
-            variant="destructive"
-            className="cursor-pointer"
-            onClick={handleToggleBlacklist}
-          >
-            Blacklist Rider
-          </Button>
-        )}
+          {/* Blacklist/Unblock Rider */}
+          {rider.isBlacklisted ? (
+            <Button
+              variant="outline"
+              className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 cursor-pointer"
+              onClick={handleToggleBlacklist}
+            >
+              Unblock Rider
+            </Button>
+          ) : (
+            <Button
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={handleToggleBlacklist}
+            >
+              Blacklist Rider
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -304,7 +403,12 @@ export function RiderDetailPage({
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4 shrink-0" />
-                <span>DOB: {rider.userDetails.dob}</span>
+                <span>
+                  DOB: {formatDate(rider.userDetails.dob)}{" "}
+                  <span className="text-foreground font-medium">
+                    ({calculateAge(rider.userDetails.dob)} yrs)
+                  </span>
+                </span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Shield className="h-4 w-4 shrink-0" />
@@ -314,6 +418,23 @@ export function RiderDetailPage({
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span>Joined: {formatDate(rider._creationTime)}</span>
               </div>
+              {lastEditedAdminName && (
+                <div className="flex items-start gap-2 text-muted-foreground pt-2 border-t border-border mt-2">
+                  <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
+                  <span className="text-xs">
+                    Last edited by{" "}
+                    <span className="font-medium text-foreground">
+                      {lastEditedAdminName}
+                    </span>
+                    {rider.lastEditedAt && (
+                      <>
+                        <br />
+                        {formatDate(rider.lastEditedAt)}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -401,10 +522,12 @@ export function RiderDetailPage({
         </div>
       </div>
 
+      {/* Image lightbox */}
       <Dialog
         open={!!activeImage}
         onOpenChange={(open) => !open && setActiveImage(null)}
       >
+        <DialogTitle />
         <DialogContent className="max-w-3xl p-1 bg-transparent border-none shadow-none flex items-center justify-center">
           {activeImage && (
             <img
@@ -513,6 +636,169 @@ export function RiderDetailPage({
                 </Button>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rider Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-card border border-border shadow-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Pencil className="h-5 w-5 text-primary" />
+              Edit Rider Details
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 pt-2">
+            {/* Personal Info Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-1 border-b border-border">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Personal Information
+                </h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rider-firstName">
+                    First Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="rider-firstName"
+                    value={editForm.firstName}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, firstName: e.target.value }))
+                    }
+                    placeholder="First name"
+                    className={!editForm.firstName.trim() ? "border-red-400" : ""}
+                  />
+                  {!editForm.firstName.trim() && (
+                    <p className="text-xs text-red-600 dark:text-red-400">First name is required</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rider-lastName">Last Name</Label>
+                  <Input
+                    id="rider-lastName"
+                    value={editForm.lastName}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, lastName: e.target.value }))
+                    }
+                    placeholder="Last name (optional)"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rider-dob">Date of Birth</Label>
+                  <Input
+                    id="rider-dob"
+                    type="date"
+                    value={editForm.dob}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, dob: e.target.value }))
+                    }
+                    max={new Date().toISOString().split("T")[0]}
+                  />
+                  {editForm.dob && calculateAge(editForm.dob) < 18 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      ⚠ Rider must be at least 18 years old
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rider-phone">Phone Number</Label>
+                  <Input
+                    id="rider-phone"
+                    value={editForm.phoneNumber}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        phoneNumber: e.target.value,
+                      }))
+                    }
+                    placeholder="+91XXXXXXXXXX"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Gender</Label>
+                  <Select
+                    value={editForm.gender}
+                    onValueChange={(v) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        gender: v as "Male" | "Female" | "Other",
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Verification Status</Label>
+                  <Select
+                    value={editForm.isVerified}
+                    onValueChange={(v) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        isVerified: v as "Pending" | "Verified" | "Rejected",
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Verified">Verified</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Error */}
+            {editError && (
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                {editError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={editSaving}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={editSaving}
+                className="cursor-pointer gap-2"
+              >
+                {editSaving ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

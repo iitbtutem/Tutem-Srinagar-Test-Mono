@@ -6,9 +6,14 @@ import { cookies } from "next/headers";
 
 export const metadata: Metadata = { title: "Drivers" };
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ organization?: string }>;
+}) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("tutem_admin_session")?.value;
+  const { organization } = await searchParams;
 
   let initialDrivers: any[] = [];
   if (sessionToken) {
@@ -21,5 +26,5 @@ export default async function Page() {
     }
   }
 
-  return <DriversPage initialDrivers={initialDrivers} />;
+  return <DriversPage initialDrivers={initialDrivers} organizationFilter={organization} />;
 }

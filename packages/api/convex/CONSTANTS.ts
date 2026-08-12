@@ -9,7 +9,7 @@ export const VEHICLE_TYPE = [
 export const FUEL_TYPE = ["Petrol", "Diesel", "EV"] as const;
 export const VEHICLE_CLASS = ["Bike", "Auto", "Cab"] as const;
 
-export const PERMISSIONS = ["Driver", "Rider", "Admin"] as const;
+export const PERMISSIONS = ["Driver", "Rider", "Admin", "Super Admin"] as const;
 
 export const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 

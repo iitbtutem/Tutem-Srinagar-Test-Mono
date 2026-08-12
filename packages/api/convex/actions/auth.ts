@@ -22,6 +22,8 @@ export const sendOtp = action({
   },
   handler: async (ctx, { phoneNumber }) => {
     const otp = generateOtp();
+
+    console.log(`OTP sent on ${phoneNumber} is  ${otp}`)
     const hashedOtp = sha256(otp);
     const smsLicense = process.env.SMS_LICENSE;
     const smsUrl = process.env.SMS_URL;
@@ -203,7 +205,7 @@ export const verifyOtpAdmin = action({
       )
     )
       throw new ConvexError(
-        "Access denied. Only Admin users can sign in here.",
+        "Access denied. Invalid credientials.",
       );
 
     const sessionToken = randomUUID();

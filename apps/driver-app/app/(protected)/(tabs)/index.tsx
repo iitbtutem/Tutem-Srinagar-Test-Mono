@@ -3,7 +3,6 @@ import { api, Id } from '@tutem/api';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
@@ -11,10 +10,9 @@ import { Link, Redirect } from 'expo-router';
 import { Text, Button, Loader } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
-import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
-import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import { useLocationManager } from '@/hooks/useLocationManager';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
 import { useAuthenticatedQuery, useAuthenticatedAction } from '@/hooks/customApi';
@@ -63,183 +61,14 @@ export default function Home() {
 
   const driverDetails = driver?.driverDetails;
 
-  // Start / stop background location foreground service whenever the
-  // driver toggles online / offline via the Convex isAvailableForRide flag.
-  useEffect(() => {
-    if (!driverDetails) {
-      stopLocationTracking();
-      return;
-    }
-
-    if ((driverDetails.isAvailableForRide && driverDetails.isOnline) || currentRide) {
-      const user_id = driver?._id;
-      if (user_id) {
-        console.log('started location tracking..');
-        startLocationTracking({ driverId: driverDetails._id, user_id });
-      }
-    } else {
-      console.log('stopped location tracking');
-      stopLocationTracking();
-    }
-  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide, driver?._id]);
-
-  // Live GPS
-  useEffect(() => {
-    let sub: Location.LocationSubscription | null = null;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    let globalChannel: ReturnType<typeof getGlobalChannel> | null = null;
-    let isCancelled = false;
-
-    const updatePresence = async (lat: number, lng: number) => {
-      if (
-        driverDetails &&
-        driverDetails.isAvailableForRide &&
-        driverDetails.isOnline &&
-        !currentRide
-      ) {
-        try {
-          await globalChannel?.presence.update({
-            driverId: driverDetails._id,
-            latitude: lat,
-            longitude: lng,
-            vehicleClass: driver?.driverDetails?.isLicenseVerified ? 'verified' : 'Not Verified',
-            lastUpdated: Date.now(),
-          });
-        } catch (e) {
-          console.error('Ably presence update error:', e);
-        }
-      } else if (globalChannel) {
-        globalChannel.presence.leave().catch(() => {});
-      }
-    };
-
-    const start = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted' || isCancelled) return;
-
-      // Presence handling for nearby search discovery
-      globalChannel = getGlobalChannel(undefined, driver?._id);
-
-      // Fetch initial position immediately
-      try {
-        const initialLoc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        if (isCancelled) return;
-        const coords = {
-          latitude: initialLoc.coords.latitude,
-          longitude: initialLoc.coords.longitude,
-        };
-
-        // Publish initial location if online
-        if (
-          (driverDetails?._id && driverDetails.isAvailableForRide && driverDetails.isOnline) ||
-          (currentRide && driverDetails)
-        ) {
-          const channel = getDriverChannel(driverDetails._id, driver?._id);
-          if (channel) {
-            channel
-              .publish('location', {
-                ...coords,
-                heading: initialLoc.coords.heading,
-                speed: initialLoc.coords.speed,
-                timestamp: initialLoc.timestamp,
-              })
-              .catch((e) => console.error('Ably initial publish error:', e));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to get initial location:', err);
-      }
-
-      if (isCancelled) return;
-
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, distanceInterval: 0 },
-        (loc) => {
-          const coords = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          };
-
-          updatePresence(coords.latitude, coords.longitude);
-
-          // Publish to Ably if online or on a ride
-          if (driverDetails?._id && (driverDetails.isAvailableForRide || currentRide)) {
-            const channel = getDriverChannel(driverDetails._id, driver?._id);
-            if (channel) {
-              channel
-                .publish('location', {
-                  ...coords,
-                  heading: loc.coords.heading,
-                  speed: loc.coords.speed,
-                  timestamp: loc.timestamp,
-                })
-                .catch((err) => {
-                  console.error('Ably publish error:', err);
-                });
-            }
-          }
-        }
-      );
-
-      if (isCancelled) {
-        sub.remove();
-        sub = null;
-        return;
-      }
-
-      // Also publish at a regular interval (every 10s) to satisfy "constant update" requirement
-      intervalId = setInterval(async () => {
-        if (driverDetails?._id && (driverDetails.isAvailableForRide || currentRide)) {
-          try {
-            const loc = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High,
-            });
-            const coords = {
-              latitude: loc.coords.latitude,
-              longitude: loc.coords.longitude,
-            };
-
-            updatePresence(coords.latitude, coords.longitude);
-
-            const channel = getDriverChannel(driverDetails._id, driver?._id);
-            if (channel) {
-              channel
-                .publish('location', {
-                  ...coords,
-                  heading: loc.coords.heading,
-                  speed: loc.coords.speed,
-                  timestamp: loc.timestamp,
-                })
-                .catch((e) => console.error('Ably heartbeat error:', e));
-            }
-          } catch (e) {
-            console.error('Failed to get location for heartbeat:', e);
-          }
-        }
-      }, 10 * 1000); // 10 seconds
-
-      // Initial presence entry
-      if (driverDetails?._id && driverDetails.isAvailableForRide && !currentRide) {
-        globalChannel?.presence
-          .enter({
-            driverId: driverDetails._id,
-          })
-          .catch(() => {});
-      }
-    };
-
-    start();
-
-    // This cleanup IS properly returned to React
-    return () => {
-      isCancelled = true;
-      sub?.remove();
-      if (intervalId !== null) clearInterval(intervalId);
-      globalChannel?.presence.leave().catch(() => {});
-    };
-  }, [driverDetails?._id, driverDetails?.isAvailableForRide, !!currentRide]);
+  useLocationManager({
+    driverId: driverDetails?._id,
+    userId: driver?._id,
+    isOnline: driverDetails?.isOnline,
+    isAvailableForRide: driverDetails?.isAvailableForRide,
+    isLicenseVerified: driverDetails?.isLicenseVerified,
+    hasActiveRide: !!currentRide,
+  });
 
   useEffect(() => {
     if (currentRide && !router.canGoBack())
