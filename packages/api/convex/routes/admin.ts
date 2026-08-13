@@ -233,6 +233,33 @@ export const getAllDrivers = adminQuery({
             ? null
             : ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
 
+        // Lookup the driver's current active ride (if any)
+        const activeRide = await ctx.db
+          .query("ride")
+          .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
+          .filter((q) =>
+            q.or(
+              q.eq(q.field("status"), "Active"),
+              q.eq(q.field("status"), "Driver Arrived"),
+            )
+          )
+          .first();
+
+        let riderDetails = null;
+        if (activeRide) {
+          const rider = await ctx.db.get(activeRide.riderId);
+          if (rider) {
+            const riderUser = await ctx.db.get(rider.userId);
+            if (riderUser) {
+              riderDetails = {
+                firstName: riderUser.firstName,
+                lastName: riderUser.lastName,
+                phoneNumber: riderUser.phoneNumber,
+              };
+            }
+          }
+        }
+
         return {
           ...driver,
           userDetails: {
@@ -243,6 +270,17 @@ export const getAllDrivers = adminQuery({
           organization,
           averageRating,
           totalRatings: ratings.length,
+          activeRide: activeRide
+            ? {
+                _id: activeRide._id,
+                status: activeRide.status,
+                fare: activeRide.fare,
+                pickup: activeRide.pickup,
+                destination: activeRide.destination,
+                updatedAt: activeRide.updatedAt,
+                riderDetails,
+              }
+            : null,
         };
       })
     );
@@ -717,12 +755,13 @@ export const getAllAdminUsers = adminQuery({
         const user = await ctx.db.get(userId as any);
         if (!user) return null;
 
-        const profilePictureUri = user.profilePictureKey
+        const profilePictureKey = (user as any).profilePictureKey;
+        const profilePictureUri = profilePictureKey
           ? await getSignedUrl(
               s3Client,
               new GetObjectCommand({
                 Bucket: process.env.MINIO_BUCKET,
-                Key: user.profilePictureKey,
+                Key: profilePictureKey,
               }),
               { expiresIn: 300 }
             )

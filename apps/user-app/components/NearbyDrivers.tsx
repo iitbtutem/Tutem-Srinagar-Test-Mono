@@ -1,18 +1,19 @@
-import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { VEHICLE_CLASS } from '../../../packages/api/convex/CONSTANTS';
 import { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { FunctionReturnType } from 'convex/server';
 import { api, Id } from '@tutem/api';
 import { cn, formatFare } from '@/lib/utils';
-import { Text, Switch, Avatar, AvatarFallback, AvatarImage, GenderAge, Rating } from '@tutem/ui';
+import { Text, Switch, Avatar, AvatarFallback, AvatarImage, GenderAge, Rating, ImageViewerModal } from '@tutem/ui';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
-  Cab: 'car',
-  Bike: 'bike',
-  Auto: 'rickshaw',
+  Cab: require('@/assets/images/cab_icon.png'),
+  Auto: require('@/assets/images/rickshaw_icon.png'),
+  Bike: require('@/assets/images/bike_icon.png'),
 } as const;
 
 // NearbyDrivers
@@ -43,6 +44,7 @@ export default function NearbyDrivers({
   isSearchingDrivers = false,
 }: NearbyDriversProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
 
   return (
     <View className="mb-6 px-4 pt-2">
@@ -67,10 +69,10 @@ export default function NearbyDrivers({
                   'flex-row items-center gap-x-1 rounded-full border px-3 py-1',
                   isSelected ? 'border-primary bg-primary' : 'border-border bg-background'
                 )}>
-                <MaterialCommunityIcons
-                  name={VEHICLE_ICONS[item]}
-                  size={13}
-                  color={isSelected ? 'white' : 'black'}
+                <Image
+                  source={VEHICLE_ICONS[item]}
+                  style={{ width: 16, height: 16 }}
+                  resizeMode="contain"
                 />
                 <Text
                   className={cn(
@@ -123,21 +125,30 @@ export default function NearbyDrivers({
                 )}>
                 {/* Avatar and gender */}
                 <View className="items-center justify-center gap-1.5">
-                  <Avatar alt="Profile pic" className="h-14 w-14">
-                    <AvatarImage
-                      source={
-                        driver.driver.userDetails.profilePictureKey?.trim()
-                          ? { uri: driver.driver.userDetails?.profilePictureKey }
-                          : require('@/assets/images/avatar.jpg')
-                      }
-                    />
-                    <AvatarFallback className="bg-white/20">
-                      <Text className="text-xs font-bold text-primary">
-                        {driver.driver.userDetails?.firstName?.[0]}
-                        {driver.driver.userDetails?.lastName?.[0]}
-                      </Text>
-                    </AvatarFallback>
-                  </Avatar>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() =>
+                      setViewerImage({
+                        uri: driver.driver.userDetails.profilePictureKey,
+                        name: `${driver.driver.userDetails.firstName ?? ''} ${driver.driver.userDetails?.lastName ?? ''}`.trim(),
+                      })
+                    }>
+                    <Avatar alt="Profile pic" className="h-14 w-14">
+                      <AvatarImage
+                        source={
+                          driver.driver.userDetails.profilePictureKey?.trim()
+                            ? { uri: driver.driver.userDetails?.profilePictureKey }
+                            : require('@/assets/images/avatar.jpg')
+                        }
+                      />
+                      <AvatarFallback className="bg-white/20">
+                        <Text className="text-xs font-bold text-primary">
+                          {driver.driver.userDetails?.firstName?.[0]}
+                          {driver.driver.userDetails?.lastName?.[0]}
+                        </Text>
+                      </AvatarFallback>
+                    </Avatar>
+                  </TouchableOpacity>
                   <GenderAge
                     gender={driver.driver.userDetails?.gender}
                     dob={driver.driver.userDetails?.dob}
@@ -154,10 +165,10 @@ export default function NearbyDrivers({
                   <Text className="text-xs font-medium">{driver.driver.organization.name}</Text>
 
                   <View className="flex-row items-center justify-start">
-                    <MaterialCommunityIcons
-                      name={VEHICLE_ICONS[driver.vehicle.class]}
-                      size={16}
-                      color={colors.primary}
+                    <Image
+                      source={VEHICLE_ICONS[driver.vehicle.class]}
+                      style={{ width: 20, height: 20 }}
+                      resizeMode="contain"
                     />
                     <Text className="ml-2 text-lg text-primary">•</Text>
                     <Text className="text-sm text-slate-600">{driver.vehicle.color}</Text>
@@ -198,6 +209,13 @@ export default function NearbyDrivers({
       ) : (
         <Text>{isSearchingDrivers ? 'Searching for drivers...' : 'No nearby drivers.'}</Text>
       )}
+      <ImageViewerModal
+        visible={Boolean(viewerImage)}
+        onClose={() => setViewerImage(null)}
+        imageUri={viewerImage?.uri}
+        name={viewerImage?.name}
+        subtitle="Driver Profile"
+      />
     </View>
   );
 }

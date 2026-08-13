@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import uuid from 'react-native-uuid';
 import Constants from 'expo-constants';
-import { View, TouchableOpacity, Keyboard, ActivityIndicator, BackHandler } from 'react-native';
+import { View, TouchableOpacity, Keyboard, ActivityIndicator, BackHandler, Image } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -38,6 +38,7 @@ import {
   GenderAge,
   Rating,
   Separator,
+  ImageViewerModal,
 } from '@tutem/ui';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useLocation } from '@/hooks/useCurrentLocation';
@@ -45,9 +46,9 @@ import DriverMarker from '@/components/DriverMarker';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
-  Cab: 'car',
-  Bike: 'bike',
-  Auto: 'rickshaw',
+  Cab: require('@/assets/images/cab_icon.png'),
+  Auto: require('@/assets/images/rickshaw_icon.png'),
+  Bike: require('@/assets/images/bike_icon.png'),
 } as const;
 
 type Cords = { latitude: number; longitude: number };
@@ -107,6 +108,7 @@ type NearbyDriversPanelProps = {
   hasSearchedDrivers: boolean;
   onFindDriver: () => void;
   isSearchingDrivers: boolean;
+  onViewImage?: (uri?: string | null, name?: string) => void;
 };
 
 function NearbyDriversPanel({
@@ -120,6 +122,7 @@ function NearbyDriversPanel({
   hasSearchedDrivers,
   onFindDriver,
   isSearchingDrivers,
+  onViewImage,
 }: NearbyDriversPanelProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
@@ -146,10 +149,10 @@ function NearbyDriversPanel({
                   'flex-row items-center gap-x-1 rounded-full border px-3 py-1',
                   isSelected ? 'border-primary bg-primary' : 'border-border bg-background'
                 )}>
-                <MaterialCommunityIcons
-                  name={VEHICLE_ICONS[item]}
-                  size={13}
-                  color={isSelected ? 'white' : 'black'}
+                <Image
+                  source={VEHICLE_ICONS[item]}
+                  style={{ width: 16, height: 16 }}
+                  resizeMode="contain"
                 />
                 <Text
                   className={cn(
@@ -215,21 +218,30 @@ function NearbyDriversPanel({
                     )}>
                     {/* Avatar and gender */}
                     <View className="items-center justify-center gap-1.5">
-                      <Avatar alt="Profile pic" className="h-14 w-14">
-                        <AvatarImage
-                          source={
-                            driver.driver.userDetails.profilePictureKey?.trim()
-                              ? { uri: driver.driver.userDetails?.profilePictureKey }
-                              : require('@/assets/images/avatar.jpg')
-                          }
-                        />
-                        <AvatarFallback className="bg-white/20">
-                          <Text className="text-xs font-bold text-primary">
-                            {driver.driver.userDetails?.firstName?.[0]}
-                            {driver.driver.userDetails?.lastName?.[0]}
-                          </Text>
-                        </AvatarFallback>
-                      </Avatar>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() =>
+                          onViewImage?.(
+                            driver.driver.userDetails.profilePictureKey,
+                            `${driver.driver.userDetails.firstName ?? ''} ${driver.driver.userDetails?.lastName ?? ''}`.trim()
+                          )
+                        }>
+                        <Avatar alt="Profile pic" className="h-14 w-14">
+                          <AvatarImage
+                            source={
+                              driver.driver.userDetails.profilePictureKey?.trim()
+                                ? { uri: driver.driver.userDetails?.profilePictureKey }
+                                : require('@/assets/images/avatar.jpg')
+                            }
+                          />
+                          <AvatarFallback className="bg-white/20">
+                            <Text className="text-xs font-bold text-primary">
+                              {driver.driver.userDetails?.firstName?.[0]}
+                              {driver.driver.userDetails?.lastName?.[0]}
+                            </Text>
+                          </AvatarFallback>
+                        </Avatar>
+                      </TouchableOpacity>
                       <GenderAge
                         gender={driver.driver.userDetails?.gender}
                         dob={driver.driver.userDetails?.dob}
@@ -246,10 +258,10 @@ function NearbyDriversPanel({
                       <Text className="text-xs font-medium">{driver.driver.organization.name}</Text>
 
                       <View className="flex-row items-center justify-start">
-                        <MaterialCommunityIcons
-                          name={VEHICLE_ICONS[driver.vehicle.class]}
-                          size={16}
-                          color={colors.primary}
+                        <Image
+                          source={VEHICLE_ICONS[driver.vehicle.class]}
+                          style={{ width: 20, height: 20 }}
+                          resizeMode="contain"
                         />
                         <Text className="text-sm capitalize text-slate-600">
                           {` | ${driver.vehicle.color} | ${driver.vehicle.model} `}
@@ -346,6 +358,7 @@ export default function WhereTo() {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
 
   const getNearbyDriversAction = useAuthenticatedAction(api.actions.nearbyDrivers.getNearbyDrivers);
 
@@ -1305,21 +1318,30 @@ export default function WhereTo() {
                 {/* Driver card */}
                 <View className="flex-row items-center gap-2">
                   <View className="items-center justify-center gap-1.5">
-                    <Avatar alt="Profile pic" className="h-12 w-12">
-                      <AvatarImage
-                        source={
-                          selectedDriver.driver.userDetails.profilePictureKey?.trim()
-                            ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
-                            : require('@/assets/images/avatar.jpg')
-                        }
-                      />
-                      <AvatarFallback className="bg-white/20">
-                        <Text className="text-xs font-bold text-primary">
-                          {selectedDriver.driver.userDetails.firstName?.[0]}
-                          {selectedDriver.driver.userDetails?.lastName?.[0]}
-                        </Text>
-                      </AvatarFallback>
-                    </Avatar>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        setViewerImage({
+                          uri: selectedDriver.driver.userDetails.profilePictureKey,
+                          name: `${selectedDriver.driver.userDetails.firstName ?? ''} ${selectedDriver.driver.userDetails?.lastName ?? ''}`.trim(),
+                        })
+                      }>
+                      <Avatar alt="Profile pic" className="h-12 w-12">
+                        <AvatarImage
+                          source={
+                            selectedDriver.driver.userDetails.profilePictureKey?.trim()
+                              ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
+                              : require('@/assets/images/avatar.jpg')
+                          }
+                        />
+                        <AvatarFallback className="bg-white/20">
+                          <Text className="text-xs font-bold text-primary">
+                            {selectedDriver.driver.userDetails.firstName?.[0]}
+                            {selectedDriver.driver.userDetails?.lastName?.[0]}
+                          </Text>
+                        </AvatarFallback>
+                      </Avatar>
+                    </TouchableOpacity>
                     <GenderAge
                       gender={selectedDriver.driver.userDetails.gender}
                       dob={selectedDriver.driver.userDetails.dob}
@@ -1335,10 +1357,10 @@ export default function WhereTo() {
                     </Text>
 
                     <View className="flex-row items-center justify-start">
-                      <MaterialCommunityIcons
-                        name={VEHICLE_ICONS[selectedDriver.vehicle.class]}
-                        size={18}
-                        color={colors.primary}
+                      <Image
+                        source={VEHICLE_ICONS[selectedDriver.vehicle.class]}
+                        style={{ width: 22, height: 22 }}
+                        resizeMode="contain"
                       />
                       <Text className="ml-1 text-sm capitalize text-slate-600">
                         {selectedDriver.vehicle.model} | {selectedDriver.vehicle.registrationNumber}{' '}
@@ -1404,6 +1426,13 @@ export default function WhereTo() {
           </Button>
         </View>
       </BottomSheet>
+      <ImageViewerModal
+        visible={Boolean(viewerImage)}
+        onClose={() => setViewerImage(null)}
+        imageUri={viewerImage?.uri}
+        name={viewerImage?.name}
+        subtitle="Driver Profile"
+      />
     </GestureHandlerRootView>
   );
 }

@@ -15,18 +15,24 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
+  ImageViewerModal,
 } from '@tutem/ui';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
-import { useAction } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { getDriverChannel } from '@/lib/ably';
+import {
+  subscribeDriverLocation,
+  unsubscribeDriverLocation,
+  fetchLatestDriverLocation,
+  getDriverChannel,
+  releaseDriverChannel,
+} from '@/lib/pusher';
 import { fetchRoute } from '@/lib/maps';
 import ErrorScreen from '@/components/ErrorScreen';
 import * as Location from 'expo-location';
@@ -36,6 +42,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSharedValue } from 'react-native-reanimated';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import NearbyDrivers from '@/components/NearbyDrivers';
+import DriverMarker from '@/components/DriverMarker';
 import SheetLayer from '@/components/BottomSheetLayer';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
@@ -82,20 +89,12 @@ type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
 // helpers
 
-function getVehicleIcon(
-  vehicleClass: VehicleClass
-): React.ComponentProps<typeof MaterialCommunityIcons>['name'] {
-  switch (vehicleClass) {
-    case 'Bike':
-      return 'motorbike';
-    case 'Auto':
-      return 'rickshaw';
-    case 'Cab':
-      return 'car';
-    default:
-      return 'car-side';
-  }
-}
+// Vehicle Icons
+const VEHICLE_ICONS = {
+  Cab: require('@/assets/images/cab_icon.png'),
+  Auto: require('@/assets/images/rickshaw_icon.png'),
+  Bike: require('@/assets/images/bike_icon.png'),
+} as const;
 
 function formatActualDuration(startedAt?: number, endedAt?: number): string {
   if (!startedAt || !endedAt) return '—';
@@ -160,6 +159,9 @@ export default function RideRequest() {
   const [selectedDriver, setSelectedDriver] = useState<NearbyDriver | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
+    null
+  );
 
   const [filters, setFilters] = useState<VehicleClass[]>([]);
   const [genderMatch, setGenderMatch] = useState(false);
@@ -378,52 +380,46 @@ export default function RideRequest() {
   useEffect(() => {
     if (!ride?.driver?._id) return;
 
-    // console.log('Setting up Ably for driver:', ride.driver._id);
+    const driverId = ride.driver._id;
+    console.log('[rideRequest] Subscribing to location updates for driver:', driverId);
 
-    // Use rewind: '1' to get the last known location immediately
-    const channel = getDriverChannel(ride.driver._id, { rewind: '1' }, ride?.rider?.userId);
-    // console.log('channel is', channel);
-    if (!channel) return;
+    let cancelled = false;
 
-    // 1. Fetch Last Known Location from History (Persisted in Ably)
-    // IMPORTANT: Ensure "Persist messages" is enabled in Ably Dashboard Settings
-    channel
-      .history({ limit: 1 })
-      .then((resultPage: any) => {
-        if (resultPage.items && resultPage.items.length > 0) {
-          const lastMessage = resultPage.items[0];
-          console.log('Restored location from Ably History:', lastMessage.data);
-          setDriverLocation({
-            latitude: lastMessage.data.latitude,
-            longitude: lastMessage.data.longitude,
-          });
-        } else {
-          console.log(
-            'Ably History is empty. If the driver is offline, no location can be shown unless History is enabled in the Ably Dashboard.'
-          );
-        }
-      })
-      .catch((err: any) => {
-        console.error('Ably History fetch failed:', err);
+    // Seed location if driver info from nearby list is available
+    const driverInfo = nearbyDrivers?.find((d) => d.driver._id === driverId);
+    if (driverInfo?.cords) {
+      setDriverLocation({
+        latitude: Number(driverInfo.cords.latitude),
+        longitude: Number(driverInfo.cords.longitude),
       });
+    }
 
-    const handleLocationUpdate = (message: any) => {
-      console.log('Received Ably location update:', message.data);
-      if (message.name === 'location') {
-        const coords = {
-          latitude: message.data.latitude,
-          longitude: message.data.longitude,
-        };
-        setDriverLocation(coords);
+    const handleLocationUpdate = (payload: any) => {
+      if (cancelled) return;
+      const latitude = Number(payload.latitude);
+      const longitude = Number(payload.longitude);
+      console.log('[rideRequest] Received location update:', payload);
+      if (!isNaN(latitude) && !isNaN(longitude) && latitude !== 0 && longitude !== 0) {
+        setDriverLocation({ latitude, longitude });
       }
     };
 
-    channel.subscribe('location', handleLocationUpdate);
+    // 1. Subscribe to real-time driver location updates via Pusher
+    subscribeDriverLocation(driverId, handleLocationUpdate);
+
+    // 2. Poll server every 3s as fallback (essential for Expo Go / unbuilt dev client)
+    const pollInterval = setInterval(() => {
+      fetchLatestDriverLocation(driverId).then((loc) => {
+        if (loc) handleLocationUpdate(loc);
+      });
+    }, 3000);
 
     return () => {
-      channel.unsubscribe('location', handleLocationUpdate);
+      cancelled = true;
+      clearInterval(pollInterval);
+      unsubscribeDriverLocation(driverId).catch(() => {});
     };
-  }, [ride?.driver?._id]);
+  }, [ride?.driver?._id, nearbyDrivers]);
 
   useEffect(() => {
     if (driverLocation && !hasCenteredOnDriver && mapRef.current) {
@@ -520,13 +516,12 @@ export default function RideRequest() {
             {route && (
               <Polyline coordinates={route.polyline} strokeWidth={3} strokeColor="#000000" />
             )}
-            {/* Driver Marker */}
+            {/* Driver Marker — uses proper vehicle class PNG icon from @/assets/images */}
             {driverLocation && (
-              <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }} flat>
-                <View className="absolute items-center justify-center rounded-full border border-blue-500 bg-yellow-300 shadow-lg">
-                  <MaterialCommunityIcons name="car-side" size={24} color={colors.primary} />
-                </View>
-              </Marker>
+              <DriverMarker
+                location={driverLocation}
+                vehicleClass={(ride.vehicle?.class as any) ?? 'Cab'}
+              />
             )}
 
             {/* Pickup Marker */}
@@ -676,8 +671,15 @@ export default function RideRequest() {
 
           {/* driver details */}
           <View className="flex-row justify-between gap-2">
-            <View
-              className={cn('items-center justify-center gap-1.5', {
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                setViewerImage({
+                  uri: ride.driver.userDetails.profilePictureKey,
+                  name: `${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails?.lastName ?? ''}`.trim(),
+                })
+              }
+              className={cn('items-center justify-center gap-1.5 rounded-full', {
                 'border-2 border-red-500':
                   ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
               })}>
@@ -696,7 +698,7 @@ export default function RideRequest() {
                   </Text>
                 </AvatarFallback>
               </Avatar>
-            </View>
+            </TouchableOpacity>
 
             <View className="flex-1 gap-0.5">
               <Text
@@ -746,11 +748,11 @@ export default function RideRequest() {
                 'bg-gray-50': ride.requestStatus !== 'Rejected',
                 'bg-red-50/60 opacity-60': ride.requestStatus === 'Rejected',
               })}>
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
-                <MaterialCommunityIcons
-                  name={getVehicleIcon(vehicle.class)}
-                  size={22}
-                  color="#4f46e5"
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 p-1">
+                <Image
+                  source={VEHICLE_ICONS[vehicle.class] || VEHICLE_ICONS.Cab}
+                  style={{ width: 28, height: 28 }}
+                  resizeMode="contain"
                 />
               </View>
 
@@ -992,21 +994,30 @@ export default function RideRequest() {
                   <View className="mb-3 gap-2 rounded-2xl bg-background p-4">
                     <View className="flex-row items-center gap-3">
                       {/* Avatar */}
-                      <Avatar alt="Profile pic" className="h-9 w-9">
-                        <AvatarImage
-                          source={
-                            selectedDriver.driver.userDetails.profilePictureKey?.trim()
-                              ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
-                              : require('@/assets/images/avatar.jpg')
-                          }
-                        />
-                        <AvatarFallback className="bg-white/20">
-                          <Text className="text-xs font-bold text-primary">
-                            {selectedDriver.driver.userDetails.firstName?.[0]}
-                            {selectedDriver.driver.userDetails?.lastName?.[0]}
-                          </Text>
-                        </AvatarFallback>
-                      </Avatar>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() =>
+                          setViewerImage({
+                            uri: selectedDriver.driver.userDetails.profilePictureKey,
+                            name: `${selectedDriver.driver.userDetails.firstName ?? ''} ${selectedDriver.driver.userDetails?.lastName ?? ''}`.trim(),
+                          })
+                        }>
+                        <Avatar alt="Profile pic" className="h-9 w-9">
+                          <AvatarImage
+                            source={
+                              selectedDriver.driver.userDetails.profilePictureKey?.trim()
+                                ? { uri: selectedDriver.driver.userDetails.profilePictureKey }
+                                : require('@/assets/images/avatar.jpg')
+                            }
+                          />
+                          <AvatarFallback className="bg-white/20">
+                            <Text className="text-xs font-bold text-primary">
+                              {selectedDriver.driver.userDetails.firstName?.[0]}
+                              {selectedDriver.driver.userDetails?.lastName?.[0]}
+                            </Text>
+                          </AvatarFallback>
+                        </Avatar>
+                      </TouchableOpacity>
 
                       <View>
                         <Text className="text-base font-semibold text-foreground">
@@ -1059,11 +1070,13 @@ export default function RideRequest() {
                     </View>
                     <Separator />
                     <View className="flex-row items-center gap-3">
-                      <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
-                        <MaterialCommunityIcons
-                          name={getVehicleIcon(selectedDriver.vehicle.class)}
-                          size={22}
-                          color="#4f46e5"
+                      <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 p-1">
+                        <Image
+                          source={
+                            VEHICLE_ICONS[selectedDriver.vehicle.class] || VEHICLE_ICONS.Cab
+                          }
+                          style={{ width: 28, height: 28 }}
+                          resizeMode="contain"
                         />
                       </View>
                       <Text className="text-sm font-semibold text-foreground">
@@ -1417,6 +1430,13 @@ export default function RideRequest() {
       {(isSearchingDrivers || changingDriver) && (
         <Loader subtitle={changingDriver ? 'Changing driver' : 'Searching drivers'} />
       )}
+      <ImageViewerModal
+        visible={Boolean(viewerImage)}
+        onClose={() => setViewerImage(null)}
+        imageUri={viewerImage?.uri}
+        name={viewerImage?.name}
+        subtitle="Driver Profile"
+      />
     </View>
   );
 }

@@ -7,7 +7,7 @@ import { FunctionReturnType } from 'convex/server';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect } from 'expo-router';
-import { Text, Button, Loader } from '@tutem/ui';
+import { Text, Button, Loader, ImageViewerModal } from '@tutem/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import DriverMarker from '@/components/DriverMarker';
@@ -112,6 +112,7 @@ export const RideRequests = memo(
     const mapRef = useRef<MapView>(null);
 
     const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
+    const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
 
     const { colorScheme: currentTheme } = useColorScheme();
     const isDark = currentTheme === 'dark';
@@ -281,7 +282,12 @@ export const RideRequests = memo(
 
           {currentRide ? (
             <View className="mx-4 flex-1 items-center justify-center bg-background">
-              <CurrentRideCard key={currentRide._id} ride={currentRide} onPress={handleClick} />
+              <CurrentRideCard
+                key={currentRide._id}
+                ride={currentRide}
+                onPress={handleClick}
+                onViewRiderImage={(uri, name) => setViewerImage({ uri, name })}
+              />
             </View>
           ) : (
             <>
@@ -319,6 +325,7 @@ export const RideRequests = memo(
                         acceptCheck={acceptCheck}
                         handleAccept={handleAccept}
                         handleReject={handleReject}
+                        onViewRiderImage={(uri, name) => setViewerImage({ uri, name })}
                       />
                     ))}
                   </View>
@@ -336,6 +343,14 @@ export const RideRequests = memo(
 
         {/* Loading overlay */}
         {isLoading && <Loader subtitle="Loading..." />}
+
+        <ImageViewerModal
+          visible={Boolean(viewerImage)}
+          onClose={() => setViewerImage(null)}
+          imageUri={viewerImage?.uri}
+          name={viewerImage?.name}
+          subtitle="Rider Profile"
+        />
       </View>
     );
   }

@@ -30,6 +30,10 @@ export default {
     android: {
       softwareKeyboardLayoutMode: "pan",
       edgeToEdgeEnabled: true,
+      // Required to allow HTTP (non-HTTPS) requests to the local Next.js dev server.
+      // Android 9+ blocks cleartext HTTP traffic by default, causing
+      // 'TypeError: Network request failed' for any http:// fetch call.
+      usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"

@@ -29,6 +29,9 @@ export default {
     },
     android: {
       edgeToEdgeEnabled: true,
+      // Required to allow HTTP requests to the local Next.js dev server
+      // (Pusher auth endpoint). Android 9+ blocks cleartext HTTP by default.
+      usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"

@@ -22,15 +22,14 @@ export const startLocationTracking = async (credentials?: { driverId: string; us
       console.warn('Notification permission denied. Background service may fail on Android 13+.');
     }
 
-    // Persist the Ably API key to SecureStore so that the background task
-    // (which runs in a headless JS thread) can access it.
-    // process.env is NOT available in headless background tasks.
-    const ablyKey = process.env.EXPO_PUBLIC_ABLY_API_KEY;
-    if (!ablyKey) {
-      console.error('[locationService] EXPO_PUBLIC_ABLY_API_KEY is not set in .env!');
+    // Persist the Pusher trigger URL to SecureStore so the headless background
+    // task can access it. process.env is NOT available in background tasks.
+    const triggerUrl = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL;
+    if (!triggerUrl) {
+      console.error('[locationService] EXPO_PUBLIC_PUSHER_TRIGGER_URL is not set in .env!');
       return false;
     }
-    await SecureStore.setItemAsync('ablyApiKey', ablyKey);
+    await SecureStore.setItemAsync('pusherTriggerUrl', triggerUrl);
 
     if (credentials) {
       await SecureStore.setItemAsync('driverId', credentials.driverId);

@@ -36,12 +36,6 @@ import { useState } from 'react';
 
 type CurrentRide = FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideByRiderId>;
 
-// Vehicle Icons
-const VEHICLE_ICONS = {
-  Cab: 'car',
-  Bike: 'bike',
-  Auto: 'rickshaw',
-} as const;
 
 const services = [
   {
@@ -217,15 +211,15 @@ export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<Curre
           {/* Vehicle + Distance + Fare */}
           <View className="flex-row items-center justify-between gap-1">
             <View className="flex-1 flex-row items-center gap-2">
-              {vehicle && (
-                <View className="rounded-full bg-primary/15 p-1">
-                  <MaterialCommunityIcons
-                    name={VEHICLE_ICONS[vehicle.class]}
-                    size={24}
-                    color={colors.primary}
-                  />
-                </View>
-              )}
+              <Image
+                source={
+                  currentRide.driver.userDetails.profilePictureKey?.trim()
+                    ? { uri: currentRide.driver.userDetails.profilePictureKey }
+                    : require('@/assets/images/avatar.jpg')
+                }
+                className="h-10 w-10 rounded-full border border-slate-200"
+                resizeMode="cover"
+              />
 
               <View className="flex-1 gap-0.5">
                 <Text className="font-semibold text-primary">

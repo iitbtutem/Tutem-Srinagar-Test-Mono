@@ -1,9 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { useSetAtom } from 'jotai';
 import { locationAtom } from '@/lib/location';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
-import { getDriverChannel, getGlobalChannel } from '@/lib/ably';
+import { publishDriverLocation } from '@/lib/pusher';
+import {
+  isNativePusherAvailable,
+  initNativePusher,
+  subscribeDriverChannel,
+  triggerLocation,
+  disconnectNativePusher,
+} from '@/lib/pusherNative';
 
 interface LocationManagerOptions {
   driverId?: string;
@@ -19,10 +26,11 @@ export function useLocationManager({
   userId,
   isOnline = false,
   isAvailableForRide = false,
-  isLicenseVerified = false,
+  isLicenseVerified: _isLicenseVerified = false,
   hasActiveRide = false,
 }: LocationManagerOptions) {
   const setLocation = useSetAtom(locationAtom);
+  const isNativePusherReadyRef = useRef<boolean>(false);
 
   // 1. Manage Background Location Foreground Service
   useEffect(() => {
@@ -42,37 +50,58 @@ export function useLocationManager({
     }
   }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide]);
 
-  // 2. Manage Foreground GPS Watching & Ably Streaming/Presence
+  // 2. Native Pusher connection — initialise once per driver session.
+  //    If native module is not linked (Expo Go / unbuilt dev client), falls back to HTTP POST.
+  useEffect(() => {
+    if (!driverId) return;
+
+    let cancelled = false;
+
+    const setup = async () => {
+      if (!isNativePusherAvailable()) {
+        console.log(
+          '[useLocationManager] Native Pusher is not available (Expo Go / unbuilt dev client). ' +
+            'Will publish location updates via HTTP trigger endpoint.'
+        );
+        isNativePusherReadyRef.current = false;
+        return;
+      }
+
+      try {
+        const initOk = await initNativePusher();
+        if (cancelled || !initOk) return;
+        const subOk = await subscribeDriverChannel(driverId);
+        if (cancelled || !subOk) return;
+
+        isNativePusherReadyRef.current = true;
+        console.log('[useLocationManager] ✅ Native Pusher ready for client events');
+      } catch (err) {
+        console.warn(
+          '[useLocationManager] Native Pusher setup failed. Falling back to HTTP trigger endpoint:',
+          err
+        );
+        isNativePusherReadyRef.current = false;
+      }
+    };
+
+    setup();
+
+    return () => {
+      cancelled = true;
+      isNativePusherReadyRef.current = false;
+      disconnectNativePusher().catch(() => {});
+    };
+  }, [driverId]);
+
+  // 3. Foreground GPS Watching — publishes via native client event (or HTTP fallback)
   useEffect(() => {
     if (!driverId || !userId) return;
 
     let sub: Location.LocationSubscription | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
-    let globalChannel: ReturnType<typeof getGlobalChannel> | null = null;
     let isCancelled = false;
 
     const shouldPublish = (isAvailableForRide && isOnline) || hasActiveRide;
-
-    const updatePresence = async (lat: number, lng: number) => {
-      if (isAvailableForRide && isOnline && !hasActiveRide && globalChannel) {
-        try {
-          await globalChannel.presence.update({
-            driverId,
-            latitude: lat,
-            longitude: lng,
-            vehicleClass:
-              isLicenseVerified === true || isLicenseVerified === 'Verified'
-                ? 'verified'
-                : 'Not Verified',
-            lastUpdated: Date.now(),
-          });
-        } catch (e) {
-          console.error('[useLocationManager] Ably presence update error:', e);
-        }
-      } else if (globalChannel) {
-        globalChannel.presence.leave().catch(() => {});
-      }
-    };
 
     const publishLocation = (coords: {
       latitude: number;
@@ -81,13 +110,27 @@ export function useLocationManager({
       speed: number | null;
       timestamp: number;
     }) => {
-      if (shouldPublish) {
-        const channel = getDriverChannel(driverId, userId);
-        if (channel) {
-          channel
-            .publish('location', coords)
-            .catch((err: unknown) => console.error('[useLocationManager] Ably publish error:', err));
-        }
+      if (!shouldPublish) return;
+
+      const payload = {
+        driverId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        heading: coords.heading,
+        speed: coords.speed,
+        timestamp: coords.timestamp,
+      };
+
+      if (isNativePusherReadyRef.current) {
+        triggerLocation(payload).then((success) => {
+          if (!success) {
+            // Fallback if trigger fails
+            publishDriverLocation(payload);
+          }
+        });
+      } else {
+        // Fallback when native module is not linked
+        publishDriverLocation(payload);
       }
     };
 
@@ -95,9 +138,7 @@ export function useLocationManager({
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted' || isCancelled) return;
 
-      globalChannel = getGlobalChannel(undefined, userId);
-
-      // Initial Position Fetch
+      // Initial position
       try {
         const initialLoc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
@@ -108,7 +149,6 @@ export function useLocationManager({
           latitude: initialLoc.coords.latitude,
           longitude: initialLoc.coords.longitude,
         };
-
         setLocation(coords);
         publishLocation({
           ...coords,
@@ -122,7 +162,7 @@ export function useLocationManager({
 
       if (isCancelled) return;
 
-      // Watch Position
+      // Continuous watch — fires on every >5 m move
       sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, distanceInterval: 5 },
         (loc) => {
@@ -130,10 +170,7 @@ export function useLocationManager({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
           };
-
           setLocation(coords);
-          updatePresence(coords.latitude, coords.longitude);
-
           publishLocation({
             ...coords,
             heading: loc.coords.heading,
@@ -149,41 +186,28 @@ export function useLocationManager({
         return;
       }
 
-      // Heartbeat interval every 10s for continuous streaming
+      // Heartbeat every 10s — keeps active-driver registry alive
       intervalId = setInterval(async () => {
-        if (shouldPublish) {
-          try {
-            const loc = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.High,
-            });
-            const coords = {
-              latitude: loc.coords.latitude,
-              longitude: loc.coords.longitude,
-            };
-
-            setLocation(coords);
-            updatePresence(coords.latitude, coords.longitude);
-
-            publishLocation({
-              ...coords,
-              heading: loc.coords.heading,
-              speed: loc.coords.speed,
-              timestamp: loc.timestamp,
-            });
-          } catch (e) {
-            console.error('[useLocationManager] Heartbeat location fetch error:', e);
-          }
+        if (!shouldPublish) return;
+        try {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
+          const coords = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          };
+          setLocation(coords);
+          publishLocation({
+            ...coords,
+            heading: loc.coords.heading,
+            speed: loc.coords.speed,
+            timestamp: loc.timestamp,
+          });
+        } catch (e) {
+          console.error('[useLocationManager] Heartbeat location fetch error:', e);
         }
       }, 10000);
-
-      // Initial presence entry
-      if (isAvailableForRide && isOnline && !hasActiveRide) {
-        globalChannel?.presence
-          .enter({
-            driverId,
-          })
-          .catch(() => {});
-      }
     };
 
     startForegroundTracking();
@@ -192,7 +216,6 @@ export function useLocationManager({
       isCancelled = true;
       sub?.remove();
       if (intervalId !== null) clearInterval(intervalId);
-      globalChannel?.presence.leave().catch(() => {});
     };
-  }, [driverId, userId, isOnline, isAvailableForRide, isLicenseVerified, hasActiveRide, setLocation]);
+  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, setLocation]);
 }

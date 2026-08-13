@@ -82,3 +82,4 @@ export { Alert, AlertDescription, AlertTitle } from "./src/components/alert";
 export { Loader } from "./src/components/loader";
 export { GenderAge } from "./src/components/gender-age";
 export { Rating } from "./src/components/rating";
+export { ImageViewerModal } from "./src/components/image-viewer";

@@ -309,9 +309,9 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      <div className="rounded-xl border border-border overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full min-w-[750px] text-sm">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="border-b border-border bg-muted/40">

@@ -35,6 +35,7 @@ import {
   Text,
   Button,
   Loader,
+  ImageViewerModal,
 } from '@tutem/ui';
 import { FunctionReturnType } from 'convex/server';
 import GenderAge from '@/components/GenderAge';
@@ -176,6 +177,7 @@ export default function Ride() {
   const [loading, setLoading] = useState<
     'driverArrived' | 'starting' | 'completing' | 'canceling' | null
   >(null);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
 
   // Cancel flow state
   const [cancelStep, setCancelStep] = useState<CancelStep | null>(null);
@@ -422,7 +424,7 @@ export default function Ride() {
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';
-  
+
   const pickupCords = { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude };
   const destCords = { latitude: ride.destination.latitude, longitude: ride.destination.longitude };
 
@@ -911,7 +913,15 @@ export default function Ride() {
                   {/* Rider + fare */}
                   <View className="my-2 flex-row items-center justify-between">
                     <View className="flex-1 flex-row items-center gap-3">
-                      <View className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() =>
+                          setViewerImage({
+                            uri: ride.rider.details.profilePictureKey,
+                            name: `${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim(),
+                          })
+                        }
+                        className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
                         <Avatar alt="Profile pic" className="h-12 w-12">
                           <AvatarImage
                             source={
@@ -926,7 +936,7 @@ export default function Ride() {
                             </Text>
                           </AvatarFallback>
                         </Avatar>
-                      </View>
+                      </TouchableOpacity>
                       <View className="flex-1">
                         <Text
                           numberOfLines={2}
@@ -1026,13 +1036,19 @@ export default function Ride() {
                   </View>
                 </View>
               )}
-              ;
             </Animated.View>
           )}
         </BottomSheetScrollView>
       </BottomSheet>
       {driverChanged && <DriverChangedAlert />}
       {rideCanceled && <RideCanceled riderCancelReason={riderCancelReason} />}
+      <ImageViewerModal
+        visible={Boolean(viewerImage)}
+        onClose={() => setViewerImage(null)}
+        imageUri={viewerImage?.uri}
+        name={viewerImage?.name}
+        subtitle="Rider Profile"
+      />
     </View>
   );
 }

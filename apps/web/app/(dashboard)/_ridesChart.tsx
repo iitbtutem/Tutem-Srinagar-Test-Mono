@@ -12,7 +12,7 @@ import {
   Bar,
   Legend,
 } from "recharts";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfDay, addDays } from "date-fns";
 import { useMemo } from "react";
 
 interface RidesChartProps {
@@ -20,14 +20,23 @@ interface RidesChartProps {
     requestedAt: number;
     status: string;
   }>;
+  startDate?: Date;
+  endDate?: Date;
+  label?: string;
 }
 
-export function RidesChart({ rides }: RidesChartProps) {
+export function RidesChart({ rides, startDate, endDate, label }: RidesChartProps) {
   const data = useMemo(() => {
-    const days = 14;
-    return [...Array(days)].map((_, i) => {
-      const day = startOfDay(subDays(new Date(), days - 1 - i));
-      const nextDay = startOfDay(subDays(new Date(), days - 2 - i));
+    const end = endDate ? startOfDay(endDate) : startOfDay(new Date());
+    const start = startDate ? startOfDay(startDate) : startOfDay(subDays(new Date(), 13));
+    const dayCount = Math.max(
+      1,
+      Math.min(90, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+    );
+
+    return [...Array(dayCount)].map((_, i) => {
+      const day = startOfDay(addDays(start, i));
+      const nextDay = startOfDay(addDays(start, i + 1));
 
       const dayRides = rides.filter(
         (r) => r.requestedAt >= day.getTime() && r.requestedAt < nextDay.getTime()
@@ -42,13 +51,13 @@ export function RidesChart({ rides }: RidesChartProps) {
         ).length,
       };
     });
-  }, [rides]);
+  }, [rides, startDate, endDate]);
 
   return (
     <div className="card-glass p-5">
       <div className="mb-4">
         <h3 className="font-semibold">Daily Rides</h3>
-        <p className="text-sm text-muted-foreground">Last 14 days</p>
+        <p className="text-sm text-muted-foreground">{label ?? "Last 14 days"}</p>
       </div>
       <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
@@ -108,14 +117,29 @@ interface RegistrationChartProps {
   riders: Array<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   drivers: Array<any>;
+  startDate?: Date;
+  endDate?: Date;
+  label?: string;
 }
 
-export function RegistrationChart({ riders, drivers }: RegistrationChartProps) {
+export function RegistrationChart({
+  riders,
+  drivers,
+  startDate,
+  endDate,
+  label,
+}: RegistrationChartProps) {
   const data = useMemo(() => {
-    const days = 14;
-    return [...Array(days)].map((_, i) => {
-      const day = startOfDay(subDays(new Date(), days - 1 - i));
-      const nextDay = startOfDay(subDays(new Date(), days - 2 - i));
+    const end = endDate ? startOfDay(endDate) : startOfDay(new Date());
+    const start = startDate ? startOfDay(startDate) : startOfDay(subDays(new Date(), 13));
+    const dayCount = Math.max(
+      1,
+      Math.min(90, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+    );
+
+    return [...Array(dayCount)].map((_, i) => {
+      const day = startOfDay(addDays(start, i));
+      const nextDay = startOfDay(addDays(start, i + 1));
 
       return {
         date: format(day, "MMM d"),
@@ -127,13 +151,13 @@ export function RegistrationChart({ riders, drivers }: RegistrationChartProps) {
         ).length,
       };
     });
-  }, [riders, drivers]);
+  }, [riders, drivers, startDate, endDate]);
 
   return (
     <div className="card-glass p-5">
       <div className="mb-4">
         <h3 className="font-semibold">New Registrations</h3>
-        <p className="text-sm text-muted-foreground">Last 14 days</p>
+        <p className="text-sm text-muted-foreground">{label ?? "Last 14 days"}</p>
       </div>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
@@ -165,3 +189,4 @@ export function RegistrationChart({ riders, drivers }: RegistrationChartProps) {
     </div>
   );
 }
+

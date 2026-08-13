@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Button, Text } from '@tutem/ui';
+import { Button, Text, Avatar, AvatarFallback, AvatarImage } from '@tutem/ui';
 import StarRating from './StarRating';
 import { distanceFormat, formatFare } from '@/lib/utils';
 import { FunctionReturnType } from 'convex/server';
@@ -82,28 +82,54 @@ export function RideRequestCard({
   handleAccept,
   handleReject,
   acceptCheck,
+  onViewRiderImage,
 }: {
   ride: RideRequest;
   handleAccept: (rideId: Id<'ride'>) => void;
   handleReject: (rideId: Id<'ride'>) => void;
   acceptCheck: { ok: boolean; reason?: string };
+  onViewRiderImage?: (uri?: string | null, name?: string) => void;
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const riderName = `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger';
+  const riderProfilePicture = ride.rider.details.profilePictureKey;
 
   return (
     <Animated.View entering={FadeInDown.delay(200)} style={animStyle} className="mb-3">
       <View className="overflow-hidden rounded-2xl border border-violet-500/50 bg-background p-4">
         {/* Header */}
         <View className="mb-3 flex-row items-start justify-between">
-          <View className="flex-1">
-            <Text className="text-title mb-1 text-base font-bold">
-              {`${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() ||
-                'Passenger'}
-            </Text>
-            <View className="flex-row gap-1">
-              <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
-              <StarRating rating={ride.rider.ratings} />
+          <View className="flex-1 flex-row items-center gap-3">
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onViewRiderImage?.(riderProfilePicture, riderName)}>
+              <Avatar alt="Rider pic" className="h-11 w-11">
+                <AvatarImage
+                  source={
+                    riderProfilePicture?.trim()
+                      ? { uri: riderProfilePicture }
+                      : require('@/assets/images/avatar.jpg')
+                  }
+                />
+                <AvatarFallback className="bg-white/20">
+                  <Text className="text-xs font-bold text-primary">
+                    {ride.rider.details.firstName?.[0]}
+                    {ride.rider.details.lastName?.[0]}
+                  </Text>
+                </AvatarFallback>
+              </Avatar>
+            </TouchableOpacity>
+
+            <View className="flex-1">
+              <Text className="text-title mb-0.5 text-base font-bold" numberOfLines={1}>
+                {riderName}
+              </Text>
+              <View className="flex-row gap-1">
+                <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
+                <StarRating rating={ride.rider.ratings} />
+              </View>
             </View>
           </View>
           <Text className="text-xl font-extrabold tracking-tight text-emerald-400">
@@ -232,9 +258,20 @@ export function RideHistoryCard({
   );
 }
 
-export function CurrentRideCard({ ride, onPress }: { ride: CurrentRide; onPress: () => void }) {
+export function CurrentRideCard({
+  ride,
+  onPress,
+  onViewRiderImage,
+}: {
+  ride: CurrentRide;
+  onPress: () => void;
+  onViewRiderImage?: (uri?: string | null, name?: string) => void;
+}) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const riderName = `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger';
+  const riderProfilePicture = ride.rider.details.profilePictureKey;
 
   return (
     <Animated.View entering={FadeInDown.delay(200)} style={animStyle} className="mb-3 w-full">
@@ -258,14 +295,35 @@ export function CurrentRideCard({ ride, onPress }: { ride: CurrentRide; onPress:
         </View>
         {/* Header */}
         <View className="mb-3 mt-2 flex-row items-start justify-between">
-          <View className="flex-1">
-            <Text className="text-title mb-1 text-base font-bold">
-              {`${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() ||
-                'Passenger'}
-            </Text>
-            <View className="flex-row gap-1">
-              <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
-              <StarRating rating={ride.rider.ratings} />
+          <View className="flex-1 flex-row items-center gap-3">
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onViewRiderImage?.(riderProfilePicture, riderName)}>
+              <Avatar alt="Rider pic" className="h-11 w-11">
+                <AvatarImage
+                  source={
+                    riderProfilePicture?.trim()
+                      ? { uri: riderProfilePicture }
+                      : require('@/assets/images/avatar.jpg')
+                  }
+                />
+                <AvatarFallback className="bg-white/20">
+                  <Text className="text-xs font-bold text-primary">
+                    {ride.rider.details.firstName?.[0]}
+                    {ride.rider.details.lastName?.[0]}
+                  </Text>
+                </AvatarFallback>
+              </Avatar>
+            </TouchableOpacity>
+
+            <View className="flex-1">
+              <Text className="text-title mb-0.5 text-base font-bold" numberOfLines={1}>
+                {riderName}
+              </Text>
+              <View className="flex-row gap-1">
+                <GenderAge gender={ride.rider.details.gender} dob={ride.rider.details.dob} />
+                <StarRating rating={ride.rider.ratings} />
+              </View>
             </View>
           </View>
           <Text className="text-xl font-extrabold tracking-tight text-emerald-400">

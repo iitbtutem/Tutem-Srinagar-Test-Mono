@@ -31,6 +31,7 @@ import {
   Loader,
   cn,
   Switch,
+  ImageViewerModal,
 } from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import useThemeColors from '@/hooks/useColorScheme';
@@ -42,7 +43,8 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
-  const [genderMatching, setGenderMatching] = useState<boolean>(false);
+  const [genderMatching, setGenderMatching] = useState(false);
+  const [viewerVisible, setViewerVisible] = useState(false);
   const { signOut } = useAuth();
   const router = useRouter();
   const { iconColor, iconBackgroundColor } = useThemeColors();
@@ -209,23 +211,25 @@ export default function Profile() {
         <View className="mt-6">
           <Animated.View style={avatarContainerStyle} className="items-center">
             <View className="rounded-full border-[3px] border-white/30 p-1 shadow-lg">
-              <Avatar alt="Profile pic" className="h-28 w-28">
-                <AvatarImage
-                  source={
-                    image
-                      ? { uri: image }
-                      : rider.profilePictureKey
-                        ? { uri: rider.profilePictureKey }
-                        : require('@/assets/images/avatar.jpg')
-                  }
-                />
-                <AvatarFallback className="bg-white/20">
-                  <Text className="text-2xl font-bold text-primary">
-                    {rider.firstName?.[0]}
-                    {rider?.lastName?.[0]}
-                  </Text>
-                </AvatarFallback>
-              </Avatar>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerVisible(true)}>
+                <Avatar alt="Profile pic" className="h-28 w-28">
+                  <AvatarImage
+                    source={
+                      image
+                        ? { uri: image }
+                        : rider.profilePictureKey
+                          ? { uri: rider.profilePictureKey }
+                          : require('@/assets/images/avatar.jpg')
+                    }
+                  />
+                  <AvatarFallback className="bg-white/20">
+                    <Text className="text-2xl font-bold text-primary">
+                      {rider.firstName?.[0]}
+                      {rider?.lastName?.[0]}
+                    </Text>
+                  </AvatarFallback>
+                </Avatar>
+              </TouchableOpacity>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
                 userId={rider._id}
@@ -340,6 +344,13 @@ export default function Profile() {
           </View>
         </View>
       </Animated.ScrollView>
+      <ImageViewerModal
+        visible={viewerVisible}
+        onClose={() => setViewerVisible(false)}
+        imageUri={image || rider.profilePictureKey}
+        name={`${rider.firstName ?? ''} ${rider.lastName ?? ''}`.trim()}
+        subtitle="Your Profile Photo"
+      />
     </View>
   );
 }

@@ -5,111 +5,78 @@ import { AppState } from 'react-native';
 
 export const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
 
-function base64Encode(str: string): string {
-  if (typeof btoa === 'function') {
-    return btoa(str);
-  }
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let output = '';
-  for (
-    let block = 0, charCode: number, i = 0, map = chars;
-    str.charAt(i | 0) || ((map = '='), i % 1);
-    output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
-  ) {
-    charCode = str.charCodeAt((i += 3 / 4));
-    if (charCode > 0xff) {
-      throw new Error(
-        "'base64Encode' failed: The string to be encoded contains characters outside of the Latin1 range."
-      );
-    }
-    block = (block << 8) | charCode;
-  }
-  return output;
-}
-
+/**
+ * Background location task.
+ *
+ * Runs in a headless JS context when the app is backgrounded.
+ * Reads the Pusher trigger URL from SecureStore (persisted by locationService.ts)
+ * and POSTs the driver's location to the Next.js server trigger endpoint,
+ * which then signs and forwards the event to Pusher.
+ *
+ * We use our own server endpoint rather than calling Pusher REST directly
+ * because:
+ *   1. Pusher REST auth requires HMAC-SHA256 which is complex in a headless context.
+ *   2. The server already has all Pusher credentials securely.
+ */
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.error('[tasks.ts] Background Location Task Error:', error.message);
     return;
   }
 
-  // Skip when app is open/foreground
+  // Skip when the app is in the foreground — foreground hook handles publishing
   if (AppState.currentState === 'active') {
-    console.log('[tasks.ts] App is foregrounded. Skipping location sync.');
+    console.log('[tasks.ts] App is foregrounded. Skipping background location sync.');
     return;
   }
 
-  if (data) {
-    const { locations } = data as {
-      locations: Location.LocationObject[];
+  if (!data) return;
+
+  const { locations } = data as { locations: Location.LocationObject[] };
+  if (!locations || locations.length === 0) return;
+
+  const location = locations[0];
+
+  try {
+    const driverId = await SecureStore.getItemAsync('driverId');
+    const pusherTriggerUrl = await SecureStore.getItemAsync('pusherTriggerUrl');
+
+    if (!driverId) {
+      console.warn('[tasks.ts] Driver ID missing. Cannot sync location.');
+      return;
+    }
+
+    if (!pusherTriggerUrl) {
+      console.error('[tasks.ts] Pusher trigger URL missing. Did locationService.ts run?');
+      return;
+    }
+
+    const payload = {
+      driverId,
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      heading: location.coords.heading,
+      speed: location.coords.speed,
+      timestamp: location.timestamp,
     };
 
-    if (!locations || locations.length === 0) return;
+    // POST to our Next.js trigger endpoint → server forwards to Pusher
+    const response = await fetch(pusherTriggerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    const location = locations[0];
-
-    try {
-      const driverId = await SecureStore.getItemAsync('driverId');
-      const user_id = await SecureStore.getItemAsync('user_id');
-
-      if (!driverId || !user_id) {
-        console.warn(
-          '[tasks.ts] Driver ID or User ID missing. Cannot sync location.'
-        );
-        return;
-      }
-
-      const ABLY_API_KEY = await SecureStore.getItemAsync('ablyApiKey');
-
-      if (!ABLY_API_KEY) {
-        console.error('[tasks.ts] Ably API Key missing.');
-        return;
-      }
-
-      const payload = {
-        driverId,
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-        heading: location.coords.heading,
-        speed: location.coords.speed,
-        timestamp: location.timestamp,
-      };
-
-      const channelName = encodeURIComponent(
-        `driver:location:${driverId}`
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(
+        `[tasks.ts] Trigger failed (${response.status}):`,
+        text
       );
-
-      const response = await fetch(
-        `https://rest.ably.io/channels/${channelName}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${base64Encode(ABLY_API_KEY)}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: 'locationUpdate',
-            data: payload,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const text = await response.text();
-
-        console.error(
-          '[tasks.ts] Ably REST publish failed:',
-          response.status,
-          text
-        );
-      } else {
-        console.log(
-          '[tasks.ts] Published background location:',
-          payload
-        );
-      }
-    } catch (err) {
-      console.error('[tasks.ts] Background task error:', err);
+    } else {
+      console.log('[tasks.ts] ✅ Published background location:', payload);
     }
+  } catch (err) {
+    console.error('[tasks.ts] Background task error:', err);
   }
 });

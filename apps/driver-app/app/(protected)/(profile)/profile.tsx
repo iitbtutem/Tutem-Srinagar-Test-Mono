@@ -31,6 +31,7 @@ import {
   Button,
   Text,
   Loader,
+  ImageViewerModal,
 } from '@tutem/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
@@ -44,6 +45,7 @@ const SCROLL_DISTANCE = EXPANDED_HEADER_HEIGHT - COLLAPSED_HEADER_HEIGHT;
 
 export default function Profile() {
   const [image, setImage] = useState('');
+  const [viewerVisible, setViewerVisible] = useState(false);
   const { sessionToken, signOut } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
@@ -230,23 +232,25 @@ export default function Profile() {
         <View className="mt-6">
           <Animated.View style={avatarContainerStyle} className="items-center">
             <View className="rounded-full border-[3px] border-white/90 p-1 shadow-lg">
-              <Avatar alt="Profile pic" className="h-28 w-28">
-                <AvatarImage
-                  source={
-                    image
-                      ? { uri: image }
-                      : driver.profilePictureKey
-                        ? { uri: driver.profilePictureKey }
-                        : require('@/assets/images/avatar.jpg')
-                  }
-                />
-                <AvatarFallback className="bg-white/20">
-                  <Text className="text-2xl font-bold text-primary">
-                    {driver.firstName?.[0]}
-                    {driver?.lastName?.[0]}
-                  </Text>
-                </AvatarFallback>
-              </Avatar>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerVisible(true)}>
+                <Avatar alt="Profile pic" className="h-28 w-28">
+                  <AvatarImage
+                    source={
+                      image
+                        ? { uri: image }
+                        : driver.profilePictureKey
+                          ? { uri: driver.profilePictureKey }
+                          : require('@/assets/images/avatar.jpg')
+                    }
+                  />
+                  <AvatarFallback className="bg-white/20">
+                    <Text className="text-2xl font-bold text-primary">
+                      {driver.firstName?.[0]}
+                      {driver?.lastName?.[0]}
+                    </Text>
+                  </AvatarFallback>
+                </Avatar>
+              </TouchableOpacity>
               <ImagePickerDialog
                 setImageUri={(newImageUri) => handleUploadImage(newImageUri)}
                 userId={driver._id}
@@ -679,6 +683,13 @@ export default function Profile() {
           </BottomSheetView>
         </BottomSheet>
       )}
+      <ImageViewerModal
+        visible={viewerVisible}
+        onClose={() => setViewerVisible(false)}
+        imageUri={image || driver.profilePictureKey}
+        name={`${driver.firstName ?? ''} ${driver.lastName ?? ''}`.trim()}
+        subtitle="Your Profile Photo"
+      />
     </View>
   );
 }
