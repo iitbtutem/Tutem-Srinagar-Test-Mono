@@ -1,6 +1,5 @@
-import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
-import { Feather, Octicons } from '@expo/vector-icons';
+import { Octicons } from '@expo/vector-icons';
 import { Text } from '@tutem/ui';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
@@ -41,15 +40,13 @@ export default function TabsLayout() {
           animation: 'shift',
           headerShown: true,
           header: () => (
-            <View className="bg-primary flex-row items-center justify-between gap-3 px-4 pb-3">
-              <Text className="flex-1 font-semibold text-center text-base text-white">
+            <View className="flex-row items-center justify-between gap-3 bg-primary px-4 pb-3">
+              <Text className="flex-1 text-center text-base font-semibold text-white">
                 Previous Rides
               </Text>
             </View>
           ),
-          tabBarIcon: ({ color }) => (
-            <Octicons name="history" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Octicons name="history" size={24} color={color} />,
         }}
       />
       {/* <Tabs.Screen

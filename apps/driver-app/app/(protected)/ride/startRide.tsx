@@ -2,9 +2,7 @@ import { useToast } from '@/components/CustomToast';
 import { Text, Input, Button, Loader } from '@tutem/ui';
 import { RIDE_OTP_TIMER_MINUTES } from '@/constants';
 import { useCountdown } from '@/hooks/useCountdown';
-import { useAuth } from '@/hooks/useAuth';
 import { api, Id } from '@tutem/api';
-import { useAction } from 'convex/react';
 import { useAuthenticatedAction } from '@/hooks/customApi';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -22,14 +20,15 @@ export default function startRide() {
   const [inputArr, setInputArr] = useState<string[]>(new Array(RIDE_OTP_SIZE).fill(''));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState<'start' | 'resend' | null>(null);
-  const { sessionToken } = useAuth();
-  
-  const { formattedTime, timeLeft, reset } = useCountdown({ initialTime: RIDE_OTP_TIMER_MINUTES * 60})
+
+  const { formattedTime, timeLeft, reset } = useCountdown({
+    initialTime: RIDE_OTP_TIMER_MINUTES * 60,
+  });
   const { showToast } = useToast();
   const inputRef = useRef<(TextInput | null)[]>([]);
 
   const startRide = useAuthenticatedAction(api.actions.ride.startRide);
-  const generateRideOtp = useAuthenticatedAction(api.actions.ride.generateRideOtp)
+  const generateRideOtp = useAuthenticatedAction(api.actions.ride.generateRideOtp);
 
   const handleChange = (value: string, index: number) => {
     const newValue = value.trim();
@@ -46,7 +45,7 @@ export default function startRide() {
       inputRef.current[index - 1]?.focus();
     }
   };
-  
+
   const otp = inputArr.join('');
 
   const verifyOtp = async () => {
@@ -60,7 +59,7 @@ export default function startRide() {
         setError('Invalid OTP');
         return;
       }
-      console.log(otp, " OTP")
+      console.log(otp, ' OTP');
       await startRide({ driverId, rideId, otp: Number(otp) });
       showToast({ title: 'Ride Started', description: 'Have a safe trip!', type: 'success' });
       router.back();
@@ -74,39 +73,50 @@ export default function startRide() {
 
   const resendOtp = async () => {
     try {
-      await generateRideOtp({ rideId })
+      await generateRideOtp({ rideId });
       reset();
     } catch (error: any) {
-      console.log(`error: ${error}`)
+      console.log(`error: ${error}`);
       showToast({
-        type: "error",
+        type: 'error',
         title: "Can't Resend OTP",
-        description: error.data ?? "Failed to resend otp. Try Again"
-      })
+        description: error.data ?? 'Failed to resend otp. Try Again',
+      });
     }
   };
 
   return (
-    <View className="flex-1 px-4 py-6 bg-background" >
-      <Stack.Screen options={{ 
-        headerShown: true,
-        title: 'Start Ride',
-        header: (props) => <BasicHeader {...props} />,
-      }} />
+    <View className="flex-1 bg-background px-4 py-6">
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Start Ride',
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
 
-      <Text className='text-center' variant={"title"}>Verify OTP</Text>
+      <Text className="text-center" variant={'title'}>
+        Verify OTP
+      </Text>
 
-      <Text variant={"muted"} className='text-center mb-6'>
+      <Text variant={'muted'} className="mb-6 text-center">
         Enter the {RIDE_OTP_SIZE}-digit code to start the ride.
       </Text>
 
-      {loading && <Loader title={ loading === "start" ? "Start Ride" : undefined } subtitle={loading === "start" ? "Verifying OTP..." : "Sending OTP..."} />}
+      {loading && (
+        <Loader
+          title={loading === 'start' ? 'Start Ride' : undefined}
+          subtitle={loading === 'start' ? 'Verifying OTP...' : 'Sending OTP...'}
+        />
+      )}
       <View className="mb-6 w-full flex-row justify-center gap-3">
         {inputArr.map((_, idx) => (
           <Input
             key={idx}
-            keyboardType='number-pad'
-            ref={(input) => { inputRef.current[idx] = input; }}
+            keyboardType="number-pad"
+            ref={(input) => {
+              inputRef.current[idx] = input;
+            }}
             onChangeText={(val) => handleChange(val, idx)}
             onKeyPress={(e) => handleKeyPress(e, idx)}
             className="h-14 w-12 text-center"
@@ -123,15 +133,13 @@ export default function startRide() {
           />
         ))}
       </View>
-      {error && <Text className="text-md text-destructive mb-2 -mt-4">⚠ {error}</Text>}
+      {error && <Text className="text-md -mt-4 mb-2 text-destructive">⚠ {error}</Text>}
       <Button
         className="w-full items-center justify-center rounded-2xl"
         disabled={!!loading || otp.length !== RIDE_OTP_SIZE}
         onPress={verifyOtp}>
         <View className="flex-row items-center gap-2">
-          <Text className="text-[17px] font-extrabold tracking-tight text-white">
-            ▶ Start Ride
-          </Text>
+          <Text className="text-[17px] font-extrabold tracking-tight text-white">▶ Start Ride</Text>
         </View>
       </Button>
       <Text className="mt-3 text-center text-[11px] font-medium text-slate-500">
@@ -139,16 +147,15 @@ export default function startRide() {
       </Text>
 
       {/* resend otp */}
-      <View className="mt-3 gap-y-4 hidden">
+      <View className="mt-3 hidden gap-y-4">
         <Button
           className="self-start rounded-full border-2 border-primary"
-          variant={"outline"}
+          variant={'outline'}
           onPress={resendOtp}
-          disabled={timeLeft > 0 || !!loading}
-        >
-          <Text className='text-primary font-bold'>
+          disabled={timeLeft > 0 || !!loading}>
+          <Text className="font-bold text-primary">
             Resend Ride OTP
-            {timeLeft > 0 ? ` (${ formattedTime })` : ""}
+            {timeLeft > 0 ? ` (${formattedTime})` : ''}
           </Text>
         </Button>
       </View>

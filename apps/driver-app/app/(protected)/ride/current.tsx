@@ -41,7 +41,6 @@ import { FunctionReturnType } from 'convex/server';
 import GenderAge from '@/components/GenderAge';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';
-import { useAuth } from '@/hooks/useAuth';
 
 // Types
 
@@ -171,13 +170,14 @@ export default function Ride() {
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
   const { colorScheme: currentTheme } = useColorScheme();
   const isDark = currentTheme === 'dark';
-  const { sessionToken } = useAuth();
 
   const [routeState, setRouteState] = useState<RouteState | null>(null);
   const [loading, setLoading] = useState<
     'driverArrived' | 'starting' | 'completing' | 'canceling' | null
   >(null);
-  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
+    null
+  );
 
   // Cancel flow state
   const [cancelStep, setCancelStep] = useState<CancelStep | null>(null);

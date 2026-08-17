@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, Button, cn } from '@tutem/ui';
 import { Feather } from '@expo/vector-icons';
@@ -8,8 +8,8 @@ type CustomDatePickerProps = {
   date: Date | null;
   setDate: (date: Date) => void;
   disabled?: boolean;
-  minimumDate?: Date,
-  maximumDate?: Date,
+  minimumDate?: Date;
+  maximumDate?: Date;
 };
 
 export type CustomDatePickerHandle = {
@@ -29,7 +29,7 @@ const CustomDatePicker = forwardRef<CustomDatePickerHandle, CustomDatePickerProp
         <Button
           disabled={disabled}
           onPress={() => setShow(true)}
-          className="justify-start h-12 bg-muted-foreground/10 dark:bg-input/80">
+          className="h-12 justify-start bg-muted-foreground/10 dark:bg-input/80">
           <Feather name="calendar" size={18} color="gray" />
           <Text
             className={cn('pl-1 text-sm font-medium text-muted-foreground/50', {

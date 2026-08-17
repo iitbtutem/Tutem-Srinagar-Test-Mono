@@ -3,7 +3,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDriver } from '@/hooks/useDriver';
 import { Feather, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { api } from '@tutem/api';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
@@ -36,7 +35,6 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { VERIFICATION_CONFIG } from '@/constants/colors';
 import useThemeColors from '@/hooks/useColorScheme';
-import { useToast } from '@/components/CustomToast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
 const EXPANDED_HEADER_HEIGHT = 240;
@@ -48,7 +46,6 @@ export default function Profile() {
   const [viewerVisible, setViewerVisible] = useState(false);
   const { sessionToken, signOut } = useAuth();
   const router = useRouter();
-  const { showToast } = useToast();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor, iconBackgroundColor } =
     useThemeColors();
 

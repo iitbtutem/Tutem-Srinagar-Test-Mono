@@ -81,6 +81,7 @@ export const getAllOrganizations = adminQuery({
     licenseRequired: v.optional(v.array(v.string())),
     rcRequired: v.optional(v.array(v.string())),
     hasPolygon: v.optional(v.array(v.string())),
+    status: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const orgs = await ctx.db.query("organization").collect();
@@ -110,6 +111,13 @@ export const getAllOrganizations = adminQuery({
         const orgHas = !!((org.polygon && org.polygon.length > 0) || org.boundingBox);
         if (hasDefined && !hasNone && !orgHas) return false;
         if (hasNone && !hasDefined && orgHas) return false;
+      }
+      if (args.status && args.status.length > 0) {
+        const hasActive = args.status.includes("Active");
+        const hasSuspended = args.status.includes("Suspended");
+        const isSuspended = org.isSuspended === true;
+        if (hasActive && !hasSuspended && isSuspended) return false;
+        if (hasSuspended && !hasActive && !isSuspended) return false;
       }
       return true;
     });
@@ -156,6 +164,8 @@ export const getNearbyOrganization = query({
       .collect();
 
     const organizations = candidateOrganizations.filter((org) => {
+      if (org.isSuspended === true) return false;
+
       // If no polygon, allow by default
       if (
         (!org.boundingBox && !org.polygon) ||
@@ -169,6 +179,44 @@ export const getNearbyOrganization = query({
     });
 
     return organizations;
+  },
+});
+
+// TOGGLE SUSPEND ORGANIZATION
+export const toggleSuspendOrganization = adminMutation({
+  args: {
+    id: v.id("organization"),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const trimmedReason = args.reason.trim();
+    if (!trimmedReason) {
+      throw new ConvexError("Reason is required to suspend or unsuspend organization");
+    }
+
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new ConvexError(`Organization with id ${args.id} not found`);
+    }
+
+    const isCurrentlySuspended = existing.isSuspended === true;
+    if (isCurrentlySuspended) {
+      await ctx.db.patch(args.id, {
+        isSuspended: false,
+        suspendedReason: undefined,
+        suspendedAt: undefined,
+        suspendedByAdminId: undefined,
+      });
+    } else {
+      await ctx.db.patch(args.id, {
+        isSuspended: true,
+        suspendedReason: trimmedReason,
+        suspendedAt: Date.now(),
+        suspendedByAdminId: ctx.user._id,
+      });
+    }
+
+    return await ctx.db.get(args.id);
   },
 });
 

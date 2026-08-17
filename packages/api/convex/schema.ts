@@ -99,6 +99,10 @@ export default defineSchema({
         }),
       }),
     ),
+    isSuspended: v.optional(v.boolean()),
+    suspendedReason: v.optional(v.string()),
+    suspendedAt: v.optional(v.number()),
+    suspendedByAdminId: v.optional(v.id("user")),
   }),
 
   //organization rates

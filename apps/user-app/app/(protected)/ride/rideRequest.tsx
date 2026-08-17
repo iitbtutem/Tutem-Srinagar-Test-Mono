@@ -30,8 +30,6 @@ import {
   subscribeDriverLocation,
   unsubscribeDriverLocation,
   fetchLatestDriverLocation,
-  getDriverChannel,
-  releaseDriverChannel,
 } from '@/lib/pusher';
 import { fetchRoute } from '@/lib/maps';
 import ErrorScreen from '@/components/ErrorScreen';
@@ -1072,9 +1070,7 @@ export default function RideRequest() {
                     <View className="flex-row items-center gap-3">
                       <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 p-1">
                         <Image
-                          source={
-                            VEHICLE_ICONS[selectedDriver.vehicle.class] || VEHICLE_ICONS.Cab
-                          }
+                          source={VEHICLE_ICONS[selectedDriver.vehicle.class] || VEHICLE_ICONS.Cab}
                           style={{ width: 28, height: 28 }}
                           resizeMode="contain"
                         />

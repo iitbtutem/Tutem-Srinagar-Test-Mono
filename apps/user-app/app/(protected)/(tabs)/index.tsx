@@ -30,12 +30,10 @@ import {
 import { distanceFormat, formatFare } from '@/lib/utils';
 import { HomeScreenHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
-import { colors } from '@/constants/colors';
 import { FunctionReturnType } from 'convex/server';
 import { useState } from 'react';
 
 type CurrentRide = FunctionReturnType<typeof api.routes.rides.getRiderCurrentRideByRiderId>;
-
 
 const services = [
   {

@@ -1,11 +1,10 @@
 import ErrorScreen from '@/components/ErrorScreen';
 import { Avatar, AvatarFallback, AvatarImage, Text, Button, Separator, Textarea } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { useToast } from '@/components/CustomToast';
 
@@ -16,15 +15,6 @@ const RATING_LABELS: Record<number, string> = {
   4: 'Great',
   5: 'Excellent!',
 };
-
-const QUICK_TAGS = [
-  'Safe driver',
-  'Friendly',
-  'On time',
-  'Professional',
-  'Clean car',
-  'Great music',
-];
 
 export default function Feedback() {
   const { rideId } = useLocalSearchParams<{ rideId: Id<'ride'> }>();

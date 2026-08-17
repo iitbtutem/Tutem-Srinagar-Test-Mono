@@ -16,6 +16,72 @@ function generateOtp(): string {
   return randomInt(min, max).toString();
 }
 
+export const sendOtpAdmin = action({
+  args: {
+    phoneNumber: v.string(),
+  },
+  handler: async (ctx, { phoneNumber }) => {
+    const ph = phoneNumber.startsWith("+91")
+      ? phoneNumber.slice(3)
+      : phoneNumber;
+
+    const user: any = await ctx.runQuery(internal.routes.auth.getUserByPhone, {
+      phoneNumber: ph,
+    });
+
+    if (
+      !user ||
+      !user.userPermissions.some((userPermission: any) =>
+        ["Admin", "Super Admin"].includes(userPermission.permission),
+      )
+    ) {
+      throw new ConvexError("Invalid credentials.");
+    }
+
+    const otp = generateOtp();
+
+    console.log(`OTP sent on ${phoneNumber} is  ${otp}`);
+    const hashedOtp = sha256(otp);
+    const smsLicense = process.env.SMS_LICENSE;
+    const smsUrl = process.env.SMS_URL;
+    if (smsLicense === undefined || smsUrl === undefined)
+      throw new ConvexError("Failed to send OTP.");
+
+    await ctx.runMutation(internal.routes.auth.upsertOtpSession, {
+      phoneNumber,
+      hashedOtp,
+    });
+
+    const smsData = {
+      phone_number: `+91${ph}`,
+      message_type: "registration_otp",
+      otp,
+    };
+
+    const smsHeaders = {
+      accept: "application/json",
+      "auth-client": "LSCL",
+      "auth-licence": smsLicense,
+      "Content-Type": "application/json",
+    };
+
+    const response = await fetch(smsUrl, {
+      method: "POST",
+      headers: smsHeaders,
+      body: JSON.stringify(smsData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      throw new ConvexError(
+        `SMS gateway error ${response.status}: ${errorText}`,
+      );
+    }
+
+    return { success: true };
+  },
+});
+
 export const sendOtp = action({
   args: {
     phoneNumber: v.string(),
@@ -23,7 +89,7 @@ export const sendOtp = action({
   handler: async (ctx, { phoneNumber }) => {
     const otp = generateOtp();
 
-    console.log(`OTP sent on ${phoneNumber} is  ${otp}`)
+    console.log(`OTP sent on ${phoneNumber} is  ${otp}`);
     const hashedOtp = sha256(otp);
     const smsLicense = process.env.SMS_LICENSE;
     const smsUrl = process.env.SMS_URL;
@@ -204,9 +270,7 @@ export const verifyOtpAdmin = action({
         (userPermission: any) => userPermission.permission === "Admin",
       )
     )
-      throw new ConvexError(
-        "Access denied. Invalid credientials.",
-      );
+      throw new ConvexError("Access denied. Invalid credientials.");
 
     const sessionToken = randomUUID();
     await ctx.runMutation(internal.routes.auth.createSession, {

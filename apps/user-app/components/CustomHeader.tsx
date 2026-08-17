@@ -17,7 +17,6 @@ import {
   AvatarImage,
   Text,
 } from '@tutem/ui';
-import { useMutation } from 'convex/react';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { colors } from '@/constants/colors';
 

@@ -23,6 +23,7 @@ import {
   Settings,
   Edit,
   ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -55,9 +56,14 @@ export type Organization = {
   canDriverEditVehicle: boolean;
   polygon?: { latitude: number; longitude: number }[];
   boundingBox?: object;
+  isSuspended?: boolean;
+  suspendedReason?: string;
+  suspendedAt?: number;
+  suspendedByAdminId?: string;
 };
 
 let onEditOrganizationGlobal: ((org: Organization) => void) | null = null;
+let onSuspendOrganizationGlobal: ((org: Organization) => void) | null = null;
 
 export const columns: ColumnDef<Organization>[] = [
   {
@@ -131,6 +137,27 @@ export const columns: ColumnDef<Organization>[] = [
     ),
   },
   {
+    id: "status",
+    header: "Status",
+    accessorFn: (o) => (o.isSuspended ? "Suspended" : "Active"),
+    cell: ({ row }) => (
+      <span
+        title={
+          row.original.isSuspended && row.original.suspendedReason
+            ? `Reason: ${row.original.suspendedReason}`
+            : undefined
+        }
+        className={`badge-status ${
+          row.original.isSuspended
+            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+        }`}
+      >
+        {row.original.isSuspended ? "Suspended" : "Active"}
+      </span>
+    ),
+  },
+  {
     id: "actions",
     header: "",
     enableSorting: false,
@@ -139,6 +166,23 @@ export const columns: ColumnDef<Organization>[] = [
         className="flex items-center gap-1"
         onClick={(e) => e.stopPropagation()}
       >
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 cursor-pointer ${
+            row.original.isSuspended
+              ? "text-green-600 hover:text-green-700 hover:bg-green-500/10"
+              : "text-destructive hover:text-destructive hover:bg-destructive/10"
+          }`}
+          title={row.original.isSuspended ? "Unsuspend Organization" : "Suspend Organization"}
+          onClick={() => {
+            if (onSuspendOrganizationGlobal) {
+              onSuspendOrganizationGlobal(row.original);
+            }
+          }}
+        >
+          <ShieldAlert className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -1149,7 +1193,123 @@ export function OrgModal({ open, onOpenChange, orgToEdit }: OrgModalProps) {
   );
 }
 
+export interface SuspendModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  org: Organization | null;
+}
+
+export function SuspendModal({ open, onOpenChange, org }: SuspendModalProps) {
+  const toggleSuspend = useAuthenticatedMutation(
+    api.routes.organizations.toggleSuspendOrganization,
+  );
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setReason("");
+    }
+  }, [open]);
+
+  if (!org) return null;
+
+  const isSuspended = org.isSuspended === true;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reason.trim()) {
+      toast.error(`Please provide a reason to ${isSuspended ? "unsuspend" : "suspend"} the organization`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await toggleSuspend({
+        id: org._id as any,
+        reason: reason.trim(),
+      });
+      toast.success(
+        `Organization ${org.name} has been ${isSuspended ? "unsuspended" : "suspended"}`
+      );
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update organization status"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldAlert className={`h-5 w-5 ${isSuspended ? "text-green-500" : "text-destructive"}`} />
+            {isSuspended ? "Unsuspend Organization" : "Suspend Organization"}
+          </DialogTitle>
+          <DialogDescription>
+            {isSuspended
+              ? `Are you sure you want to unsuspend "${org.name}"? This will reactivate drivers under this organization.`
+              : `Are you sure you want to suspend "${org.name}"? Drivers belonging to this organization will be ignored in search and cannot receive ride requests.`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="suspendReason" className="text-xs font-semibold text-foreground">
+              Reason <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="suspendReason"
+              placeholder={`Enter reason to ${isSuspended ? "unsuspend" : "suspend"} organization...`}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="bg-background"
+              autoFocus
+            />
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant={isSuspended ? "default" : "destructive"}
+              disabled={isSubmitting || !reason.trim()}
+            >
+              {isSubmitting
+                ? isSuspended
+                  ? "Unsuspending..."
+                  : "Suspending..."
+                : isSuspended
+                  ? "Unsuspend Organization"
+                  : "Suspend Organization"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const filterFields = [
+  {
+    id: "status",
+    label: "Status",
+    options: [
+      { label: "Active", value: "Active" },
+      { label: "Suspended", value: "Suspended" },
+    ],
+  },
   {
     id: "licenseRequired",
     label: "License Verification",
@@ -1187,7 +1347,9 @@ export function OrganizationsPage({
   const [orgToEdit, setOrgToEdit] = useState<Organization | undefined>(
     undefined,
   );
-  
+  const [showSuspend, setShowSuspend] = useState(false);
+  const [orgToSuspend, setOrgToSuspend] = useState<Organization | null>(null);
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<any[]>([]);
 
@@ -1196,11 +1358,17 @@ export function OrganizationsPage({
       setOrgToEdit(org);
       setShowEdit(true);
     };
+    onSuspendOrganizationGlobal = (org) => {
+      setOrgToSuspend(org);
+      setShowSuspend(true);
+    };
     return () => {
       onEditOrganizationGlobal = null;
+      onSuspendOrganizationGlobal = null;
     };
   }, []);
 
+  const statusFilter = columnFilters.find((f) => f.id === "status")?.value;
   const licenseFilter = columnFilters.find((f) => f.id === "licenseRequired")?.value;
   const rcFilter = columnFilters.find((f) => f.id === "rcRequired")?.value;
   const polyFilter = columnFilters.find((f) => f.id === "hasPolygon")?.value;
@@ -1209,6 +1377,7 @@ export function OrganizationsPage({
     api.routes.organizations.getAllOrganizations,
     {
       search: globalFilter || undefined,
+      status: statusFilter && statusFilter.length > 0 ? statusFilter : undefined,
       licenseRequired: licenseFilter && licenseFilter.length > 0 ? licenseFilter : undefined,
       rcRequired: rcFilter && rcFilter.length > 0 ? rcFilter : undefined,
       hasPolygon: polyFilter && polyFilter.length > 0 ? polyFilter : undefined,
@@ -1227,6 +1396,14 @@ export function OrganizationsPage({
           if (!open) setOrgToEdit(undefined);
         }}
         orgToEdit={orgToEdit}
+      />
+      <SuspendModal
+        open={showSuspend}
+        onOpenChange={(open) => {
+          setShowSuspend(open);
+          if (!open) setOrgToSuspend(null);
+        }}
+        org={orgToSuspend}
       />
 
       <div className="page-header flex items-center justify-between">

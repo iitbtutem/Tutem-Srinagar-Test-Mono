@@ -17,7 +17,6 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api } from '@tutem/api';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';

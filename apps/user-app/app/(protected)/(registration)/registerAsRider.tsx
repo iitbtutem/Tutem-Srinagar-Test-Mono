@@ -4,7 +4,6 @@ import { useNotification } from '@/context/NotificationContext';
 import { useRider } from '@/hooks/useRider';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@tutem/api';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';

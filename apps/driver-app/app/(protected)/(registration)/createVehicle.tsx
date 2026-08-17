@@ -19,7 +19,6 @@ import { FUEL_TYPE, VEHICLE_CLASS, VEHICLE_TYPE } from '@/constants';
 import React, { useMemo, useRef, useState } from 'react';
 import { api } from '@tutem/api';
 import { useDriver } from '@/hooks/useDriver';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { useToast } from '@/components/CustomToast';
 import { Stack, useRouter } from 'expo-router';
@@ -39,16 +38,17 @@ import { BasicHeader } from '@/components/CustomHeader';
 type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 
 const vehicleSchema = z.object({
-  registrationNumber: z.string("Registration number is required.")
+  registrationNumber: z
+    .string('Registration number is required.')
     .min(10, 'Registration number must be atleast 10 characters long.'),
   type: z.enum(VEHICLE_TYPE),
-  model: z.string("Enter your vehicle model")
+  model: z
+    .string('Enter your vehicle model')
     .min(2, 'Model name must be atleast 2 characters long.'),
   fuelType: z.enum(FUEL_TYPE),
-  color: z.string("Color must be a string.")
-    .min(3, 'Color must be atleast 3 characters long.'),
+  color: z.string('Color must be a string.').min(3, 'Color must be atleast 3 characters long.'),
   seatingCapacity: z
-    .number("Seating capacity must be a number.")
+    .number('Seating capacity must be a number.')
     .min(2, 'Seating capacity must be atleast 2.')
     .max(50, 'Seasting capacity cannot exceed 50'),
   class: z.enum(VEHICLE_CLASS),
@@ -58,13 +58,13 @@ const vehicleSchema = z.object({
 
 export default function CreateVehicle() {
   const router = useRouter();
-  const { showToast } = useToast();  
+  const { showToast } = useToast();
   const { uploadFile } = useFileUpload();
 
-  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor} = useThemeColors();
+  const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const [imagePickupKey, setImagePickupKey] = useState<PickupImageKey>();
-  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { driver } = useDriver();
   const addVehicle = useAuthenticatedMutation(api.routes.vehicle.addVehicle);
@@ -112,10 +112,16 @@ export default function CreateVehicle() {
           description: 'RC image is required',
         });
       }
-      const insuranceImageKey = await uploadFile(data.insuranceImageKey, `vehicleInsurance/${driver._id}}`);
+      const insuranceImageKey = await uploadFile(
+        data.insuranceImageKey,
+        `vehicleInsurance/${driver._id}}`
+      );
       if (driverDetails === null) return;
 
-      if (driverDetails.organization?.isVehicleRCVerificationRequired && insuranceImageKey === undefined) {
+      if (
+        driverDetails.organization?.isVehicleRCVerificationRequired &&
+        insuranceImageKey === undefined
+      ) {
         setError('insuranceImageKey', {
           type: 'required',
           message: 'Insurance image required',
@@ -137,8 +143,8 @@ export default function CreateVehicle() {
         insuranceImageKey,
       });
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
-      router.replace("/(protected)/(tabs)");
-      if(router.canDismiss()) router.dismissAll();
+      router.replace('/(protected)/(tabs)');
+      if (router.canDismiss()) router.dismissAll();
     } catch (error) {
       console.error(error);
       showToast({ title: 'Something went wrong', type: 'error' });
@@ -159,7 +165,7 @@ export default function CreateVehicle() {
           title: 'Permission needed',
           description: 'Camera permissions are required.',
         });
-      result = await ImagePicker.launchCameraAsync({ 
+      result = await ImagePicker.launchCameraAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -173,7 +179,7 @@ export default function CreateVehicle() {
           title: 'Permission needed',
           description: 'Camera roll permissions are required.',
         });
-      result = await ImagePicker.launchImageLibraryAsync({ 
+      result = await ImagePicker.launchImageLibraryAsync({
         allowsMultipleSelection: false,
         mediaTypes: 'images',
         allowsEditing: true,
@@ -186,22 +192,24 @@ export default function CreateVehicle() {
     }
   };
 
-  const { isVehicleRCVerificationRequired, isVehicleInsuranceImageRequired } = driver.driverDetails.organization;
+  const { isVehicleRCVerificationRequired, isVehicleInsuranceImageRequired } =
+    driver.driverDetails.organization;
 
   return (
     <View className="flex-1 bg-background">
-      <Stack.Screen options={{
-        title: "Register Vehicle",
-        headerShown: true,
-        header: (props) => <BasicHeader {...props} />
-      }} />
-      {isSubmitting && <Loader subtitle='Submitting...' />}
+      <Stack.Screen
+        options={{
+          title: 'Register Vehicle',
+          headerShown: true,
+          header: (props) => <BasicHeader {...props} />,
+        }}
+      />
+      {isSubmitting && <Loader subtitle="Submitting..." />}
       <KeyboardAwareScrollView
         bottomOffset={62}
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1, padding: 8 }}>
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
-
           <View className="gap-3 px-3 pb-20 pt-2">
             {/* Registration Number */}
             <View>
@@ -458,7 +466,7 @@ export default function CreateVehicle() {
                             'h-12 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-300 bg-background'
                           )}
                           onPress={() => {
-                            setImagePickupKey("rcImageKey")
+                            setImagePickupKey('rcImageKey');
                             bottomSheetRef.current?.expand();
                             clearErrors('rcImageKey');
                           }}>
@@ -513,7 +521,7 @@ export default function CreateVehicle() {
                             'h-12 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-300 bg-background'
                           )}
                           onPress={() => {
-                            setImagePickupKey("insuranceImageKey")
+                            setImagePickupKey('insuranceImageKey');
                             bottomSheetRef.current?.expand();
                             clearErrors('insuranceImageKey');
                           }}>
@@ -533,12 +541,8 @@ export default function CreateVehicle() {
               <Text className="text-md text-destructive">{errors.insuranceImageKey.message}</Text>
             )}
 
-            <Button 
-              onPress={onSubmit}
-              disabled={ isSubmitting }
-              className='my-4'
-              >
-              <Text>{isSubmitting ? "Registering…" : "Register Vehicle"}</Text>
+            <Button onPress={onSubmit} disabled={isSubmitting} className="my-4">
+              <Text>{isSubmitting ? 'Registering…' : 'Register Vehicle'}</Text>
             </Button>
           </View>
         </Animated.View>
@@ -556,21 +560,23 @@ export default function CreateVehicle() {
         <BottomSheetView className="gap-6 p-6">
           <Text className="text-center text-xl font-bold">Select Image Source</Text>
 
-          {imagePickupKey && <View className="flex-row justify-between">
-            <TouchableOpacity
-              className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
-              onPress={() => handlePick('camera', imagePickupKey)}>
-              <Feather name="camera" size={32} color="#1ca0d9" />
-              <Text className="font-semibold text-gray-600">Camera</Text>
-            </TouchableOpacity>
+          {imagePickupKey && (
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                className="mr-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-800"
+                onPress={() => handlePick('camera', imagePickupKey)}>
+                <Feather name="camera" size={32} color="#1ca0d9" />
+                <Text className="font-semibold text-gray-600">Camera</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
-              onPress={() => handlePick('gallery', imagePickupKey)}>
-              <Feather name="image" size={32} color="#ed9d2d" />
-              <Text className="font-semibold text-gray-600">Gallery</Text>
-            </TouchableOpacity>
-          </View>}
+              <TouchableOpacity
+                className="ml-2 h-32 flex-1 items-center justify-center gap-2 rounded-xl border border-orange-800"
+                onPress={() => handlePick('gallery', imagePickupKey)}>
+                <Feather name="image" size={32} color="#ed9d2d" />
+                <Text className="font-semibold text-gray-600">Gallery</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </BottomSheetView>
       </BottomSheet>
       <KeyboardToolbar />

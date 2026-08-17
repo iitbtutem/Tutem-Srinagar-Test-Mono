@@ -1,8 +1,8 @@
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useAuthenticatedQuery } from '@/hooks/customApi';
-import { ScrollView, View, Text, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { MapPin, Clock, DollarSign, Star, Phone, Gauge } from 'lucide-react-native';
+import { MapPin, Clock, DollarSign, Star, Gauge } from 'lucide-react-native';
 import { api, Id } from '@tutem/api';
 import ErrorScreen from '@/components/ErrorScreen';
 import { distanceFormat, getTimeBetweenFormatted, formatFare } from '@/lib/utils';

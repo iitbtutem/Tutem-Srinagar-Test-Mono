@@ -58,7 +58,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Convex actions and mutations – called directly from client
-  const sendOtp = useAction(api.actions.auth.sendOtp);
+  const sendOtp = useAction(api.actions.auth.sendOtpAdmin);
   const verifyOtp = useAction(api.actions.auth.verifyOtpAdmin);
   const deleteSession = useMutation(api.routes.auth.deleteSession);
 

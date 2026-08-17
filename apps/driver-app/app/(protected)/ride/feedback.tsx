@@ -10,11 +10,10 @@ import {
   Loader,
 } from '@tutem/ui';
 import { api, Id } from '@tutem/api';
-import { useMutation } from 'convex/react';
 import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { BasicHeader } from '@/components/CustomHeader';
 import { colors } from '@/constants/colors';

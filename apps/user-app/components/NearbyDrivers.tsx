@@ -2,12 +2,21 @@ import { useState } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { VEHICLE_CLASS } from '../../../packages/api/convex/CONSTANTS';
 import { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { FunctionReturnType } from 'convex/server';
 import { api, Id } from '@tutem/api';
 import { cn, formatFare } from '@/lib/utils';
-import { Text, Switch, Avatar, AvatarFallback, AvatarImage, GenderAge, Rating, ImageViewerModal } from '@tutem/ui';
-import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
+import {
+  Text,
+  Switch,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  GenderAge,
+  Rating,
+  ImageViewerModal,
+} from '@tutem/ui';
+import { VERIFICATION_CONFIG } from '@/constants/colors';
 
 // Vehicle Icons
 const VEHICLE_ICONS = {
@@ -44,7 +53,9 @@ export default function NearbyDrivers({
   isSearchingDrivers = false,
 }: NearbyDriversProps) {
   type VehicleClass = (typeof VEHICLE_CLASS)[number];
-  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
+    null
+  );
 
   return (
     <View className="mb-6 px-4 pt-2">

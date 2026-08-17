@@ -13,13 +13,15 @@ import {
   Loader2,
   Edit,
   Users,
+  ShieldAlert,
+  AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
 import { OrgRatesPanel } from "./_orgRatesPanel";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { OrgModal } from "../_organizationsPage";
+import { OrgModal, SuspendModal } from "../_organizationsPage";
 
 function BooleanBadge({
   value,
@@ -198,6 +200,9 @@ export function OrganizationDetailPage({
   }
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+
+  const isSuspended = org.isSuspended === true;
 
   return (
     <div className="space-y-5">
@@ -205,6 +210,11 @@ export function OrganizationDetailPage({
         open={showEditModal}
         onOpenChange={setShowEditModal}
         orgToEdit={org}
+      />
+      <SuspendModal
+        open={showSuspendModal}
+        onOpenChange={setShowSuspendModal}
+        org={org}
       />
 
       <div className="flex items-center justify-between">
@@ -216,7 +226,18 @@ export function OrganizationDetailPage({
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="page-title">{org.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="page-title">{org.name}</h1>
+              <span
+                className={`badge-status ${
+                  isSuspended
+                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                }`}
+              >
+                {isSuspended ? "Suspended" : "Active"}
+              </span>
+            </div>
             <p className="page-description">Organization Details</p>
           </div>
         </div>
@@ -230,6 +251,14 @@ export function OrganizationDetailPage({
             View Drivers
           </Button>
           <Button
+            variant={isSuspended ? "outline" : "destructive"}
+            onClick={() => setShowSuspendModal(true)}
+            className="flex items-center gap-2"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            {isSuspended ? "Unsuspend Organization" : "Suspend Organization"}
+          </Button>
+          <Button
             onClick={() => setShowEditModal(true)}
             className="flex items-center gap-2"
           >
@@ -238,6 +267,25 @@ export function OrganizationDetailPage({
           </Button>
         </div>
       </div>
+
+      {isSuspended && (
+        <div className="p-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 flex items-start gap-3 text-red-900 dark:text-red-200">
+          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-1 text-sm">
+            <p className="font-semibold">This Organization is Suspended</p>
+            {org.suspendedReason && (
+              <p className="text-xs text-red-700 dark:text-red-300">
+                <span className="font-semibold">Reason:</span> {org.suspendedReason}
+              </p>
+            )}
+            {org.suspendedAt && (
+              <p className="text-[11px] text-red-600/80 dark:text-red-400/80">
+                Suspended on {formatDate(org.suspendedAt)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Info card */}

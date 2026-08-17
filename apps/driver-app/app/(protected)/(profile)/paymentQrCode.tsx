@@ -6,7 +6,6 @@ import { useCallback, useState } from 'react';
 import { Alert, Image, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, Pencil, QrCode } from 'lucide-react-native';
-import { useMutation } from 'convex/react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { BasicHeader } from '@/components/CustomHeader';
 
