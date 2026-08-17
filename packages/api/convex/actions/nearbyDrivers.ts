@@ -3,9 +3,11 @@
 import { ConvexError, v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 import { NearbyDriverResult } from "../routes/rides";
 import { METERS_IN_KM } from "../CONSTANTS";
 import { validateSession } from "../helpers/sessionFunctions";
+import { locationCache, evictStaleEntries } from "./pusher";
 
 type ReturnValue = NearbyDriverResult[];
 
@@ -28,7 +30,6 @@ function haversineDistance(
   return R * c;
 }
 
-// ✅ Export directly — no intermediate variable
 export const getNearbyDrivers = action({
   args: {
     sessionToken: v.string(),
@@ -51,18 +52,6 @@ export const getNearbyDrivers = action({
     // Validate session
     await validateSession(ctx, args.sessionToken, "Rider");
 
-    const ABLY_API_KEY =
-      process.env.ABLY_API_KEY || process.env.EXPO_PUBLIC_ABLY_API_KEY;
-    if (!ABLY_API_KEY) {
-      throw new ConvexError(
-        "ABLY_API_KEY not configured in Convex environment",
-      );
-    }
-    const ABLY_URL = process.env.ABLY_URL || process.env.EXPO_PUBLIC_ABLY_URL;
-    if (!ABLY_URL) {
-      throw new ConvexError("ABLY_URL not configured in Convex environment");
-    }
-
     try {
       const settings = await ctx.runQuery(
         internal.routes.settings.rideSettingsInternal,
@@ -72,56 +61,56 @@ export const getNearbyDrivers = action({
         ? settings.nearbyRadius / METERS_IN_KM
         : 3;
 
-      console.log("nearbyRadius : ", nearByRadiusInKms);
+      console.log("nearbyRadius:", nearByRadiusInKms);
 
-      const authHeader = `Basic ${btoa(ABLY_API_KEY)}`;
-      const response = await fetch(ABLY_URL, {
-        headers: { Authorization: authHeader },
-      });
+      // Evict stale cache entries (drivers that stopped sending location > 2 min ago)
+      evictStaleEntries();
 
-      if (!response.ok) return [];
+      if (locationCache.size === 0) {
+        console.log(
+          "[getNearbyDrivers] Location cache is empty — no active drivers.",
+        );
+        return [];
+      }
 
-      const presenceSet: any[] = await response.json();
+      console.log(
+        `[getNearbyDrivers] Checking ${locationCache.size} cached driver(s)`,
+      );
 
-      if (presenceSet.length === 0) return [];
+      // Filter cached drivers by Haversine distance from the pickup point
+      const nearbyDriversInfo: {
+        driverId: Id<"driver">;
+        latitude: number;
+        longitude: number;
+      }[] = [];
 
-      const nearbyDriversInfo = presenceSet.flatMap((m) => {
-        let parsedData = m.data;
-
-        if (typeof m.data === "string") {
-          try {
-            parsedData = JSON.parse(m.data);
-          } catch (e) {
-            return [];
-          }
-        }
-
-        const hasData =
-          parsedData &&
-          parsedData.latitude !== undefined &&
-          parsedData.longitude !== undefined;
-
-        if (!hasData) return [];
-
-        const driver = {
-          driverId: parsedData.driverId,
-          latitude: Number(parsedData.latitude),
-          longitude: Number(parsedData.longitude),
-        };
+      for (const [driverId, cached] of locationCache.entries()) {
+        if (!cached.isAvailable) continue; // skip unavailable drivers
 
         const dist = haversineDistance(
           Number(args.pickup.latitude),
           Number(args.pickup.longitude),
-          driver.latitude,
-          driver.longitude,
+          cached.latitude,
+          cached.longitude,
         );
 
-        const isNearby = dist <= nearByRadiusInKms;
+        if (dist <= nearByRadiusInKms) {
+          nearbyDriversInfo.push({
+            driverId: driverId as Id<"driver">,
+            latitude: cached.latitude,
+            longitude: cached.longitude,
+          });
+        }
+      }
 
-        return isNearby ? [driver] : [];
-      });
+      if (nearbyDriversInfo.length === 0) {
+        console.log("[getNearbyDrivers] No active drivers within radius.");
+        return [];
+      }
 
-      if (nearbyDriversInfo.length === 0) return [];
+      console.log(
+        `[getNearbyDrivers] ${nearbyDriversInfo.length} driver(s) within ${nearByRadiusInKms} km`,
+      );
 
       const result = await ctx.runQuery(
         internal.routes.rides.getNearbyDriversQueryResultInternal,

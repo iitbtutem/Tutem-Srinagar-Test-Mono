@@ -49,7 +49,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
     const { driversInfo } = args;
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
-    if (rider.isBlacklisted === true) throw new ConvexError("Rider is blacklisted");
+    if (rider.isBlacklisted === true)
+      throw new ConvexError("Rider is blacklisted");
     const riderUser = await ctx.db.get(rider.userId);
     if (riderUser === null) throw new ConvexError("Invalid user");
 
@@ -125,7 +126,8 @@ export const getNearbyDriversQueryResultInternal = internalQuery({
               driverRatings.length;
 
         const organization = await ctx.db.get(driverDetails.organizationId);
-        if (organization === null) return null;
+        if (organization === null || organization.isSuspended === true)
+          return null;
 
         const organizationRate = await ctx.db
           .query("organizationsRate")
@@ -197,10 +199,18 @@ export const bookRideInternal = internalMutation({
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
     if (rider === null) throw new ConvexError("Invalid user");
-    if (rider.isBlacklisted === true) throw new ConvexError("Rider is blacklisted");
+    if (rider.isBlacklisted === true)
+      throw new ConvexError("Rider is blacklisted");
     const driver = await ctx.db.get(args.driverId);
     if (driver === null) throw new ConvexError("Driver doesn't exist");
-    if (driver.isBlacklisted === true) throw new ConvexError("Driver is blacklisted");
+    if (driver.isBlacklisted === true)
+      throw new ConvexError("Driver is blacklisted");
+
+    const organization = await ctx.db.get(driver.organizationId);
+    if (organization === null)
+      throw new ConvexError("Driver doesn't belong to any organisation");
+    if (organization.isSuspended === true)
+      throw new ConvexError("Driver belongs to a suspended organisation");
 
     if (rider.userId === driver.userId)
       throw new ConvexError("Driver and rider cannot be same user");
@@ -290,13 +300,22 @@ export const changeDriverInternal = internalMutation({
     if (
       newDriver === null ||
       newDriver.isAvailableForRide === false ||
-      newDriver.isOnline === false
+      newDriver.isOnline === false ||
+      newDriver.isBlacklisted === true
     )
       throw new ConvexError(
         newDriver === null
           ? "Driver not found"
-          : "Driver not available for ride",
+          : newDriver.isBlacklisted === true
+            ? "Driver is blacklisted"
+            : "Driver not available for ride",
       );
+
+    const organization = await ctx.db.get(newDriver.organizationId);
+    if (organization === null)
+      throw new ConvexError("Driver doesn't belong to any organisation");
+    if (organization.isSuspended === true)
+      throw new ConvexError("Driver belongs to a suspended organisation");
 
     if (
       driver &&

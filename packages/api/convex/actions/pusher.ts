@@ -61,7 +61,7 @@ export interface CachedDriverLocation {
   ts: number;
 }
 
-const locationCache = new Map<string, CachedDriverLocation>();
+export const locationCache = new Map<string, CachedDriverLocation>();
 const STALE_MS = 120_000; // evict if no heartbeat for 2 minutes
 
 export function cacheDriverLocation(entry: CachedDriverLocation): void {
