@@ -313,9 +313,16 @@ function DriverCard({
       : "border-border hover:border-primary/30 hover:bg-muted/50";
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${borderCls} ${booked ? "bg-amber-500/[0.03]" : ""}`}
     >
       <div className="flex items-center gap-3">
@@ -527,7 +534,7 @@ function DriverCard({
           )}
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
