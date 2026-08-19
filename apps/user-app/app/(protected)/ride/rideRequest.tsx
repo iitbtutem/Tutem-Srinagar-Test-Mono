@@ -26,11 +26,7 @@ import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import {
-  subscribeDriverLocation,
-  unsubscribeDriverLocation,
-  fetchLatestDriverLocation,
-} from '@/lib/pusher';
+import { subscribeDriverLocation, unsubscribeDriverLocation } from '@/lib/pusher';
 import { fetchRoute } from '@/lib/maps';
 import ErrorScreen from '@/components/ErrorScreen';
 import * as Location from 'expo-location';
@@ -376,7 +372,10 @@ export default function RideRequest() {
   }, [filters, genderMatch]);
 
   useEffect(() => {
-    if (!ride?.driver?._id) return;
+    if (!ride?.driver?._id) {
+      setDriverLocation(null);
+      return;
+    }
 
     const driverId = ride.driver._id;
     console.log('[rideRequest] Subscribing to location updates for driver:', driverId);
@@ -402,22 +401,14 @@ export default function RideRequest() {
       }
     };
 
-    // 1. Subscribe to real-time driver location updates via Pusher
+    // Subscribe to real-time driver location updates via Pusher
     subscribeDriverLocation(driverId, handleLocationUpdate);
-
-    // 2. Poll server every 3s as fallback (essential for Expo Go / unbuilt dev client)
-    const pollInterval = setInterval(() => {
-      fetchLatestDriverLocation(driverId).then((loc) => {
-        if (loc) handleLocationUpdate(loc);
-      });
-    }, 3000);
 
     return () => {
       cancelled = true;
-      clearInterval(pollInterval);
-      unsubscribeDriverLocation(driverId).catch(() => {});
+      unsubscribeDriverLocation(driverId);
     };
-  }, [ride?.driver?._id, nearbyDrivers]);
+  }, [ride?.driver?._id]);
 
   useEffect(() => {
     if (driverLocation && !hasCenteredOnDriver && mapRef.current) {
@@ -551,6 +542,14 @@ export default function RideRequest() {
               </Marker>
             )}
           </MapView>
+
+          {/* Loading driver live location indicator */}
+          {ride.driver && !driverLocation && ride.requestStatus === 'Accepted' && (
+            <View className="absolute left-3 top-3 flex-row items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-md">
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <Text className="text-xs font-medium text-gray-700">Locating driver...</Text>
+            </View>
+          )}
 
           <Pressable
             onPress={() => setIsMapMaximized(!isMapMaximized)}

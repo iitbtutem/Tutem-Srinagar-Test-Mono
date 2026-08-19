@@ -3,14 +3,13 @@ import * as Location from 'expo-location';
 import { useSetAtom } from 'jotai';
 import { locationAtom } from '@/lib/location';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
-import { publishDriverLocation } from '@/lib/pusher';
 import {
   isNativePusherAvailable,
   initNativePusher,
   subscribeDriverChannel,
   triggerLocation,
   disconnectNativePusher,
-} from '@/lib/pusherNative';
+} from '@/lib/pusher';
 
 interface LocationManagerOptions {
   driverId?: string;
@@ -122,15 +121,7 @@ export function useLocationManager({
       };
 
       if (isNativePusherReadyRef.current) {
-        triggerLocation(payload).then((success) => {
-          if (!success) {
-            // Fallback if trigger fails
-            publishDriverLocation(payload);
-          }
-        });
-      } else {
-        // Fallback when native module is not linked
-        publishDriverLocation(payload);
+        triggerLocation(payload);
       }
     };
 

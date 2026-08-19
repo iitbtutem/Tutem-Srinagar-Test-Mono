@@ -267,13 +267,7 @@ export default function Ride() {
     }
   }
 
-  useEffect(() => {
-    if (!ride || !driverLocation) return;
-    fitMap([
-      { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude },
-      { latitude: ride.destination.latitude, longitude: ride.destination.longitude },
-    ]);
-  }, [ride]);
+  const hasInitiallyCenteredRef = useRef(false);
 
   const fitMap = useCallback(
     (extra?: Cords[]) => {
@@ -282,12 +276,45 @@ export default function Ride() {
       if (extra) coords.push(...extra);
       if (coords.length === 0) return;
       mapRef.current?.fitToCoordinates(coords, {
-        edgePadding: { top: 10, right: 20, bottom: 100, left: 20 },
+        edgePadding: { top: 60, right: 40, bottom: 200, left: 40 },
         animated: true,
       });
     },
     [driverLocation]
   );
+
+  const handleLocateDriver = useCallback(() => {
+    if (!driverLocation || !mapRef.current) return;
+    mapRef.current.animateToRegion(
+      {
+        ...driverLocation,
+        latitudeDelta: 0.015,
+        longitudeDelta: 0.015,
+      },
+      800
+    );
+  }, [driverLocation]);
+
+  useEffect(() => {
+    if (!driverLocation || !mapRef.current) return;
+
+    if (ride) {
+      fitMap([
+        { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude },
+        { latitude: ride.destination.latitude, longitude: ride.destination.longitude },
+      ]);
+    } else if (!hasInitiallyCenteredRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          ...driverLocation,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        800
+      );
+    }
+    hasInitiallyCenteredRef.current = true;
+  }, [ride, driverLocation, fitMap]);
 
   // Action handlers
   const handleDriverArrived = async () => {
@@ -415,12 +442,6 @@ export default function Ride() {
     );
 
   if (ride === null) return <Redirect href={'/'} />;
-
-  const handleLocateDriver = () => {
-    const { address: pickupAddress, ...pickupCords } = ride.pickup;
-    const { address: destAddress, ...destCords } = ride.destination;
-    fitMap([pickupCords, destCords].filter(Boolean) as Cords[]);
-  };
 
   const isRideOpen = ride.status === 'Open';
   const isDriverArrivedStatus = ride.status === 'Driver Arrived';

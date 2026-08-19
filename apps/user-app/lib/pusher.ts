@@ -1,17 +1,11 @@
 /**
  * apps/user-app/lib/pusher.ts
  *
- * Rider-side Pusher client using pusher-websocket-react-native.
- *
- * The native SDK maintains a persistent WebSocket connection using the
- * platform's native networking stack, reducing JS overhead and battery
- * usage compared to the pure-JS pusher-js/react-native adapter.
+ * Rider-side Native Pusher client using @pusher/pusher-websocket-react-native.
+ * Used for development builds (`npx expo run:android` / `npx expo run:ios`) and production.
  *
  * The rider app only SUBSCRIBES — it never triggers events.
- * Listen for `client-locationUpdate` on the driver's private channel.
- *
- * Authentication is handled by the Next.js /api/pusher/auth endpoint
- * (one HTTP call per subscription, not per location update).
+ * Listens for `client-locationUpdate` on the driver's private channel.
  */
 import { NativeModules } from 'react-native';
 import { Pusher, PusherChannel, PusherEvent } from '@pusher/pusher-websocket-react-native';
@@ -24,18 +18,20 @@ export function isNativePusherAvailable(): boolean {
   return Boolean(NativeModules.PusherWebsocketReactNative);
 }
 
-// ─── Singleton helper ──────────────────────────────────────────────────────────
-
 let _initialized = false;
 
 function getPusher(): Pusher {
   return Pusher.getInstance();
 }
 
-async function ensureConnected(): Promise<boolean> {
+/**
+ * Ensures the native Pusher client is initialized and connected.
+ */
+export async function ensureConnected(): Promise<boolean> {
   if (!isNativePusherAvailable()) {
     console.warn(
-      '[pusher.ts] Native module PusherWebsocketReactNative is not linked (Expo Go / unbuilt dev client).'
+      '[pusher.ts] ⚠️ Native module PusherWebsocketReactNative is not linked.\n' +
+        'Please run inside a development build: `npx expo run:android` or `npx expo run:ios`.'
     );
     return false;
   }
@@ -43,7 +39,9 @@ async function ensureConnected(): Promise<boolean> {
   if (_initialized) return true;
 
   if (!APP_KEY || !CLUSTER) {
-    console.error('[pusher.ts] EXPO_PUBLIC_PUSHER_APP_KEY or EXPO_PUBLIC_PUSHER_CLUSTER not set.');
+    console.error(
+      '[pusher.ts] ❌ EXPO_PUBLIC_PUSHER_APP_KEY or EXPO_PUBLIC_PUSHER_CLUSTER not set in .env.'
+    );
     return false;
   }
 
@@ -63,7 +61,7 @@ async function ensureConnected(): Promise<boolean> {
 
     await pusher.connect();
     _initialized = true;
-    console.log('[pusher.ts] ✅ Native Pusher connected');
+    console.log('[pusher.ts] ✅ Native Pusher connected successfully');
     return true;
   } catch (err) {
     console.error('[pusher.ts] Failed to initialize native Pusher:', err);
@@ -71,54 +69,20 @@ async function ensureConnected(): Promise<boolean> {
   }
 }
 
-// ─── Channel helpers ──────────────────────────────────────────────────────────
-
-const LOCATION_URL = AUTH_URL.replace('/api/pusher/auth', '/api/pusher/driver-location');
-
-/**
- * Fetch a driver's latest recorded location directly from the backend.
- */
-export async function fetchLatestDriverLocation(
-  driverId: string
-): Promise<DriverLocationPayload | null> {
-  if (!LOCATION_URL) return null;
-  try {
-    const res = await fetch(`${LOCATION_URL}?driverId=${driverId}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.success && data.location?.latitude && data.location?.longitude) {
-      return data.location as DriverLocationPayload;
-    }
-  } catch (err) {
-    console.error('[pusher.ts] Failed to fetch latest driver location:', err);
-  }
-  return null;
-}
-
 /**
  * Subscribe to a driver's location channel.
- * Pass an `onLocation` callback to receive real-time location updates.
- *
- * Automatically fetches latest location via HTTP immediately on call,
- * and maintains continuous location tracking even if native Pusher is unlinked.
+ * Pass an `onLocation` callback to receive real-time location updates
+ * broadcasted via the `client-locationUpdate` event.
  */
 export async function subscribeDriverLocation(
   driverId: string,
   onLocation: (payload: DriverLocationPayload) => void
 ): Promise<PusherChannel | null> {
-  // 1. Immediately fetch latest recorded location from server (0ms delay)
-  fetchLatestDriverLocation(driverId).then((loc) => {
-    if (loc) onLocation(loc);
-  });
-
-  // 2. Try subscribing via native Pusher SDK if available
   const connected = await ensureConnected();
   if (!connected) return null;
 
   const channelName = `private-driver-location-${driverId}`;
+  console.log(`[pusher.ts] Subscribing to native channel: ${channelName}`);
 
   try {
     const pusher = getPusher();
@@ -127,6 +91,7 @@ export async function subscribeDriverLocation(
       onEvent: (event: PusherEvent) => {
         if (event.eventName === 'client-locationUpdate') {
           try {
+            console.log('[pusher.ts] Received client-locationUpdate:', event.data);
             const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
             onLocation(data as DriverLocationPayload);
           } catch (e) {
@@ -138,9 +103,10 @@ export async function subscribeDriverLocation(
         console.log(`[pusher.ts] ✅ Subscribed to ${channelName}`);
       },
       onSubscriptionError: (message: string, e: any) => {
-        console.error('[pusher.ts] Subscription error:', message, e);
+        console.error(`[pusher.ts] ❌ Subscription error on ${channelName}:`, message, e);
       },
     });
+
     return channel;
   } catch (err) {
     console.error('[pusher.ts] subscribe() threw:', err);
@@ -175,11 +141,12 @@ export async function disconnectPusher(): Promise<void> {
     const pusher = getPusher();
     await pusher.disconnect();
     _initialized = false;
+    console.log('[pusher.ts] Disconnected native Pusher');
   } catch {}
 }
 
 /**
- * Backward-compatible aliases for legacy callers (e.g. rideRequest.tsx)
+ * Backward-compatible aliases for legacy callers
  */
 export async function getDriverChannel(
   driverId: string,
