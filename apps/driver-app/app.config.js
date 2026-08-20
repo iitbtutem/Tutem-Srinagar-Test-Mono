@@ -45,7 +45,8 @@ export default {
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
       config: {
         googleMaps: {

@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -192,6 +192,75 @@ http.route({
       });
     } catch (error: any) {
       console.error("[GET /api/pusher/driver-location] Error:", error);
+      return new Response(
+        JSON.stringify({ error: error?.message || "Internal server error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// 4. Driver Available Location  POST /api/driver/location
+//
+// Called by:
+//   • driver-app/hooks/useLocationManager.ts  — foreground, every 30s (available)
+//   • driver-app/lib/tasks.ts                 — background (available mode)
+//
+// Body: { driverId, latitude, longitude, isAvailable }
+//
+// Does:
+//   - isAvailable=true  → upsert row in availableDriverLocation table
+//   - isAvailable=false → delete row from availableDriverLocation table
+//
+// On-ride drivers send location directly to Pusher (client event from native SDK
+// or via /api/pusher/trigger for background tasks). No server hop needed for Pusher.
+// ---------------------------------------------------------------------------
+http.route({
+  path: "/api/driver/location",
+  method: "OPTIONS",
+  handler: httpAction(async () =>
+    new Response(null, { status: 204, headers: corsHeaders })
+  ),
+});
+
+http.route({
+  path: "/api/driver/location",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { driverId, latitude, longitude, isAvailable } = body;
+
+      if (!driverId || latitude === undefined || longitude === undefined) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields: driverId, latitude, longitude" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (isAvailable === false) {
+        // Driver went unavailable / offline / started a ride — remove from available pool
+        await ctx.runMutation(internal.routes.driverLocation.deleteAvailableDriverLocation, {
+          driverId: String(driverId) as any,
+        });
+        console.log(`[/api/driver/location] 🗑️ Deleted location for driver ${driverId}`);
+      } else {
+        // Driver is available — upsert location
+        await ctx.runMutation(internal.routes.driverLocation.upsertAvailableDriverLocation, {
+          driverId: String(driverId) as any,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+        });
+        console.log(`[/api/driver/location] 📍 Upserted location for driver ${driverId}: ${latitude}, ${longitude}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("[POST /api/driver/location] Error:", error);
       return new Response(
         JSON.stringify({ error: error?.message || "Internal server error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

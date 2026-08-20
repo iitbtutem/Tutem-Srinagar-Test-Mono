@@ -36,7 +36,7 @@ interface DriverLocation {
 
 interface ActiveRideInfo {
   _id: string;
-  status: "Active" | "Driver Arrived";
+  status: "Open" | "Active" | "Driver Arrived";
   fare?: number;
   pickup?: {
     address: string;
@@ -386,7 +386,6 @@ function DriverCard({
       {/* Expanded details when card is selected */}
       {isSelected && marker.info && (
         <div className="mt-2.5 pt-2 border-t border-border/60 text-xs space-y-2 animate-in fade-in-0 duration-150">
-
           {marker.info.userDetails?.phoneNumber && (
             <div className="flex items-center justify-between text-muted-foreground">
               <span>Phone:</span>
@@ -429,10 +428,9 @@ function DriverCard({
           {marker.info.activeRide && (
             <div className="mt-2 p-2.5 rounded-lg bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/50 dark:border-amber-700/50 space-y-1.5 text-[11px]">
               <div className="flex items-center justify-between font-semibold text-amber-700 dark:text-amber-400 pb-1 border-b border-amber-300/40 dark:border-amber-800/40">
-                <span className="flex items-center gap-1">
-                  <Car className="h-3 w-3" /> Ride Info (
-                  {marker.info.activeRide.status})
-                </span>
+                <div className="flex items-center gap-1">
+                  <Car className="h-3 w-3" /> Ride Info
+                </div>
                 {marker.info.activeRide.fare != null && (
                   <span className="font-bold flex items-center gap-0.5">
                     ₹{marker.info.activeRide.fare}
@@ -496,12 +494,29 @@ function DriverCard({
                   title="Click to highlight destination location on map"
                 >
                   <Navigation className="h-3 w-3 text-rose-600 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-muted-foreground shrink-0 font-medium">Dest:</span>
+                  <span className="text-muted-foreground shrink-0 font-medium">
+                    Dest:
+                  </span>
                   <span className="font-medium truncate flex-1 text-right group-hover:text-rose-700 dark:group-hover:text-rose-400">
                     {marker.info.activeRide.destination.address}
                   </span>
                 </div>
               )}
+
+              <div className="flex items-center justify-between text-muted-foreground pt-1 border-t border-amber-200/50 dark:border-amber-800/30 text-[10px]">
+                <div className="flex items-center gap-1">
+                  <Car className="h-3 w-3" /> Status:
+                </div>
+                <p className="font-normal text-[14px]">
+                  {marker.info.activeRide.status === "Open" ? (
+                    <span>Heading towards pickup</span>
+                  ) : marker.info.activeRide.status === "Driver Arrived" ? (
+                    <span>Waiting for rider at pickup location</span>
+                  ) : (
+                    <span>Ride Ongoing</span>
+                  )}
+                </p>
+              </div>
 
               <div className="flex items-center justify-between text-muted-foreground pt-1 border-t border-amber-200/50 dark:border-amber-800/30 text-[10px]">
                 <span className="flex items-center gap-1">
@@ -517,7 +532,9 @@ function DriverCard({
           {/* Footer Action: Locate Driver on Map (Only for drivers on ride) */}
           {marker.info?.activeRide && (
             <div className="pt-2 border-t border-border/40 flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground font-medium">Map Action</span>
+              <span className="text-[10px] text-muted-foreground font-medium">
+                Map Action
+              </span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -584,12 +601,26 @@ function buildInfoWindowContent(marker: DriverMarkerState): string {
           ? `
         <div style="border-top:1px solid #fcd34d;margin-top:6px;padding-top:6px;background:#fef3c7;border-radius:6px;padding:6px;font-size:11px;display:flex;flex-direction:column;gap:3px;color:#1f2937;">
           <div style="font-weight:700;color:#b45309;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-            <span>🚗 Active Ride (${ride.status})</span>
+            <span>🚗 Active Ride</span>
             ${ride.fare != null ? `<span style="font-weight:800;color:#047857;">₹${ride.fare}</span>` : ""}
           </div>
           <div>👤 <strong>Rider:</strong> ${riderName} ${riderPhone ? `(<a href="tel:${riderPhone}" style="color:#2563eb;text-decoration:none;">${riderPhone}</a>)` : ""}</div>
           ${ride.pickup?.address ? `<div>📍 <strong>Pickup:</strong> ${ride.pickup.address}</div>` : ""}
           ${ride.destination?.address ? `<div>🏁 <strong>Dest:</strong> ${ride.destination.address}</div>` : ""}
+          <div className="flex items-center justify-between text-muted-foreground pt-1 border-t border-amber-200/50 dark:border-amber-800/30 text-[10px]">
+            <div style="font-weight:700;color:#b45309;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+              <span> 🚗 Status: </span>
+
+              <p style="font-weight:400;margin:0;">
+                ${
+                  ride.status === "Open"
+                    ? "Heading towards pickup"
+                    : ride.status === "Driver Arrived"
+                      ? "Waiting for rider at pickup location"
+                      : "Ride Ongoing"
+                }
+              </p>
+            </div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px;border-top:1px border-dashed #fde68a;padding-top:2px;">⏱️ <strong>Last update:</strong> ${timeAgo}</div>
         </div>
       `
@@ -652,6 +683,14 @@ export function TrackingPage() {
   const drivers = useAuthenticatedQuery(api.routes.admin.getAllDrivers) as
     | DriverInfo[]
     | undefined;
+
+  // Poll available-driver locations from Convex DB.
+  // Available drivers (not on a ride) no longer send via Pusher — they POST
+  // to the DB every 30s. This reactive query picks up new entries automatically
+  // and re-runs whenever the DB row changes (Convex live query).
+  const availableDriverLocations = useAuthenticatedQuery(
+    api.routes.driverLocation.getAvailableDriverLocations,
+  );
 
   // Extract unique orgs from drivers
   const orgs = useMemo<{ id: string; name: string }[]>(() => {
@@ -857,6 +896,75 @@ export function TrackingPage() {
     });
   }, [drivers]);
 
+  // Merge available-driver locations from Convex DB into the map.
+  // These are drivers who are online + available (not on a ride).
+  // They stopped using Pusher and now write to the DB every ~30s.
+  useEffect(() => {
+    if (!availableDriverLocations || !drivers) return;
+    setDriverLocations((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+
+      availableDriverLocations.forEach((loc) => {
+        const existing = next.get(loc.driverId);
+        // Only update if DB entry is newer than what we already have
+        // (on-ride drivers may have a more recent Pusher update)
+        if (!existing || loc.updatedAt > (existing.location.timestamp ?? 0)) {
+          next.set(loc.driverId, {
+            driverId: loc.driverId,
+            location: {
+              driverId: loc.driverId,
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              timestamp: loc.updatedAt,
+            },
+            info: drivers.find((d) => d._id === loc.driverId),
+          });
+          changed = true;
+        }
+      });
+
+      // Remove available-mode drivers that have since gone offline
+      // (their DB row was deleted — they won't appear in availableDriverLocations anymore)
+      // Only remove if the marker came from the DB (no activeRide) and is now stale.
+      next.forEach((marker, id) => {
+        if (!marker.info?.activeRide) {
+          const stillInDb = availableDriverLocations.some(
+            (l) => l.driverId === id,
+          );
+          if (!stillInDb && prev.has(id) && !prev.get(id)?.info?.activeRide) {
+            next.delete(id);
+            changed = true;
+          }
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [availableDriverLocations, drivers]);
+
+  // Stale-location eviction: remove markers that stopped sending for >40s.
+  // Prevents ghost markers from persisting when a driver closes the app
+  // without going through the normal offline flow.
+  useEffect(() => {
+    const STALE_THRESHOLD_MS = 40_000;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setDriverLocations((prev) => {
+        let changed = false;
+        const next = new Map(prev);
+        next.forEach((marker, id) => {
+          if (now - marker.location.timestamp > STALE_THRESHOLD_MS) {
+            next.delete(id);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 10_000); // check every 10s
+    return () => clearInterval(interval);
+  }, []);
+
   // Update Google Maps markers
   useEffect(() => {
     if (!googleMapRef.current || !isMapLoaded) return;
@@ -945,7 +1053,8 @@ export function TrackingPage() {
       type: "pickup" | "destination",
       durationMs = 5000,
     ) => {
-      if (!googleMapRef.current || !coords.latitude || !coords.longitude) return;
+      if (!googleMapRef.current || !coords.latitude || !coords.longitude)
+        return;
 
       clearPulseMarkers();
       const map = googleMapRef.current;
@@ -953,7 +1062,9 @@ export function TrackingPage() {
       const targetLatLng = new google.maps.LatLng(pos.lat, pos.lng);
 
       const currentBounds = map.getBounds();
-      const isWithinScreen = currentBounds ? currentBounds.contains(targetLatLng) : false;
+      const isWithinScreen = currentBounds
+        ? currentBounds.contains(targetLatLng)
+        : false;
 
       if (isWithinScreen) {
         // Target is on screen — smoothly pan and ensure appropriate zoom level
@@ -970,7 +1081,12 @@ export function TrackingPage() {
         combinedBounds.extend(targetLatLng);
 
         // Step 1: Smoothly fit bounds (zoom out to include current view + target)
-        map.fitBounds(combinedBounds, { top: 70, right: 70, bottom: 70, left: 70 });
+        map.fitBounds(combinedBounds, {
+          top: 70,
+          right: 70,
+          bottom: 70,
+          left: 70,
+        });
 
         // Step 2: Smoothly pan to target and zoom in after brief delay
         const tPan = setTimeout(() => {
@@ -1002,7 +1118,9 @@ export function TrackingPage() {
 
       const t = setTimeout(() => {
         marker.setMap(null);
-        pulseMarkersRef.current = pulseMarkersRef.current.filter((m) => m !== marker);
+        pulseMarkersRef.current = pulseMarkersRef.current.filter(
+          (m) => m !== marker,
+        );
       }, durationMs);
 
       pulseTimeoutRef.current.push(t);
@@ -1045,7 +1163,9 @@ export function TrackingPage() {
 
         const t1 = setTimeout(() => {
           pMarker.setMap(null);
-          pulseMarkersRef.current = pulseMarkersRef.current.filter((m) => m !== pMarker);
+          pulseMarkersRef.current = pulseMarkersRef.current.filter(
+            (m) => m !== pMarker,
+          );
         }, durationMs);
         pulseTimeoutRef.current.push(t1);
       }
@@ -1070,7 +1190,9 @@ export function TrackingPage() {
 
         const t2 = setTimeout(() => {
           dMarker.setMap(null);
-          pulseMarkersRef.current = pulseMarkersRef.current.filter((m) => m !== dMarker);
+          pulseMarkersRef.current = pulseMarkersRef.current.filter(
+            (m) => m !== dMarker,
+          );
         }, durationMs);
         pulseTimeoutRef.current.push(t2);
       }
@@ -1096,7 +1218,12 @@ export function TrackingPage() {
             const combined = new google.maps.LatLngBounds();
             if (currentBounds) combined.union(currentBounds);
             combined.extend(center);
-            map.fitBounds(combined, { top: 70, right: 70, bottom: 70, left: 70 });
+            map.fitBounds(combined, {
+              top: 70,
+              right: 70,
+              bottom: 70,
+              left: 70,
+            });
             const tPan = setTimeout(() => {
               map.panTo(center);
               const tZoom = setTimeout(() => map.setZoom(15), 300);
@@ -1109,9 +1236,19 @@ export function TrackingPage() {
             const combined = new google.maps.LatLngBounds();
             combined.union(currentBounds);
             combined.union(bounds);
-            map.fitBounds(combined, { top: 70, right: 70, bottom: 70, left: 70 });
+            map.fitBounds(combined, {
+              top: 70,
+              right: 70,
+              bottom: 70,
+              left: 70,
+            });
             const tFit = setTimeout(() => {
-              map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 });
+              map.fitBounds(bounds, {
+                top: 70,
+                right: 70,
+                bottom: 70,
+                left: 70,
+              });
             }, 400);
             pulseTimeoutRef.current.push(tFit);
           } else {
@@ -1133,7 +1270,9 @@ export function TrackingPage() {
       const targetLatLng = new google.maps.LatLng(pos.lat, pos.lng);
 
       const currentBounds = map.getBounds();
-      const isWithinScreen = currentBounds ? currentBounds.contains(targetLatLng) : false;
+      const isWithinScreen = currentBounds
+        ? currentBounds.contains(targetLatLng)
+        : false;
 
       if (isWithinScreen) {
         map.panTo(pos);

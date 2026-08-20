@@ -31,7 +31,7 @@ export const getAllRiders = adminQuery({
                 Bucket: process.env.MINIO_BUCKET,
                 Key: user.profilePictureKey,
               }),
-              { expiresIn: 300 }
+              { expiresIn: 300 },
             )
           : undefined;
 
@@ -55,7 +55,7 @@ export const getAllRiders = adminQuery({
           averageRating,
           totalRatings: ratings.length,
         };
-      })
+      }),
     );
 
     const activeRiders = results.filter(Boolean) as any[];
@@ -95,7 +95,7 @@ export const getRiderById = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: user.profilePictureKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -140,16 +140,12 @@ export const updateRiderAdmin = adminMutation({
     firstName: v.string(),
     lastName: v.optional(v.string()),
     dob: v.string(),
-    gender: v.union(
-      v.literal("Male"),
-      v.literal("Female"),
-      v.literal("Other")
-    ),
+    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     isVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
-      v.literal("Verified")
+      v.literal("Verified"),
     ),
   },
   handler: async (ctx, args) => {
@@ -162,7 +158,7 @@ export const updateRiderAdmin = adminMutation({
       const existingUser = await ctx.db
         .query("user")
         .withIndex("by_phoneNumber", (q) =>
-          q.eq("phoneNumber", args.phoneNumber)
+          q.eq("phoneNumber", args.phoneNumber),
         )
         .first();
       if (existingUser && existingUser._id !== rider.userId) {
@@ -211,7 +207,7 @@ export const getAllDrivers = adminQuery({
                 Bucket: process.env.MINIO_BUCKET,
                 Key: user.profilePictureKey,
               }),
-              { expiresIn: 300 }
+              { expiresIn: 300 },
             )
           : undefined;
 
@@ -239,9 +235,10 @@ export const getAllDrivers = adminQuery({
           .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
           .filter((q) =>
             q.or(
+              q.eq(q.field("status"), "Open"),
               q.eq(q.field("status"), "Active"),
               q.eq(q.field("status"), "Driver Arrived"),
-            )
+            ),
           )
           .first();
 
@@ -282,7 +279,7 @@ export const getAllDrivers = adminQuery({
               }
             : null,
         };
-      })
+      }),
     );
 
     const activeDrivers = results.filter(Boolean) as any[];
@@ -295,7 +292,11 @@ export const getAllDrivers = adminQuery({
         const name = `${firstName} ${lastName}`.toLowerCase();
         const phone = driver.userDetails?.phoneNumber || "";
         const reg = driver.vehicle?.registrationNumber || "";
-        if (!name.includes(s) && !phone.includes(s) && !reg.toLowerCase().includes(s)) {
+        if (
+          !name.includes(s) &&
+          !phone.includes(s) &&
+          !reg.toLowerCase().includes(s)
+        ) {
           return false;
         }
       }
@@ -329,7 +330,7 @@ export const getDriverById = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: user.profilePictureKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -340,7 +341,7 @@ export const getDriverById = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: driver.licenseImageFrontKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -351,7 +352,7 @@ export const getDriverById = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: driver.licenseImageBackKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -362,7 +363,7 @@ export const getDriverById = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: driver.paymentQrCodeKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -381,7 +382,7 @@ export const getDriverById = adminQuery({
           Bucket: process.env.MINIO_BUCKET,
           Key: vehicle.rcImageKey,
         }),
-        { expiresIn: 300 }
+        { expiresIn: 300 },
       );
     }
 
@@ -392,7 +393,7 @@ export const getDriverById = adminQuery({
           Bucket: process.env.MINIO_BUCKET,
           Key: vehicle.insuranceImageKey,
         }),
-        { expiresIn: 300 }
+        { expiresIn: 300 },
       );
     }
 
@@ -449,17 +450,13 @@ export const updateDriverAdmin = adminMutation({
     firstName: v.string(),
     lastName: v.optional(v.string()),
     dob: v.string(),
-    gender: v.union(
-      v.literal("Male"),
-      v.literal("Female"),
-      v.literal("Other")
-    ),
+    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     licenseNumber: v.string(),
     isLicenseVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
-      v.literal("Verified")
+      v.literal("Verified"),
     ),
   },
   handler: async (ctx, args) => {
@@ -472,7 +469,7 @@ export const updateDriverAdmin = adminMutation({
       const existingUser = await ctx.db
         .query("user")
         .withIndex("by_phoneNumber", (q) =>
-          q.eq("phoneNumber", args.phoneNumber)
+          q.eq("phoneNumber", args.phoneNumber),
         )
         .first();
       if (existingUser && existingUser._id !== driver.userId) {
@@ -508,18 +505,14 @@ export const updateDriverVehicleAdmin = adminMutation({
       v.literal("Sedan"),
       v.literal("Suv"),
       v.literal("Auto"),
-      v.literal("Bike")
+      v.literal("Bike"),
     ),
     fuelType: v.union(
       v.literal("Petrol"),
       v.literal("Diesel"),
-      v.literal("EV")
+      v.literal("EV"),
     ),
-    class: v.union(
-      v.literal("Bike"),
-      v.literal("Auto"),
-      v.literal("Cab")
-    ),
+    class: v.union(v.literal("Bike"), v.literal("Auto"), v.literal("Cab")),
     color: v.string(),
     registrationNumber: v.string(),
     seatingCapacity: v.number(),
@@ -533,11 +526,13 @@ export const updateDriverVehicleAdmin = adminMutation({
       const existing = await ctx.db
         .query("vehicle")
         .withIndex("by_registrationNumber", (q) =>
-          q.eq("registrationNumber", args.registrationNumber)
+          q.eq("registrationNumber", args.registrationNumber),
         )
         .first();
       if (existing && existing._id !== vehicle._id) {
-        throw new ConvexError("Registration number already in use by another vehicle");
+        throw new ConvexError(
+          "Registration number already in use by another vehicle",
+        );
       }
     }
 
@@ -581,15 +576,11 @@ export const getAllRidesAdmin = adminQuery({
 
         return {
           ...ride,
-          rider: rider
-            ? { ...rider, userDetails: riderUser }
-            : null,
-          driver: driver
-            ? { ...driver, userDetails: driverUser }
-            : null,
+          rider: rider ? { ...rider, userDetails: riderUser } : null,
+          driver: driver ? { ...driver, userDetails: driverUser } : null,
           ratings,
         };
-      })
+      }),
     );
 
     const activeRides = results.filter(Boolean);
@@ -597,8 +588,10 @@ export const getAllRidesAdmin = adminQuery({
     return activeRides.filter((ride) => {
       if (args.search) {
         const s = args.search.toLowerCase();
-        const rName = `${ride.rider?.userDetails?.firstName || ""} ${ride.rider?.userDetails?.lastName || ""}`.toLowerCase();
-        const dName = `${ride.driver?.userDetails?.firstName || ""} ${ride.driver?.userDetails?.lastName || ""}`.toLowerCase();
+        const rName =
+          `${ride.rider?.userDetails?.firstName || ""} ${ride.rider?.userDetails?.lastName || ""}`.toLowerCase();
+        const dName =
+          `${ride.driver?.userDetails?.firstName || ""} ${ride.driver?.userDetails?.lastName || ""}`.toLowerCase();
         const rideId = String(ride._id).toLowerCase();
         if (!rName.includes(s) && !dName.includes(s) && !rideId.includes(s)) {
           return false;
@@ -663,34 +656,32 @@ export const getRideByIdAdmin = adminQuery({
       ? await ctx.db
           .query("organizationsRate")
           .withIndex("by_organization", (q) =>
-            q.eq("organizationId", organization._id)
+            q.eq("organizationId", organization._id),
           )
           .collect()
       : [];
 
-    const riderProfileUri =
-      riderUser?.profilePictureKey
-        ? await getSignedUrl(
-            s3Client,
-            new GetObjectCommand({
-              Bucket: process.env.MINIO_BUCKET,
-              Key: riderUser.profilePictureKey,
-            }),
-            { expiresIn: 300 }
-          )
-        : undefined;
+    const riderProfileUri = riderUser?.profilePictureKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: riderUser.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
 
-    const driverProfileUri =
-      driverUser?.profilePictureKey
-        ? await getSignedUrl(
-            s3Client,
-            new GetObjectCommand({
-              Bucket: process.env.MINIO_BUCKET,
-              Key: driverUser.profilePictureKey,
-            }),
-            { expiresIn: 300 }
-          )
-        : undefined;
+    const driverProfileUri = driverUser?.profilePictureKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: driverUser.profilePictureKey,
+          }),
+          { expiresIn: 300 },
+        )
+      : undefined;
 
     return {
       ...ride,
@@ -729,11 +720,14 @@ export const getAllAdminUsers = adminQuery({
     // Collect both Admin and Super Admin permission rows
     const allPerms = await ctx.db.query("userPermission").collect();
     const adminPerms = allPerms.filter(
-      (p) => p.permission === "Admin" || p.permission === "Super Admin"
+      (p) => p.permission === "Admin" || p.permission === "Super Admin",
     );
 
     // Build a unique set of users (a user may have both Admin and Super Admin rows)
-    const userMap = new Map<string, { adminPermId: string; isSuperAdmin: boolean }>();
+    const userMap = new Map<
+      string,
+      { adminPermId: string; isSuperAdmin: boolean }
+    >();
     for (const perm of adminPerms) {
       const key = perm.userId as string;
       if (!userMap.has(key)) {
@@ -763,7 +757,7 @@ export const getAllAdminUsers = adminQuery({
                 Bucket: process.env.MINIO_BUCKET,
                 Key: profilePictureKey,
               }),
-              { expiresIn: 300 }
+              { expiresIn: 300 },
             )
           : undefined;
 
@@ -773,7 +767,7 @@ export const getAllAdminUsers = adminQuery({
           permissionId: meta.adminPermId,
           isSuperAdmin: meta.isSuperAdmin,
         };
-      })
+      }),
     );
 
     const activeAdmins = results.filter(Boolean) as any[];
@@ -781,7 +775,8 @@ export const getAllAdminUsers = adminQuery({
     return activeAdmins.filter((admin) => {
       if (args.search) {
         const s = args.search.toLowerCase();
-        const name = `${admin.firstName || ""} ${admin.lastName || ""}`.toLowerCase();
+        const name =
+          `${admin.firstName || ""} ${admin.lastName || ""}`.toLowerCase();
         const phone = admin.phoneNumber || "";
         if (!name.includes(s) && !phone.includes(s)) {
           return false;
@@ -813,11 +808,7 @@ export const createAdminUser = superAdminMutation({
     firstName: v.string(),
     lastName: v.optional(v.string()),
     dob: v.string(),
-    gender: v.union(
-      v.literal("Male"),
-      v.literal("Female"),
-      v.literal("Other")
-    ),
+    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     isSuperAdmin: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -826,9 +817,7 @@ export const createAdminUser = superAdminMutation({
     // Check if user with phone already exists
     const existingUser = await ctx.db
       .query("user")
-      .withIndex("by_phoneNumber", (q) =>
-        q.eq("phoneNumber", args.phoneNumber)
-      )
+      .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
       .first();
 
     if (existingUser) {
@@ -840,7 +829,9 @@ export const createAdminUser = superAdminMutation({
         .first();
 
       if (existingPerm) {
-        throw new ConvexError(`User already has ${targetPermission} permission`);
+        throw new ConvexError(
+          `User already has ${targetPermission} permission`,
+        );
       }
 
       // Ensure the user at minimum has Admin permission too
@@ -880,7 +871,10 @@ export const createAdminUser = superAdminMutation({
 
     // Optionally also grant Super Admin
     if (args.isSuperAdmin) {
-      await ctx.db.insert("userPermission", { userId, permission: "Super Admin" });
+      await ctx.db.insert("userPermission", {
+        userId,
+        permission: "Super Admin",
+      });
     }
 
     return userId;
@@ -894,11 +888,7 @@ export const updateAdminUser = superAdminMutation({
     firstName: v.string(),
     lastName: v.optional(v.string()),
     dob: v.string(),
-    gender: v.union(
-      v.literal("Male"),
-      v.literal("Female"),
-      v.literal("Other")
-    ),
+    gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     isSuperAdmin: v.boolean(),
   },
@@ -910,7 +900,9 @@ export const updateAdminUser = superAdminMutation({
     if (user.phoneNumber !== args.phoneNumber) {
       const existing = await ctx.db
         .query("user")
-        .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
+        .withIndex("by_phoneNumber", (q) =>
+          q.eq("phoneNumber", args.phoneNumber),
+        )
         .first();
       if (existing && existing._id !== args.userId) {
         throw new ConvexError("Phone number already in use by another user");
@@ -949,7 +941,7 @@ export const updateAdminUser = superAdminMutation({
         .collect();
       if (superAdmins.length <= 1) {
         throw new ConvexError(
-          "Cannot demote: at least one Super Admin must remain"
+          "Cannot demote: at least one Super Admin must remain",
         );
       }
       await ctx.db.delete(superAdminPerm._id);
@@ -978,7 +970,7 @@ export const deleteAdminUser = superAdminMutation({
         .collect();
       if (allSuperAdmins.length <= 1) {
         throw new ConvexError(
-          "Cannot delete the last Super Admin. Promote another admin first."
+          "Cannot delete the last Super Admin. Promote another admin first.",
         );
       }
     }
@@ -1032,7 +1024,7 @@ export const getAdminProfile = adminQuery({
             Bucket: process.env.MINIO_BUCKET,
             Key: ctx.user.profilePictureKey,
           }),
-          { expiresIn: 300 }
+          { expiresIn: 300 },
         )
       : undefined;
 
@@ -1107,7 +1099,7 @@ export const verifyRiderAdmin = adminMutation({
     isVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
-      v.literal("Verified")
+      v.literal("Verified"),
     ),
   },
   handler: async (ctx, args) => {
@@ -1125,7 +1117,7 @@ export const verifyDriverLicenseAdmin = adminMutation({
     isLicenseVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
-      v.literal("Verified")
+      v.literal("Verified"),
     ),
   },
   handler: async (ctx, args) => {
@@ -1143,7 +1135,7 @@ export const verifyVehicleAdmin = adminMutation({
     isVerified: v.union(
       v.literal("Pending"),
       v.literal("Rejected"),
-      v.literal("Verified")
+      v.literal("Verified"),
     ),
   },
   handler: async (ctx, args) => {
@@ -1154,4 +1146,3 @@ export const verifyVehicleAdmin = adminMutation({
     });
   },
 });
-

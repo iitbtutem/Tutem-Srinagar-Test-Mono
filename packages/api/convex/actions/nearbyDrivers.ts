@@ -1,13 +1,13 @@
 "use node";
 
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { NearbyDriverResult } from "../routes/rides";
 import { METERS_IN_KM } from "../CONSTANTS";
 import { validateSession } from "../helpers/sessionFunctions";
-import { locationCache, evictStaleEntries } from "./pusher";
+
 
 type ReturnValue = NearbyDriverResult[];
 
@@ -63,42 +63,43 @@ export const getNearbyDrivers = action({
 
       console.log("nearbyRadius:", nearByRadiusInKms);
 
-      // Evict stale cache entries (drivers that stopped sending location > 2 min ago)
-      evictStaleEntries();
+      // Query fresh driver locations from Convex DB.
+      // Stale entries (updatedAt > 35s ago) are already filtered server-side.
+      const activeLocations = await ctx.runQuery(
+        internal.routes.driverLocation.getActiveDriverLocations,
+      );
 
-      if (locationCache.size === 0) {
+      if (activeLocations.length === 0) {
         console.log(
-          "[getNearbyDrivers] Location cache is empty — no active drivers.",
+          "[getNearbyDrivers] No active driver locations in DB.",
         );
         return [];
       }
 
       console.log(
-        `[getNearbyDrivers] Checking ${locationCache.size} cached driver(s)`,
+        `[getNearbyDrivers] Checking ${activeLocations.length} active driver(s) from DB`,
       );
 
-      // Filter cached drivers by Haversine distance from the pickup point
+      // Filter by Haversine distance from the pickup point
       const nearbyDriversInfo: {
         driverId: Id<"driver">;
         latitude: number;
         longitude: number;
       }[] = [];
 
-      for (const [driverId, cached] of locationCache.entries()) {
-        if (!cached.isAvailable) continue; // skip unavailable drivers
-
+      for (const loc of activeLocations) {
         const dist = haversineDistance(
           Number(args.pickup.latitude),
           Number(args.pickup.longitude),
-          cached.latitude,
-          cached.longitude,
+          loc.latitude,
+          loc.longitude,
         );
 
         if (dist <= nearByRadiusInKms) {
           nearbyDriversInfo.push({
-            driverId: driverId as Id<"driver">,
-            latitude: cached.latitude,
-            longitude: cached.longitude,
+            driverId: loc.driverId,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
           });
         }
       }
@@ -130,3 +131,4 @@ export const getNearbyDrivers = action({
     }
   },
 });
+

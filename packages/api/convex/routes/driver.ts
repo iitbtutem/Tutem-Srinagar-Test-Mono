@@ -570,10 +570,23 @@ export const toggleAvailability = driverMutation({
         )
         .collect();
 
-      if (rideRequests.length > 0)
+      if (rideRequests.length > 0) {
+        if (
+          rideRequests.some((r) =>
+            ["Driver Arrived", "Active"].includes(r.status),
+          ) ||
+          rideRequests.some(
+            (r) => r.status === "Open" && r.requestStatus === "Accepted",
+          )
+        ) {
+          throw new ConvexError(
+            "You have an active ride. Please complete it before going offline.",
+          );
+        }
         throw new ConvexError(
           "You have pending ride requests. Please reject or accept them before going offline.",
         );
+      }
     }
 
     await ctx.db.patch(driver._id, {

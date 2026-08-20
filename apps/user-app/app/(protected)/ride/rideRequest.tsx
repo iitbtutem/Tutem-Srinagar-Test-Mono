@@ -468,6 +468,8 @@ export default function RideRequest() {
 
   const cancelReasons = ride.status === 'Active' ? CANCEL_REASONS_ACTIVE : CANCEL_REASONS_OPEN;
 
+  const locatingDriver = ride.driver && !driverLocation && ride.requestStatus === 'Accepted' && (ride.status === "Active" || ride.status === "Driver Arrived")
+
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen
@@ -544,7 +546,7 @@ export default function RideRequest() {
           </MapView>
 
           {/* Loading driver live location indicator */}
-          {ride.driver && !driverLocation && ride.requestStatus === 'Accepted' && (
+          {locatingDriver && (
             <View className="absolute left-3 top-3 flex-row items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-md">
               <ActivityIndicator size="small" color="#3b82f6" />
               <Text className="text-xs font-medium text-gray-700">Locating driver...</Text>

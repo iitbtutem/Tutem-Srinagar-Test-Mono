@@ -235,4 +235,14 @@ export default defineSchema({
     .index("by_sessionToken", ["sessionToken"])
     .index("by_phone", ["phoneNumber"])
     .index("by_userId", ["userId"]),
+
+  // Active driver locations (available + online only)
+  // One row per driver — upserted every ~30s, deleted when driver goes unavailable/offline.
+  // updatedAt is used to filter stale entries in getNearbyDrivers (> 35s old = stale).
+  availableDriverLocation: defineTable({
+    driverId: v.id("driver"),
+    latitude: v.number(),
+    longitude: v.number(),
+    updatedAt: v.number(), // Unix ms
+  }).index("by_driver", ["driverId"]),
 });
