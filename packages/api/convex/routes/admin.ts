@@ -234,10 +234,13 @@ export const getAllDrivers = adminQuery({
           .query("ride")
           .withIndex("by_driver", (q) => q.eq("driverId", driver._id))
           .filter((q) =>
-            q.or(
-              q.eq(q.field("status"), "Open"),
-              q.eq(q.field("status"), "Active"),
-              q.eq(q.field("status"), "Driver Arrived"),
+            q.and(
+              q.or(
+                q.eq(q.field("status"), "Open"),
+                q.eq(q.field("status"), "Active"),
+                q.eq(q.field("status"), "Driver Arrived"),
+              ),
+              q.neq(q.field("requestStatus"), "Rejected"),
             ),
           )
           .first();
