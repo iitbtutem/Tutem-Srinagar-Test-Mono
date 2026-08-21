@@ -6,6 +6,33 @@ import { driverMutation, adminQuery } from "../helpers/sessionFunctions";
 const STALE_MS = 35_000;
 
 /**
+ * Internal query: does this driver currently have an active ride?
+ *
+ * Used by triggerDriverLocation to detect the "admin cleared ride while app
+ * was backgrounded" scenario — where the background task still runs in
+ * on-ride mode but the driver is actually free.
+ *
+ * Returns true if a non-terminal ride row exists for the driver.
+ */
+export const driverHasActiveRide = internalQuery({
+  args: { driverId: v.id("driver") },
+  handler: async (ctx, { driverId }) => {
+    const ride = await ctx.db
+      .query("ride")
+      .withIndex("by_driver", (q) => q.eq("driverId", driverId))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("status"), "Completed"),
+          q.neq(q.field("status"), "Canceled"),
+          q.neq(q.field("status"), "Abort")
+        )
+      )
+      .first();
+    return ride !== null;
+  },
+});
+
+/**
  * Upsert a driver's available location.
  * Called when driver is online + available for rides.
  * One row per driver — existing row is updated, new row is inserted if absent.

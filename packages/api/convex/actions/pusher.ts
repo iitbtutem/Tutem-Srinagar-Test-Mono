@@ -2,6 +2,7 @@
 
 import Pusher from "pusher";
 import { action, internalAction } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 
 // ---------------------------------------------------------------------------
@@ -146,7 +147,7 @@ export const triggerDriverLocation = action({
     timestamp: v.optional(v.number()),
     isAvailable: v.optional(v.boolean()),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     const now = args.timestamp ?? Date.now();
 
     // 1. Update server-side cache (used by getNearbyDrivers)
@@ -175,6 +176,40 @@ export const triggerDriverLocation = action({
     );
 
     console.log(`[pusher] 📍 trigger + cache for driver ${args.driverId}`);
+
+    // 3. Stale-mode correction: the background task (tasks.ts) stores
+    //    locationMode in SecureStore. If admin cleared a ride while the app
+    //    was backgrounded, the task still fires in 'on-ride' mode even though
+    //    the driver is now free. Detect this server-side and upsert the driver's
+    //    location into availableDriverLocation so they're discoverable for new
+    //    ride requests and visible on the tracking page's Convex live query.
+    try {
+      const driverId = args.driverId as any; // Id<"driver">
+      const hasRide = await ctx.runQuery(
+        internal.routes.driverLocation.driverHasActiveRide,
+        { driverId }
+      );
+
+      if (!hasRide) {
+        // Driver is free but background task thinks they're on-ride.
+        // Write to DB so they appear in the available pool.
+        await ctx.runMutation(
+          internal.routes.driverLocation.upsertAvailableDriverLocation,
+          {
+            driverId,
+            latitude: args.latitude,
+            longitude: args.longitude,
+          }
+        );
+        console.log(
+          `[pusher] 🔄 Stale on-ride mode detected for ${args.driverId} — upserted to availableDriverLocation.`
+        );
+      }
+    } catch (e) {
+      // Non-fatal: Pusher broadcast succeeded; DB sync is best-effort.
+      console.warn(`[pusher] ⚠️ Available-location sync failed for ${args.driverId}:`, e);
+    }
+
     return { success: true };
   },
 });
