@@ -134,7 +134,9 @@ http.route({
         longitude: Number(longitude),
         heading: heading != null ? Number(heading) : null,
         speed: speed != null ? Number(speed) : null,
-        timestamp: timestamp != null ? Number(timestamp) : Date.now(),
+        // Always use server receive-time so the tracking page shows accurate
+        // "last seen" regardless of GPS clock drift or device clock skew.
+        timestamp: Date.now(),
         isAvailable: isAvailable !== false, // default true
       });
 

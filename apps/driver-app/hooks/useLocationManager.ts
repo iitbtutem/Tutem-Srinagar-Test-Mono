@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import * as Location from 'expo-location';
 import { useSetAtom } from 'jotai';
 import { locationAtom } from '@/lib/location';
@@ -126,13 +126,27 @@ export function useLocationManager({
   }, [driverId]);
 
   // 3. Foreground GPS Watching
+  //
+  // On-ride Pusher client events are throttled to ON_RIDE_SEND_INTERVAL_MS (3 s).
+  // Pusher enforces a hard limit of ~10 client events/sec per connection; without
+  // throttling, rapid GPS ticks (watchPositionAsync fires on every >5 m move) can
+  // hit that ceiling and produce "Rejected client event because of rate limiting".
+  const ON_RIDE_SEND_INTERVAL_MS = 3_000;
+
   useEffect(() => {
     if (!driverId || !userId) return;
 
     let sub: Location.LocationSubscription | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    let appStateSub: ReturnType<typeof AppState.addEventListener> | null = null;
     let isCancelled = false;
-    let lastDbSentAt = 0; // throttle tracker for 'available' mode
+    let lastDbSentAt = 0;      // throttle for available-mode DB upserts
+    let lastOnRideSentAt = 0;  // throttle for on-ride Pusher publishes
+    // Concurrency guard — prevents multiple concurrent startForegroundTracking calls.
+    // Without this, rapid AppState 'active' events or fast effect re-runs stack
+    // multiple watchPositionAsync subscriptions that all fire concurrently, causing
+    // duplicate publishes and Pusher rate-limit rejections.
+    let isStarting = false;
 
     const shouldPublish = (isAvailableForRide && isOnline) || hasActiveRide;
 
@@ -169,7 +183,11 @@ export function useLocationManager({
 
         console.log('[useLocationManager] 📍 Upserted location via Convex SDK (available mode)');
       } else if (hasActiveRide) {
-        // ── On-ride mode: send directly to Pusher (native) → HTTP fallback ──────
+        // ── On-ride mode — throttled to avoid Pusher rate-limit rejection ────────
+        const now = Date.now();
+        if (now - lastOnRideSentAt < ON_RIDE_SEND_INTERVAL_MS) return;
+        lastOnRideSentAt = now;
+
         const payload = {
           driverId: driverId!,
           latitude: coords.latitude,
@@ -200,76 +218,107 @@ export function useLocationManager({
     };
 
     const startForegroundTracking = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted' || isCancelled) return;
-
-      // Initial position
-      try {
-        const initialLoc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        if (isCancelled) return;
-
-        const coords = {
-          latitude: initialLoc.coords.latitude,
-          longitude: initialLoc.coords.longitude,
-          timestamp: initialLoc.timestamp,
-        };
-        setLocation({ latitude: coords.latitude, longitude: coords.longitude });
-        publishLocation(coords);
-      } catch (err) {
-        console.error('[useLocationManager] Initial location fetch error:', err);
-      }
-
-      if (isCancelled) return;
-
-      // Continuous watch — fires on every >5 m move
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, distanceInterval: 5 },
-        (loc) => {
-          const coords = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            timestamp: loc.timestamp,
-          };
-          setLocation({ latitude: coords.latitude, longitude: coords.longitude });
-          publishLocation(coords);
-        }
-      );
-
-      if (isCancelled) {
-        sub.remove();
-        sub = null;
+      // Skip if already starting — prevents stacked watchers from rapid AppState events
+      if (isStarting) {
+        console.log('[useLocationManager] startForegroundTracking already in progress — skipping.');
         return;
       }
+      isStarting = true;
 
-      // Heartbeat every 10s — ensures available-mode DB row stays fresh even without movement
-      intervalId = setInterval(async () => {
-        if (!shouldPublish) return;
+      try {
+        // Tear down any existing watcher before starting fresh
+        sub?.remove();
+        sub = null;
+        if (intervalId !== null) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted' || isCancelled) return;
+
+        // Immediate first fix
         try {
-          const loc = await Location.getCurrentPositionAsync({
+          const initialLoc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
           });
+          if (isCancelled) return;
+
           const coords = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            timestamp: loc.timestamp,
+            latitude: initialLoc.coords.latitude,
+            longitude: initialLoc.coords.longitude,
+            timestamp: initialLoc.timestamp,
           };
           setLocation({ latitude: coords.latitude, longitude: coords.longitude });
           publishLocation(coords);
-        } catch (e) {
-          console.error('[useLocationManager] Heartbeat location fetch error:', e);
+        } catch (err) {
+          console.error('[useLocationManager] Initial location fetch error:', err);
         }
-      }, 10000);
+
+        if (isCancelled) return;
+
+        // Continuous watch — fires on every >5 m move
+        sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+          (loc) => {
+            const coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              timestamp: loc.timestamp,
+            };
+            setLocation({ latitude: coords.latitude, longitude: coords.longitude });
+            publishLocation(coords);
+          }
+        );
+
+        if (isCancelled) {
+          sub.remove();
+          sub = null;
+          return;
+        }
+
+        // Heartbeat every 10 s — keeps available-mode DB row alive when stationary
+        intervalId = setInterval(async () => {
+          if (!shouldPublish || isCancelled) return;
+          try {
+            const loc = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+            const coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              timestamp: loc.timestamp,
+            };
+            setLocation({ latitude: coords.latitude, longitude: coords.longitude });
+            publishLocation(coords);
+          } catch (e) {
+            console.error('[useLocationManager] Heartbeat location fetch error:', e);
+          }
+        }, 10_000);
+      } finally {
+        isStarting = false;
+      }
     };
 
     startForegroundTracking();
+
+    // Re-start the foreground watcher whenever the app returns to foreground.
+    // On Android, watchPositionAsync can silently stall while the app is minimised.
+    // The isStarting guard inside startForegroundTracking ensures only one call
+    // runs at a time even if the OS emits rapid active/background transitions.
+    appStateSub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active' && !isCancelled) {
+        console.log('[useLocationManager] App foregrounded — restarting foreground GPS watcher...');
+        startForegroundTracking();
+      }
+    });
 
     return () => {
       isCancelled = true;
       sub?.remove();
       if (intervalId !== null) clearInterval(intervalId);
+      appStateSub?.remove();
     };
-  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, setLocation]);
+  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, setLocation, upsertLocation]);
 }
 

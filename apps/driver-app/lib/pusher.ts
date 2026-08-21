@@ -196,11 +196,13 @@ export async function disconnectNativePusher(): Promise<void> {
       } catch {}
       _channel = null;
       _subscribedDriverId = null;
+      _isSubscribed = false;
     }
 
     await pusher.disconnect();
   } catch {}
 
   _initialized = false;
+  _isSubscribed = false;
   console.log('[pusher.ts] Disconnected native Pusher');
 }

@@ -675,6 +675,14 @@ export function TrackingPage() {
     "all" | "Bike" | "Auto" | "Cab"
   >("all");
 
+  // Ticker — forces re-renders every 30 s so formatTimeAgo in DriverCard
+  // always shows accurate relative time, even when no new location data arrives.
+  const [, setTimerTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTimerTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Keep ref in sync
   useEffect(() => {
     driverLocationsRef.current = driverLocations;

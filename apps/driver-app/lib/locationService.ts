@@ -94,8 +94,13 @@ export const startLocationTracking = async (
     if (hasStarted && mode === 'on-ride') {
       console.log('[locationService] Restarting background task in on-ride mode for tighter updates.');
       await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      // Brief pause so Android's foreground service can fully stop before the new
+      // task registers. Without this, some devices kill the process mid-restart.
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
     } else if (hasStarted) {
       // Available mode already running — mode updated in SecureStore above, no restart needed.
+      // The background task reads locationMode from SecureStore on every tick, so it will
+      // automatically switch to the new mode on its next execution without restarting.
       console.log('[locationService] ✅ Background task already running, mode updated to:', mode);
       return true;
     }
