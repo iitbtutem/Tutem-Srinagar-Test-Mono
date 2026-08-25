@@ -243,6 +243,8 @@ export default defineSchema({
     driverId: v.id("driver"),
     latitude: v.number(),
     longitude: v.number(),
+    speed: v.optional(v.number()), // m/s
+    heading: v.optional(v.number()), // degrees
     updatedAt: v.number(), // Unix ms
   }).index("by_driver", ["driverId"]),
 });

@@ -11,10 +11,11 @@ export default function Loading() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
+        {Array.from({ length: 8 })
+          .fill(1)
+          .map((_, idx) => (
+            <SkeletonCard key={idx} />
+          ))}
       </div>
 
       {/* Charts Grid */}

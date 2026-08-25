@@ -9,29 +9,29 @@ export type LocationMode = 'available' | 'on-ride';
  * Start background location tracking.
  *
  * @param credentials  - driverId + user_id to persist for the headless background task
- * @param mode         - 'available' → POST to Convex DB endpoint (getNearbyDrivers pool)
- *                       'on-ride'   → POST to Convex Pusher trigger (rider tracking)
+ * @param mode         - 'available' or 'on-ride' (used to set GPS interval accuracy)
+ *
+ * The background task always sends to /api/pusher/trigger — the server determines
+ * whether to broadcast to Pusher or upsert to DB based on the driver's current state.
  *
  * SecureStore keys written:
  *   driverId           – driver's Convex document ID
  *   user_id            – user's Convex document ID
- *   locationMode       – 'available' | 'on-ride'
- *   locationUpdateUrl  – Convex /api/driver/location  (used in 'available' mode)
- *   pusherTriggerUrl   – Convex /api/pusher/trigger   (used in 'on-ride' mode)
+ *   pusherTriggerUrl   – Convex /api/pusher/trigger (unified endpoint)
  */
 export const startLocationTracking = async (
   credentials?: { driverId: string; user_id: string },
   mode: LocationMode = 'available'
 ) => {
   try {
-    // ── Foreground permission (required) ──────────────────────────────────────
+    // Foreground permission (required)
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== 'granted') {
       console.warn('[locationService] ❌ Foreground location permission denied.');
       return false;
     }
 
-    // ── Background permission (required for background task) ──────────────────
+    // Background permission (required for background task)
     // On Android the user must choose "Allow all the time" in Settings.
     // If only "While using the app" is granted, we log a warning but still
     // allow foreground-only tracking (watchPositionAsync will work when active).
@@ -46,7 +46,7 @@ export const startLocationTracking = async (
       // so watchPositionAsync works when the app is active.
     }
 
-    // ── Notification permission (required for Android foreground service) ─────
+    // Notification permission (required for Android foreground service)
     const { status: notificationStatus } = await Notifications.requestPermissionsAsync();
     if (notificationStatus !== 'granted') {
       console.warn(
@@ -55,35 +55,33 @@ export const startLocationTracking = async (
       );
     }
 
-    // ── Persist URLs and mode to SecureStore ──────────────────────────────────
-    // process.env is NOT available in headless background tasks.
-    const locationUpdateUrl = process.env.EXPO_PUBLIC_LOCATION_UPDATE_URL;
+    // Persist the unified trigger URL + mode to SecureStore before starting the task.
+    // process.env is NOT available in headless background tasks — URL is hardcoded here.
     const pusherTriggerUrl = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL;
 
-    if (!locationUpdateUrl) {
-      console.error('[locationService] ❌ EXPO_PUBLIC_LOCATION_UPDATE_URL is not set in .env!');
-      return false;
-    }
     if (!pusherTriggerUrl) {
-      console.error('[locationService] ❌ EXPO_PUBLIC_PUSHER_TRIGGER_URL is not set in .env!');
+      console.error('[locationService] ❌ pusherTriggerUrl is not set!');
       return false;
     }
 
     // Always write before starting the task so the first tick reads correct values.
     await SecureStore.setItemAsync('locationMode', mode);
-    await SecureStore.setItemAsync('locationUpdateUrl', locationUpdateUrl);
     await SecureStore.setItemAsync('pusherTriggerUrl', pusherTriggerUrl);
     if (credentials) {
       await SecureStore.setItemAsync('driverId', credentials.driverId);
       await SecureStore.setItemAsync('user_id', credentials.user_id);
     }
 
-    console.log(`[locationService] SecureStore written: mode=${mode}, driverId=${credentials?.driverId}`);
+    console.log(
+      `[locationService] SecureStore written: mode=${mode}, driverId=${credentials?.driverId}`
+    );
 
     // If background permission was denied, skip starting the background task.
     // Foreground watchPositionAsync (in useLocationManager) will handle active tracking.
     if (backgroundStatus !== 'granted') {
-      console.warn('[locationService] Skipping startLocationUpdatesAsync (no background permission).');
+      console.warn(
+        '[locationService] Skipping startLocationUpdatesAsync (no background permission).'
+      );
       return true;
     }
 
@@ -92,7 +90,9 @@ export const startLocationTracking = async (
     // On-ride needs real-time accuracy — restart the task with tighter intervals
     // if it was previously running in 'available' mode.
     if (hasStarted && mode === 'on-ride') {
-      console.log('[locationService] Restarting background task in on-ride mode for tighter updates.');
+      console.log(
+        '[locationService] Restarting background task in on-ride mode for tighter updates.'
+      );
       await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
       // Brief pause so Android's foreground service can fully stop before the new
       // task registers. Without this, some devices kill the process mid-restart.
@@ -109,12 +109,12 @@ export const startLocationTracking = async (
 
     console.log(
       `[locationService] Starting background location updates (mode: ${mode}, ` +
-        `interval: ${isOnRide ? 4 : 15}s)...`
+        `interval: ${isOnRide ? 10 : 30}s)...`
     );
 
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
       accuracy: isOnRide ? Location.Accuracy.High : Location.Accuracy.Balanced,
-      timeInterval: isOnRide ? 4000 : 15000,
+      timeInterval: isOnRide ? 10000 : 30000,
       // distanceInterval:0 = fire on time interval alone regardless of movement.
       // This is critical for on-ride so location is sent even when the driver is stationary.
       distanceInterval: 0,
@@ -133,7 +133,10 @@ export const startLocationTracking = async (
     console.log('[locationService] ✅ Started background location tracking successfully.');
     return true;
   } catch (error: any) {
-    console.error('[locationService] ❌ Error starting location tracking:', error?.message ?? error);
+    console.error(
+      '[locationService] ❌ Error starting location tracking:',
+      error?.message ?? error
+    );
     return false;
   }
 };

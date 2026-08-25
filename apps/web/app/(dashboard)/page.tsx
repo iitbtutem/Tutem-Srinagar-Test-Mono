@@ -12,6 +12,12 @@ export default async function HomePage() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("tutem_admin_session")?.value;
 
+  await new Promise((r) => {
+    setTimeout(() => {
+      r("resolved");
+    }, 2500);
+  });
+
   let initialRiders: any[] = [];
   let initialDrivers: any[] = [];
   let initialOrgs: any[] = [];

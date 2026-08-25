@@ -18,9 +18,32 @@ import { api } from '@tutem/api';
 // when the native Pusher module is not linked (on-ride mode, foreground).
 const PUSHER_TRIGGER_URL = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL ?? '';
 
-// Throttle: available-mode DB upserts are capped to once per 30s.
-// Riders discovering drivers don't need sub-second freshness.
-const AVAILABLE_SEND_INTERVAL_MS = 30_000;
+/**
+ * Calculate optimal send interval based on driver's speed.
+ * 
+ * For available mode (driver waiting for rides):
+ * - Speed < 1 m/s (~3.6 km/h, stationary): 60 seconds
+ * - Speed < 5.56 m/s (20 km/h): 45 seconds
+ * - Speed < 11.11 m/s (40 km/h): 30 seconds
+ * - Speed >= 11.11 m/s (40+ km/h): 20 seconds
+ * 
+ * For on-ride mode (active ride):
+ * - Speed < 10 m/s (~36 km/h): 20 seconds
+ * - Speed < 12.5 m/s (~45 km/h): 15 seconds
+ * - Speed >= 12.5 m/s: 10 seconds
+ */
+const getOptimalIntervalAvailable = (speed: number | null | undefined): number => {
+  if (!speed || speed < 1) return 60_000;      // Stationary: 60s
+  if (speed < 5.56) return 45_000;             // < 20 km/h: 45s
+  if (speed < 11.11) return 30_000;            // < 40 km/h: 30s
+  return 20_000;                               // >= 40 km/h: 20s
+};
+
+const getOptimalIntervalOnRide = (speed: number | null | undefined): number => {
+  if (!speed || speed < 10) return 20_000; // Slow or stationary: 20s
+  if (speed < 12.5) return 15_000;           // Medium speed: 15s
+  return 10_000;                           // Fast: 10s
+};
 
 interface LocationManagerOptions {
   driverId?: string;
@@ -76,6 +99,14 @@ export function useLocationManager({
   //    Also reconnects when the app returns to foreground (Android can drop WS in background).
   useEffect(() => {
     if (!driverId) return;
+    
+    // Only initialize Pusher for on-ride drivers
+    if (!hasActiveRide) {
+      // Not on ride — disconnect Pusher if connected
+      disconnectNativePusher().catch(() => {});
+      isNativePusherReadyRef.current = false;
+      return;
+    }
 
     let cancelled = false;
 
@@ -123,15 +154,12 @@ export function useLocationManager({
       appStateSub.remove();
       disconnectNativePusher().catch(() => {});
     };
-  }, [driverId]);
+  }, [driverId, hasActiveRide]);
 
   // 3. Foreground GPS Watching
   //
-  // On-ride Pusher client events are throttled to ON_RIDE_SEND_INTERVAL_MS (3 s).
-  // Pusher enforces a hard limit of ~10 client events/sec per connection; without
-  // throttling, rapid GPS ticks (watchPositionAsync fires on every >5 m move) can
-  // hit that ceiling and produce "Rejected client event because of rate limiting".
-  const ON_RIDE_SEND_INTERVAL_MS = 3_000;
+  // On-ride Pusher client events use adaptive throttling based on speed.
+  // Pusher enforces a hard limit of ~10 client events/sec per connection.
 
   useEffect(() => {
     if (!driverId || !userId) return;
@@ -153,23 +181,28 @@ export function useLocationManager({
     /**
      * Publish driver location.
      *
-     * - available mode: call Convex SDK mutation directly (upserts DB row, throttled 30s).
+     * - available mode: call Convex SDK mutation directly (upserts DB row, adaptive throttle).
      *   Uses the already-open Convex WebSocket — zero extra network connections.
+     *   Server-side routing happens in the SDK mutation handler.
      *
-     * - on-ride mode: send directly to Pusher via native client event (zero server hop).
+     * - on-ride mode: send directly to Pusher via native client event (adaptive throttle).
      *   Falls back to POST /api/pusher/trigger only if native Pusher is not available.
+     *   Server-side routing happens in the HTTP endpoint handler.
      */
     const publishLocation = async (coords: {
       latitude: number;
       longitude: number;
+      speed?: number | null;
+      heading?: number | null;
       timestamp: number;
     }) => {
       if (!shouldPublish) return;
 
       if (!hasActiveRide && isAvailableForRide && isOnline) {
-        // ── Available mode: Convex SDK mutation (no HTTP) ─────────────────────────
+        // ── Available mode: Convex SDK mutation with adaptive throttle ─────────────
         const now = Date.now();
-        if (now - lastDbSentAt < AVAILABLE_SEND_INTERVAL_MS) return; // throttled
+        const adaptiveInterval = getOptimalIntervalAvailable(coords.speed);
+        if (now - lastDbSentAt < adaptiveInterval) return; // adaptive throttle
         lastDbSentAt = now;
 
         if (!driverId) return;
@@ -177,21 +210,26 @@ export function useLocationManager({
           driverId: driverId as any,
           latitude: coords.latitude,
           longitude: coords.longitude,
+          speed: coords.speed ?? undefined,
+          heading: coords.heading ?? undefined,
         }).catch((err) => {
           console.error('[useLocationManager] Convex upsert failed:', err);
         });
 
-        console.log('[useLocationManager] 📍 Upserted location via Convex SDK (available mode)');
+        console.log(`[useLocationManager] 📍 Upserted location via Convex SDK (available mode, interval: ${adaptiveInterval}ms)`);
       } else if (hasActiveRide) {
-        // ── On-ride mode — throttled to avoid Pusher rate-limit rejection ────────
+        // ── On-ride mode — adaptive throttle based on speed ────────────────────────
         const now = Date.now();
-        if (now - lastOnRideSentAt < ON_RIDE_SEND_INTERVAL_MS) return;
+        const adaptiveInterval = getOptimalIntervalOnRide(coords.speed);
+        if (now - lastOnRideSentAt < adaptiveInterval) return;
         lastOnRideSentAt = now;
 
         const payload = {
           driverId: driverId!,
           latitude: coords.latitude,
           longitude: coords.longitude,
+          heading: coords.heading,
+          speed: coords.speed,
           timestamp: coords.timestamp,
         };
 
@@ -247,6 +285,8 @@ export function useLocationManager({
           const coords = {
             latitude: initialLoc.coords.latitude,
             longitude: initialLoc.coords.longitude,
+            speed: initialLoc.coords.speed,
+            heading: initialLoc.coords.heading,
             timestamp: initialLoc.timestamp,
           };
           setLocation({ latitude: coords.latitude, longitude: coords.longitude });
@@ -257,13 +297,15 @@ export function useLocationManager({
 
         if (isCancelled) return;
 
-        // Continuous watch — fires on every >5 m move
+        // Continuous watch — fires on every >50 m move
         sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+          { accuracy: Location.Accuracy.High, distanceInterval: 50 },
           (loc) => {
             const coords = {
               latitude: loc.coords.latitude,
               longitude: loc.coords.longitude,
+              speed: loc.coords.speed,
+              heading: loc.coords.heading,
               timestamp: loc.timestamp,
             };
             setLocation({ latitude: coords.latitude, longitude: coords.longitude });
@@ -277,7 +319,7 @@ export function useLocationManager({
           return;
         }
 
-        // Heartbeat every 10 s — keeps available-mode DB row alive when stationary
+        // Heartbeat every 30 s — keeps available-mode DB row alive when stationary
         intervalId = setInterval(async () => {
           if (!shouldPublish || isCancelled) return;
           try {
@@ -287,6 +329,8 @@ export function useLocationManager({
             const coords = {
               latitude: loc.coords.latitude,
               longitude: loc.coords.longitude,
+              speed: loc.coords.speed,
+              heading: loc.coords.heading,
               timestamp: loc.timestamp,
             };
             setLocation({ latitude: coords.latitude, longitude: coords.longitude });
@@ -294,7 +338,7 @@ export function useLocationManager({
           } catch (e) {
             console.error('[useLocationManager] Heartbeat location fetch error:', e);
           }
-        }, 10_000);
+        }, 30_000);
       } finally {
         isStarting = false;
       }

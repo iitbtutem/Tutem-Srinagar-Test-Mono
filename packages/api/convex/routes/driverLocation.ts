@@ -42,6 +42,8 @@ export const upsertAvailableDriverLocation = internalMutation({
     driverId: v.id("driver"),
     latitude: v.number(),
     longitude: v.number(),
+    speed: v.optional(v.number()),
+    heading: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -53,6 +55,8 @@ export const upsertAvailableDriverLocation = internalMutation({
       await ctx.db.patch(existing._id, {
         latitude: args.latitude,
         longitude: args.longitude,
+        speed: args.speed,
+        heading: args.heading,
         updatedAt: Date.now(),
       });
     } else {
@@ -60,6 +64,8 @@ export const upsertAvailableDriverLocation = internalMutation({
         driverId: args.driverId,
         latitude: args.latitude,
         longitude: args.longitude,
+        speed: args.speed,
+        heading: args.heading,
         updatedAt: Date.now(),
       });
     }
@@ -103,6 +109,28 @@ export const getActiveDriverLocations = internalQuery({
   },
 });
 
+/**
+ * Fetch the latest stored location for a specific driver.
+ * Used by the HTTP polling fallback (GET /api/pusher/driver-location).
+ * Returns null if the driver has no recorded location.
+ */
+export const getDriverLocationById = internalQuery({
+  args: { driverId: v.id("driver") },
+  handler: async (ctx, { driverId }) => {
+    const loc = await ctx.db
+      .query("availableDriverLocation")
+      .withIndex("by_driver", (q) => q.eq("driverId", driverId))
+      .first();
+    if (!loc) return null;
+    return {
+      driverId: loc.driverId,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      timestamp: loc.updatedAt,
+    };
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Public SDK-callable mutations (foreground use via Convex React Native client)
 //
@@ -123,6 +151,8 @@ export const upsertAvailableDriverLocationSDK = driverMutation({
     driverId: v.id("driver"),
     latitude: v.number(),
     longitude: v.number(),
+    speed: v.optional(v.number()),
+    heading: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -134,6 +164,8 @@ export const upsertAvailableDriverLocationSDK = driverMutation({
       await ctx.db.patch(existing._id, {
         latitude: args.latitude,
         longitude: args.longitude,
+        speed: args.speed,
+        heading: args.heading,
         updatedAt: Date.now(),
       });
     } else {
@@ -141,6 +173,8 @@ export const upsertAvailableDriverLocationSDK = driverMutation({
         driverId: args.driverId,
         latitude: args.latitude,
         longitude: args.longitude,
+        speed: args.speed,
+        heading: args.heading,
         updatedAt: Date.now(),
       });
     }
@@ -192,6 +226,8 @@ export const getAvailableDriverLocations = adminQuery({
         driverId: loc.driverId,
         latitude: loc.latitude,
         longitude: loc.longitude,
+        speed: loc.speed,
+        heading: loc.heading,
         updatedAt: loc.updatedAt,
       }));
   },

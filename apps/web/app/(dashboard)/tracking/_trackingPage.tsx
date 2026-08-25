@@ -596,6 +596,15 @@ function buildInfoWindowContent(marker: DriverMarkerState): string {
       `
           : ""
       }
+
+          ${
+            marker.location.speed != null && marker.location.speed > 0
+              ? `<p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+              <span> ⏲</span>
+              ${(marker.location.speed * 3.6).toFixed(0)} km/h
+            </p>`
+              : ""
+          }
       ${
         booked && ride
           ? `

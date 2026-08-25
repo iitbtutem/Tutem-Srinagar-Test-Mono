@@ -5,7 +5,7 @@ import { api } from "@tutem/api";
 import { StatCard } from "./_statCard";
 import { RidesChart, RegistrationChart } from "./_ridesChart";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { columns as riderColumns } from "./riders/_ridersPage";
 import { columns as driverColumns } from "./drivers/_driversPage";
@@ -29,16 +29,8 @@ import {
   Wifi,
   Activity,
   Calendar,
-  Flame,
 } from "lucide-react";
-import PusherClient from "pusher-js";
-import {
-  subDays,
-  startOfDay,
-  endOfDay,
-  startOfMonth,
-  format,
-} from "date-fns";
+import { subDays, startOfDay, endOfDay, startOfMonth, format } from "date-fns";
 
 export function DashboardPage({
   initialRiders,
@@ -61,9 +53,6 @@ export function DashboardPage({
     filterFields?: any[];
   } | null>(null);
 
-  // Active drivers from Pusher live location updates
-  const [activeDriverIds, setActiveDriverIds] = useState<Set<string>>(new Set());
-
   // Date range filter state (Default: last 14 days)
   const [preset, setPreset] = useState<
     "7d" | "14d" | "30d" | "month" | "all" | "custom"
@@ -74,7 +63,7 @@ export function DashboardPage({
   const liveRiders = useAuthenticatedQuery(api.routes.admin.getAllRiders);
   const liveDrivers = useAuthenticatedQuery(api.routes.admin.getAllDrivers);
   const liveOrganizations = useAuthenticatedQuery(
-    api.routes.organizations.getAllOrganizations
+    api.routes.organizations.getAllOrganizations,
   );
   const liveRides = useAuthenticatedQuery(api.routes.admin.getAllRidesAdmin);
 
@@ -88,45 +77,6 @@ export function DashboardPage({
     drivers === undefined ||
     organizations === undefined;
 
-  // ── 1. Fetch & Subscribe to Active Drivers (via Pusher + REST API) ──────
-  useEffect(() => {
-    const fetchActive = () => {
-      fetch("/api/pusher/active-drivers")
-        .then((r) => r.json())
-        .then((d: { activeDriverIds?: string[] }) => {
-          if (d.activeDriverIds) {
-            setActiveDriverIds(new Set(d.activeDriverIds));
-          }
-        })
-        .catch(() => {});
-    };
-
-    fetchActive();
-    const pollTimer = setInterval(fetchActive, 10000); // 10s poll fallback
-
-    const appKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
-    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
-    if (!appKey || !cluster) return () => clearInterval(pollTimer);
-
-    const pusher = new PusherClient(appKey, {
-      cluster,
-      authEndpoint: "/api/pusher/auth",
-    });
-
-    const channel = pusher.subscribe("private-active-drivers");
-    channel.bind("list-updated", (d: { activeDriverIds?: string[] }) => {
-      if (d.activeDriverIds) {
-        setActiveDriverIds(new Set(d.activeDriverIds));
-      }
-    });
-
-    return () => {
-      clearInterval(pollTimer);
-      pusher.disconnect();
-    };
-  }, []);
-
-  // ── 2. Compute Date Range (Default: Last 14 days) ──────────────────────
   const { startDate, endDate, dateLabel } = useMemo(() => {
     const now = new Date();
     if (preset === "7d") {
@@ -181,7 +131,7 @@ export function DashboardPage({
     const startMs = startDate.getTime();
     const endMs = endDate.getTime();
     return rides.filter(
-      (r: any) => r.requestedAt >= startMs && r.requestedAt <= endMs
+      (r: any) => r.requestedAt >= startMs && r.requestedAt <= endMs,
     );
   }, [rides, startDate, endDate]);
 
@@ -189,7 +139,8 @@ export function DashboardPage({
   const totalRiders = riders?.length ?? 0;
   const totalDrivers = drivers?.length ?? 0;
   const onlineDrivers = drivers?.filter((d: any) => d.isOnline).length ?? 0;
-  const availableDrivers = drivers?.filter((d: any) => d.isAvailableForRide).length ?? 0;
+  const availableDrivers =
+    drivers?.filter((d: any) => d.isAvailableForRide).length ?? 0;
   const totalOrgs = organizations?.length ?? 0;
 
   // Active Rides: Status is Open, Active, or Driver Arrived
@@ -199,23 +150,18 @@ export function DashboardPage({
         (r: any) =>
           r.status === "Open" ||
           r.status === "Active" ||
-          r.status === "Driver Arrived"
+          r.status === "Driver Arrived",
       ) ?? []
     );
   }, [rides]);
 
-  // Active Drivers list (from live Pusher registry)
-  const activeDriversList = useMemo(() => {
-    return drivers?.filter((d: any) => activeDriverIds.has(d._id)) ?? [];
-  }, [drivers, activeDriverIds]);
-
   const totalRidesInPeriod = filteredRides.length;
-  const completedRidesInPeriod =
-    filteredRides.filter((r: any) => r.status === "Completed").length;
-  const cancelledRidesInPeriod =
-    filteredRides.filter(
-      (r: any) => r.status === "Canceled" || r.status === "Abort"
-    ).length;
+  const completedRidesInPeriod = filteredRides.filter(
+    (r: any) => r.status === "Completed",
+  ).length;
+  const cancelledRidesInPeriod = filteredRides.filter(
+    (r: any) => r.status === "Canceled" || r.status === "Abort",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -268,7 +214,7 @@ export function DashboardPage({
       </div>
 
       {/* Stat cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
           [...Array(10)].map((_, i) => <SkeletonCard key={i} />)
         ) : (
@@ -348,13 +294,50 @@ export function DashboardPage({
               icon={Wifi}
               color="green"
               description={`${availableDrivers} available for ride`}
-              onClick={() =>
+              onClick={() => {
+                const onlineData = (
+                  drivers?.filter((d: any) => d.isOnline) ?? []
+                ).map((d: any) => ({
+                  ...d,
+                  locationStatus: d.isAvailableForRide
+                    ? "Available"
+                    : "On Ride",
+                }));
                 setSelectedCard({
                   title: "Online Drivers",
                   type: "driver",
-                  data: drivers?.filter((d: any) => d.isOnline) ?? [],
-                  columns: driverColumns,
+                  data: onlineData,
+                  columns: [
+                    ...driverColumns,
+                    {
+                      id: "locationStatus",
+                      header: "Mode",
+                      accessorKey: "locationStatus",
+                      cell: ({ row }: any) => {
+                        const status = row.original.locationStatus as string;
+                        return (
+                          <span
+                            className={
+                              status === "Available"
+                                ? "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500"
+                                : "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500"
+                            }
+                          >
+                            {status}
+                          </span>
+                        );
+                      },
+                    },
+                  ],
                   filterFields: [
+                    {
+                      id: "locationStatus",
+                      label: "Mode",
+                      options: [
+                        { label: "Available", value: "Available" },
+                        { label: "On Ride", value: "On Ride" },
+                      ],
+                    },
                     {
                       id: "license",
                       label: "License Verification",
@@ -365,35 +348,8 @@ export function DashboardPage({
                       ],
                     },
                   ],
-                })
-              }
-            />
-
-            <StatCard
-              title="Active Drivers"
-              value={activeDriverIds.size}
-              icon={Flame}
-              color="teal"
-              description="Actively sending location"
-              onClick={() =>
-                setSelectedCard({
-                  title: "Active Drivers",
-                  type: "driver",
-                  data: activeDriversList,
-                  columns: driverColumns,
-                  filterFields: [
-                    {
-                      id: "license",
-                      label: "License Verification",
-                      options: [
-                        { label: "Pending", value: "Pending" },
-                        { label: "Verified", value: "Verified" },
-                        { label: "Rejected", value: "Rejected" },
-                      ],
-                    },
-                  ],
-                })
-              }
+                });
+              }}
             />
 
             <StatCard
@@ -506,7 +462,9 @@ export function DashboardPage({
                 setSelectedCard({
                   title: `Completed Rides (${dateLabel})`,
                   type: "ride",
-                  data: filteredRides.filter((r: any) => r.status === "Completed"),
+                  data: filteredRides.filter(
+                    (r: any) => r.status === "Completed",
+                  ),
                   columns: rideColumns,
                 })
               }
@@ -523,7 +481,7 @@ export function DashboardPage({
                   title: `Cancelled Rides (${dateLabel})`,
                   type: "ride",
                   data: filteredRides.filter(
-                    (r: any) => r.status === "Canceled" || r.status === "Abort"
+                    (r: any) => r.status === "Canceled" || r.status === "Abort",
                   ),
                   columns: rideColumns,
                   filterFields: [
