@@ -93,14 +93,16 @@ export function RideRequestCard({
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  const riderName = `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger';
+  const riderName =
+    `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() ||
+    'Passenger';
   const riderProfilePicture = ride.rider.details.profilePictureKey;
 
   return (
     <Animated.View entering={FadeInDown.delay(200)} style={animStyle} className="mb-3">
-      <View className="overflow-hidden rounded-2xl border border-violet-500/50 bg-background p-4">
+      <View className="overflow-hidden rounded-2xl border border-primary bg-background px-4 py-3">
         {/* Header */}
-        <View className="mb-3 flex-row items-start justify-between">
+        <View className="flex-row items-start justify-between">
           <View className="flex-1 flex-row items-center gap-3">
             <TouchableOpacity
               activeOpacity={0.8}
@@ -138,16 +140,16 @@ export function RideRequestCard({
         </View>
 
         {/* Route timeline */}
-        <View className="mb-3 flex-row items-stretch pl-0.5">
+        <View className="my-1.5 flex-row items-stretch pl-0.5">
           <View className="w-4 items-center">
             <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
-            <View className="my-1 w-px flex-1 bg-slate-700" />
+            <View className="w-px flex-1 bg-slate-700" />
             <View
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: colors.destination }}
             />
           </View>
-          <View className="ml-3 flex-1 gap-2.5">
+          <View className="ml-3 flex-1 gap-1">
             <Text className="text-[13px] font-medium text-slate-400" numberOfLines={1}>
               {ride.pickup?.address ?? 'Pickup location'}
             </Text>
@@ -169,7 +171,7 @@ export function RideRequestCard({
           </View>
         </View>
 
-        <View className="mt-2 flex-row gap-3">
+        <View className="mt-1.5 flex-row gap-3">
           <Button
             size="sm"
             className="flex-1 items-center justify-center rounded-2xl border-2 border-red-500/40 bg-red-500/10"
@@ -270,7 +272,9 @@ export function CurrentRideCard({
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  const riderName = `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() || 'Passenger';
+  const riderName =
+    `${ride.rider.details.firstName ?? ''} ${ride.rider.details.lastName ?? ''}`.trim() ||
+    'Passenger';
   const riderProfilePicture = ride.rider.details.profilePictureKey;
 
   return (

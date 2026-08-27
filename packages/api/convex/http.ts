@@ -117,7 +117,6 @@ http.route({
 //   • If driver is available → upsert to Convex DB (nearby driver discovery)
 //
 // The server checks the driver's current state to determine routing automatically.
-// No need to store locationMode in SecureStore on the client.
 // ---------------------------------------------------------------------------
 http.route({
   path: "/api/pusher/trigger",

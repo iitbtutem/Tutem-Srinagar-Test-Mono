@@ -8,7 +8,7 @@ export type LocationMode = 'available' | 'on-ride';
 /**
  * Start background location tracking.
  *
- * @param credentials  - driverId + user_id to persist for the headless background task
+ * @param credentials  - driverId to persist for the headless background task
  * @param mode         - 'available' or 'on-ride' (used to set GPS interval accuracy)
  *
  * The background task always sends to /api/pusher/trigger — the server determines
@@ -16,13 +16,9 @@ export type LocationMode = 'available' | 'on-ride';
  *
  * SecureStore keys written:
  *   driverId           – driver's Convex document ID
- *   user_id            – user's Convex document ID
  *   pusherTriggerUrl   – Convex /api/pusher/trigger (unified endpoint)
  */
-export const startLocationTracking = async (
-  credentials?: { driverId: string; user_id: string },
-  mode: LocationMode = 'available'
-) => {
+export const startLocationTracking = async (driverId: string, mode: LocationMode = 'available') => {
   try {
     // Foreground permission (required)
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
@@ -65,16 +61,12 @@ export const startLocationTracking = async (
     }
 
     // Always write before starting the task so the first tick reads correct values.
-    await SecureStore.setItemAsync('locationMode', mode);
     await SecureStore.setItemAsync('pusherTriggerUrl', pusherTriggerUrl);
-    if (credentials) {
-      await SecureStore.setItemAsync('driverId', credentials.driverId);
-      await SecureStore.setItemAsync('user_id', credentials.user_id);
+    if (driverId) {
+      await SecureStore.setItemAsync('driverId', driverId);
     }
 
-    console.log(
-      `[locationService] SecureStore written: mode=${mode}, driverId=${credentials?.driverId}`
-    );
+    console.log(`[locationService] SecureStore written: mode=${mode}, driverId=${driverId}`);
 
     // If background permission was denied, skip starting the background task.
     // Foreground watchPositionAsync (in useLocationManager) will handle active tracking.
@@ -98,9 +90,6 @@ export const startLocationTracking = async (
       // task registers. Without this, some devices kill the process mid-restart.
       await new Promise<void>((resolve) => setTimeout(resolve, 300));
     } else if (hasStarted) {
-      // Available mode already running — mode updated in SecureStore above, no restart needed.
-      // The background task reads locationMode from SecureStore on every tick, so it will
-      // automatically switch to the new mode on its next execution without restarting.
       console.log('[locationService] ✅ Background task already running, mode updated to:', mode);
       return true;
     }

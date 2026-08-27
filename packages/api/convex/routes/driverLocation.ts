@@ -3,7 +3,7 @@ import { internalMutation, internalQuery } from "../_generated/server";
 import { driverMutation, adminQuery } from "../helpers/sessionFunctions";
 
 // Entries older than this are considered stale and excluded from getNearbyDrivers.
-const STALE_MS = 35_000;
+const STALE_MS = 61_000;
 
 /**
  * Internal query: does this driver currently have an active ride?
@@ -24,8 +24,8 @@ export const driverHasActiveRide = internalQuery({
         q.and(
           q.neq(q.field("status"), "Completed"),
           q.neq(q.field("status"), "Canceled"),
-          q.neq(q.field("status"), "Abort")
-        )
+          q.neq(q.field("status"), "Abort"),
+        ),
       )
       .first();
     return ride !== null;

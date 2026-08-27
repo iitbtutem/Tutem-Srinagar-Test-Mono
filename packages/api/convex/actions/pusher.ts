@@ -14,8 +14,7 @@ let _pusher: Pusher | null = null;
 export function getPusher(): Pusher {
   if (!_pusher) {
     const appId =
-      process.env.PUSHER_APP_ID ||
-      process.env.EXPO_PUBLIC_PUSHER_APP_ID;
+      process.env.PUSHER_APP_ID || process.env.EXPO_PUBLIC_PUSHER_APP_ID;
     const key =
       process.env.PUSHER_APP_KEY ||
       process.env.EXPO_PUBLIC_PUSHER_APP_KEY ||
@@ -30,7 +29,7 @@ export function getPusher(): Pusher {
 
     if (!appId || !key || !secret || !cluster) {
       throw new Error(
-        "Pusher credentials missing. Set PUSHER_APP_ID, PUSHER_APP_KEY, PUSHER_APP_SECRET, PUSHER_CLUSTER in Convex env vars."
+        "Pusher credentials missing. Set PUSHER_APP_ID, PUSHER_APP_KEY, PUSHER_APP_SECRET, PUSHER_CLUSTER in Convex env vars.",
       );
     }
 
@@ -58,10 +57,12 @@ export const authorizeChannel = action({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
   },
-  handler: async (_ctx, { socketId, channelName, driverId, latitude, longitude }) => {
+  handler: async (
+    _ctx,
+    { socketId, channelName, driverId, latitude, longitude },
+  ) => {
     const isAllowed =
-      channelName.startsWith("private-") ||
-      channelName.startsWith("presence-");
+      channelName.startsWith("private-") || channelName.startsWith("presence-");
 
     if (!isAllowed) throw new Error("Unauthorized channel");
 
@@ -95,7 +96,6 @@ export const authorizeChannel = action({
  *   - If driver is available (no ride) → upsert to Convex DB (nearby driver discovery)
  *
  * The server checks the driver's current state (hasActiveRide) to determine routing.
- * This eliminates the need to store locationMode in SecureStore on the client.
  */
 export const triggerDriverLocation = action({
   args: {
@@ -107,14 +107,17 @@ export const triggerDriverLocation = action({
     timestamp: v.optional(v.number()),
     isAvailable: v.optional(v.boolean()),
   },
-  handler: async (ctx, args): Promise<{ success: boolean; mode: "on-ride" | "available" }> => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ success: boolean; mode: "on-ride" | "available" }> => {
     const now = args.timestamp ?? Date.now();
     const driverId = args.driverId;
 
     // 1. Check if driver has an active ride (server-side routing decision)
     const hasRide = await ctx.runQuery(
       internal.routes.driverLocation.driverHasActiveRide,
-      { driverId }
+      { driverId },
     );
 
     if (hasRide) {
@@ -130,7 +133,7 @@ export const triggerDriverLocation = action({
           longitude: args.longitude,
           speed: args.speed ?? undefined,
           heading: args.heading ?? undefined,
-        }
+        },
       );
 
       // Broadcast to Pusher — rider/admin receive this directly from Pusher
@@ -145,10 +148,12 @@ export const triggerDriverLocation = action({
           heading: args.heading ?? null,
           speed: args.speed ?? null,
           timestamp: now,
-        }
+        },
       );
 
-      console.log(`[pusher] 📍 ON-RIDE: Broadcast to Pusher + upserted to DB for driver ${args.driverId}`);
+      console.log(
+        `[pusher] 📍 ON-RIDE: Broadcast to Pusher + upserted to DB for driver ${args.driverId}`,
+      );
     } else {
       // ─── AVAILABLE MODE: Upsert to Convex DB ─────────────────────────────────
 
@@ -160,13 +165,15 @@ export const triggerDriverLocation = action({
           longitude: args.longitude,
           speed: args.speed ?? undefined,
           heading: args.heading ?? undefined,
-        }
+        },
       );
 
-      console.log(`[pusher] 📍 AVAILABLE: Upserted to DB for driver ${args.driverId}`);
+      console.log(
+        `[pusher] 📍 AVAILABLE: Upserted to DB for driver ${args.driverId}`,
+      );
     }
 
-    return { success: true, mode: hasRide ? 'on-ride' : 'available' };
+    return { success: true, mode: hasRide ? "on-ride" : "available" };
   },
 });
 
@@ -191,7 +198,7 @@ export const triggerInternalDriverLocation = internalAction({
         driverId,
         latitude: args.latitude,
         longitude: args.longitude,
-      }
+      },
     );
 
     const pusher = getPusher();
@@ -205,7 +212,7 @@ export const triggerInternalDriverLocation = internalAction({
         heading: args.heading ?? null,
         speed: args.speed ?? null,
         timestamp: now,
-      }
+      },
     );
 
     return { success: true };
@@ -222,7 +229,10 @@ export const getDriverLocation = action({
   args: {
     driverId: v.id("driver"),
   },
-  handler: async (ctx, { driverId }): Promise<{
+  handler: async (
+    ctx,
+    { driverId },
+  ): Promise<{
     success: boolean;
     location: {
       driverId: string;
@@ -233,7 +243,7 @@ export const getDriverLocation = action({
   }> => {
     const location = await ctx.runQuery(
       internal.routes.driverLocation.getDriverLocationById,
-      { driverId }
+      { driverId },
     );
     return { success: true, location };
   },

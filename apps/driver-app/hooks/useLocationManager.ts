@@ -20,29 +20,29 @@ const PUSHER_TRIGGER_URL = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL ?? '';
 
 /**
  * Calculate optimal send interval based on driver's speed.
- * 
+ *
  * For available mode (driver waiting for rides):
  * - Speed < 1 m/s (~3.6 km/h, stationary): 60 seconds
  * - Speed < 5.56 m/s (20 km/h): 45 seconds
  * - Speed < 11.11 m/s (40 km/h): 30 seconds
  * - Speed >= 11.11 m/s (40+ km/h): 20 seconds
- * 
+ *
  * For on-ride mode (active ride):
  * - Speed < 10 m/s (~36 km/h): 20 seconds
  * - Speed < 12.5 m/s (~45 km/h): 15 seconds
  * - Speed >= 12.5 m/s: 10 seconds
  */
 const getOptimalIntervalAvailable = (speed: number | null | undefined): number => {
-  if (!speed || speed < 1) return 60_000;      // Stationary: 60s
-  if (speed < 5.56) return 45_000;             // < 20 km/h: 45s
-  if (speed < 11.11) return 30_000;            // < 40 km/h: 30s
-  return 20_000;                               // >= 40 km/h: 20s
+  if (!speed || speed < 1) return 60_000; // Stationary: 60s
+  if (speed < 5.56) return 45_000; // < 20 km/h: 45s
+  if (speed < 11.11) return 30_000; // < 40 km/h: 30s
+  return 20_000; // >= 40 km/h: 20s
 };
 
 const getOptimalIntervalOnRide = (speed: number | null | undefined): number => {
   if (!speed || speed < 10) return 20_000; // Slow or stationary: 20s
-  if (speed < 12.5) return 15_000;           // Medium speed: 15s
-  return 10_000;                           // Fast: 10s
+  if (speed < 12.5) return 15_000; // Medium speed: 15s
+  return 10_000; // Fast: 10s
 };
 
 interface LocationManagerOptions {
@@ -86,7 +86,7 @@ export function useLocationManager({
     if (shouldTrack) {
       const currentMode = hasActiveRide ? 'on-ride' : 'available';
       console.log('[useLocationManager] Starting background location service, mode:', currentMode);
-      startLocationTracking({ driverId, user_id: userId }, currentMode);
+      startLocationTracking(driverId, currentMode);
     } else {
       console.log('[useLocationManager] Stopping background location service...');
       stopLocationTracking();
@@ -99,7 +99,7 @@ export function useLocationManager({
   //    Also reconnects when the app returns to foreground (Android can drop WS in background).
   useEffect(() => {
     if (!driverId) return;
-    
+
     // Only initialize Pusher for on-ride drivers
     if (!hasActiveRide) {
       // Not on ride — disconnect Pusher if connected
@@ -168,8 +168,8 @@ export function useLocationManager({
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let appStateSub: ReturnType<typeof AppState.addEventListener> | null = null;
     let isCancelled = false;
-    let lastDbSentAt = 0;      // throttle for available-mode DB upserts
-    let lastOnRideSentAt = 0;  // throttle for on-ride Pusher publishes
+    let lastDbSentAt = 0; // throttle for available-mode DB upserts
+    let lastOnRideSentAt = 0; // throttle for on-ride Pusher publishes
     // Concurrency guard — prevents multiple concurrent startForegroundTracking calls.
     // Without this, rapid AppState 'active' events or fast effect re-runs stack
     // multiple watchPositionAsync subscriptions that all fire concurrently, causing
@@ -216,7 +216,9 @@ export function useLocationManager({
           console.error('[useLocationManager] Convex upsert failed:', err);
         });
 
-        console.log(`[useLocationManager] 📍 Upserted location via Convex SDK (available mode, interval: ${adaptiveInterval}ms)`);
+        console.log(
+          `[useLocationManager] 📍 Upserted location via Convex SDK (available mode, interval: ${adaptiveInterval}ms)`
+        );
       } else if (hasActiveRide) {
         // ── On-ride mode — adaptive throttle based on speed ────────────────────────
         const now = Date.now();
@@ -239,7 +241,9 @@ export function useLocationManager({
         if (isNativePusherReadyRef.current) {
           sentViaNative = await triggerLocation(payload);
           if (!sentViaNative) {
-            console.warn('[useLocationManager] Native Pusher trigger failed — falling back to HTTP.');
+            console.warn(
+              '[useLocationManager] Native Pusher trigger failed — falling back to HTTP.'
+            );
           }
         }
 
@@ -365,4 +369,3 @@ export function useLocationManager({
     };
   }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, setLocation, upsertLocation]);
 }
-

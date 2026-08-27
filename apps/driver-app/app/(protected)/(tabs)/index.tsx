@@ -8,14 +8,19 @@ import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
 import { Link, Redirect } from 'expo-router';
 import { Text, Button, Loader, ImageViewerModal } from '@tutem/ui';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
 import { useLocationManager } from '@/hooks/useLocationManager';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
-import { useAuthenticatedQuery, useAuthenticatedAction } from '@/hooks/customApi';
+import {
+  useAuthenticatedQuery,
+  useAuthenticatedAction,
+  useAuthenticatedMutation,
+} from '@/hooks/customApi';
+import { cn } from '@/lib/utils';
 
 // Types
 
@@ -93,7 +98,6 @@ export default function Home() {
 export const RideRequests = memo(
   ({ driver, currentRide }: { driver: Driver; currentRide: CurrentRide | null }) => {
     const { showToast } = useToast();
-    const { sessionToken } = useAuth();
     const driverLocation = useDriverLiveLocation();
 
     const vehicle = useAuthenticatedQuery(
@@ -107,12 +111,15 @@ export const RideRequests = memo(
     );
     const acceptRide = useAuthenticatedAction(api.actions.ride.acceptRideAction);
     const rejectRide = useAuthenticatedAction(api.actions.ride.rejectRide);
+    const toggleGenderMatching = useAuthenticatedMutation(api.routes.driver.toggleGenderMatching);
 
     // Map & location
     const mapRef = useRef<MapView>(null);
 
     const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
-    const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
+    const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
+      null
+    );
 
     const { colorScheme: currentTheme } = useColorScheme();
     const isDark = currentTheme === 'dark';
@@ -210,6 +217,11 @@ export const RideRequests = memo(
         });
     };
 
+    const toggleGenderMatch = async () => {
+      if (driver.driverDetails === null) return;
+      await toggleGenderMatching({ id: driver.driverDetails._id });
+    };
+
     return (
       <View className="flex-1 bg-background">
         {actionLoading && (
@@ -265,7 +277,44 @@ export const RideRequests = memo(
               style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
               className="flex-row items-start justify-between"
               pointerEvents="box-none">
-              <View />
+              {/* Gender Toggle */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className={cn(
+                  'flex-row items-center gap-2 rounded-xl border border-slate-300 px-2.5 py-1.5 shadow-lg',
+                  {
+                    'bg-green-100': driver.driverDetails?.genderMatching,
+                    'bg-red-100': !driver.driverDetails?.genderMatching,
+                  }
+                )}
+                onPress={async () => {
+                  if (!driver.driverDetails) return;
+                  try {
+                    await toggleGenderMatch();
+                  } catch (error: any) {
+                    console.log('error', error);
+                    showToast({
+                      type: 'error',
+                      title: 'Failed',
+                      description: error.data ?? 'Failed to switch',
+                    });
+                  }
+                }}>
+                <View
+                  className={cn('h-7 w-7 items-center justify-center rounded-full', {
+                    'bg-green-500': driver.driverDetails?.genderMatching,
+                    'bg-red-600': !driver.driverDetails?.genderMatching,
+                  })}>
+                  <Feather name="users" size={16} color="white" />
+                </View>
+
+                <View>
+                  <Text className="text-[10px] text-gray-500">Gender Match</Text>
+                  <Text className="text-xs font-bold text-primary">
+                    {driver.driverDetails?.genderMatching ? 'Same' : 'Any'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => fitMap([driverLocation].filter(Boolean) as Cords[])}
                 activeOpacity={0.8}
@@ -330,10 +379,16 @@ export const RideRequests = memo(
                     ))}
                   </View>
                 </View>
-              ) : (
+              ) : driver.driverDetails?.isOnline ? (
                 <View className="absolute bottom-0 w-full bg-background py-2">
                   <Text className="text-center text-sm font-semibold text-primary">
                     No ride requests{'\n'}We'll notify you when there are!
+                  </Text>
+                </View>
+              ) : (
+                <View className="absolute bottom-0 w-full bg-background py-2">
+                  <Text className="text-center text-sm font-semibold text-destructive">
+                    You are offline{'\n'}Go online to receive ride requests!
                   </Text>
                 </View>
               )}
