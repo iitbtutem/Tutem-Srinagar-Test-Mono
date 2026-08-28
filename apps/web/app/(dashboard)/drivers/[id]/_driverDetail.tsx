@@ -51,6 +51,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "convex/react";
 
 export function DriverDetailPage({
   id,
@@ -64,6 +65,8 @@ export function DriverDetailPage({
   const liveDriver = useAuthenticatedQuery(api.routes.admin.getDriverById, {
     id: id as any,
   }) as any;
+
+  const ageSettings = useQuery(api.routes.settings.getUserAgeSettings) as any;
 
   const driver = liveDriver ?? initialDriver;
 
@@ -995,11 +998,33 @@ export function DriverDetailPage({
                     }
                     max={new Date().toISOString().split("T")[0]}
                   />
-                  {editForm.dob && calculateAge(editForm.dob) < 18 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      ⚠ Driver must be at least 18 years old
-                    </p>
-                  )}
+                  {editForm.dob &&
+                    ageSettings &&
+                    (() => {
+                      const age = calculateAge(editForm.dob);
+                      const minAge = ageSettings.minDriverAge;
+                      const maxAge = ageSettings.maxDriverAge;
+
+                      if (age < minAge) {
+                        return (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            ⚠ Driver must be at least {minAge} years old.
+                            Current age: {age}
+                          </p>
+                        );
+                      }
+
+                      if (maxAge && age > maxAge) {
+                        return (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            ⚠ Driver must be at most {maxAge} years old. Current
+                            age: {age}
+                          </p>
+                        );
+                      }
+
+                      return null;
+                    })()}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-phone">Phone Number</Label>

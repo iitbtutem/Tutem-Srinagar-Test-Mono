@@ -8,6 +8,7 @@ import {
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { validateAge, getAgeSettingsOrThrow } from "../helpers/validation";
 
 // ─── Riders ────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,10 @@ export const updateRiderAdmin = adminMutation({
   handler: async (ctx, args) => {
     const rider = await ctx.db.get(args.riderId);
     if (!rider) throw new ConvexError("Rider not found");
+
+    // Validate rider age based on DB settings
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(args.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
 
     // Check phone number uniqueness if changed
     const currentUser = await ctx.db.get(rider.userId);
@@ -465,6 +470,10 @@ export const updateDriverAdmin = adminMutation({
   handler: async (ctx, args) => {
     const driver = await ctx.db.get(args.driverId);
     if (!driver) throw new ConvexError("Driver not found");
+
+    // Validate driver age based on DB settings
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(args.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
 
     // Check phone number uniqueness if changed
     const currentUser = await ctx.db.get(driver.userId);

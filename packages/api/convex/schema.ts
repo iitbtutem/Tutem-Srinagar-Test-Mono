@@ -219,6 +219,13 @@ export default defineSchema({
     cancellationPenalty: v.optional(v.number()),
   }),
 
+  userAgeSettings: defineTable({
+    minDriverAge: v.number(),
+    maxDriverAge: v.optional(v.number()),
+    minRiderAge: v.number(),
+    maxRiderAge: v.optional(v.number()),
+  }),
+
   otpSession: defineTable({
     phoneNumber: v.string(),
     hashedOtp: v.string(),

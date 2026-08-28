@@ -5,6 +5,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { internal } from "../_generated/api";
+import { validateAge, getAgeSettingsOrThrow } from "../helpers/validation";
 
 export const login = mutation({
   args: {
@@ -86,6 +87,10 @@ export const addDriver = mutation({
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Validate driver age based on DB settings
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(args.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
+
     let existingUser = await ctx.db
       .query("user")
       .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
@@ -166,6 +171,10 @@ export const registerAsDriver = driverMutation({
       .first();
     if (existingDriver !== null)
       throw new ConvexError("Driver profile already exists");
+
+    // Validate driver age based on DB settings (user already exists with DOB)
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(ctx.user.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
 
     const organization = await ctx.db.get(args.organizationId);
 

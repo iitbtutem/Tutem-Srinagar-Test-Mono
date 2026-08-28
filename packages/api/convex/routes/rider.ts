@@ -8,6 +8,7 @@ import {
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { validateAge, getAgeSettingsOrThrow } from "../helpers/validation";
 
 export const registerExpoPushToken = riderMutation({
   args: {
@@ -48,6 +49,10 @@ export const addRider = mutation({
     expoPushToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Validate rider age based on DB settings
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(args.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
+
     const existingUser = await ctx.db
       .query("user")
       .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", args.phoneNumber))
@@ -102,6 +107,10 @@ export const registerAsRider = riderMutation({
       .first();
     if (existingRider !== null)
       throw new ConvexError("Rider profile already exists");
+
+    // Validate rider age based on DB settings (user already exists with DOB)
+    const ageSettings = await getAgeSettingsOrThrow(ctx);
+    validateAge(ctx.user.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
 
     await ctx.db.insert("rider", {
       isVerified: "Pending",

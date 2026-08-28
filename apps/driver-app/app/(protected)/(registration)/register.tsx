@@ -24,7 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@tutem/api';
-import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -87,6 +87,7 @@ export default function Register() {
     api.routes.organizations.getNearbyOrganization,
     initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
   );
+  const ageSettings = useQuery(api.routes.settings.getUserAgeSettings);
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const createSession = useAction(api.actions.auth.createSessionForUser);
@@ -128,6 +129,21 @@ export default function Register() {
   const requiresLicenseImage = selectedOrganization?.isLicenseVerficationRequired ?? false;
 
   const snapPoints = useMemo(() => ['35%'], []);
+
+  const dobMinDate = useMemo(
+    () =>
+      ageSettings?.maxDriverAge != null
+        ? subYears(new Date(), ageSettings.maxDriverAge)
+        : undefined,
+    [ageSettings?.maxDriverAge]
+  );
+  const dobMaxDate = useMemo(
+    () =>
+      ageSettings?.minDriverAge != null
+        ? subYears(new Date(), ageSettings.minDriverAge)
+        : undefined,
+    [ageSettings?.minDriverAge]
+  );
 
   const handlePick = async (source: 'camera' | 'gallery') => {
     bottomSheetRef.current?.close();
@@ -238,6 +254,7 @@ export default function Register() {
   }, []);
 
   if (driverIsLoading === undefined) return <LoadingScreen message="Loading account…" />;
+  if (ageSettings === undefined) return <LoadingScreen message="Loading…" />;
 
   if (driver && sessionToken) return <Redirect href="/" />;
 
@@ -256,9 +273,13 @@ export default function Register() {
         contentContainerStyle={{ flexGrow: 1 }}>
         <Animated.View
           entering={FadeInRight.delay(300).duration(400)}
-          className="flex-1 bg-background">
-          <Text className="my-4 mb-2 px-3 text-lg font-semibold">Fill in your details</Text>
-          <View className="gap-3 px-3 pb-20 pt-2">
+          className="flex-1 bg-background px-4">
+          <Text className="mt-2 text-center text-xl font-bold text-primary">Registration</Text>
+
+          <Text className="mb-3 mt-0.5 px-6 text-center text-sm text-muted-foreground">
+            Fill in your details to create your account.
+          </Text>
+          <View className="gap-3 pb-20">
             {/* Organizations Select */}
             <View>
               <View className="mb-1 flex-row items-center gap-1.5">
@@ -345,7 +366,7 @@ export default function Register() {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     ref={lastNameRef}
-                    placeholder="Kholi"
+                    placeholder="Last Name"
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
@@ -400,7 +421,8 @@ export default function Register() {
                         field.onChange(date);
                         licenseRef.current?.focus();
                       }}
-                      maximumDate={subYears(new Date(), 18)}
+                      minimumDate={dobMinDate}
+                      maximumDate={dobMaxDate}
                     />
                     {fieldState.error && (
                       <Text className="text-md text-destructive">{fieldState.error.message}</Text>
@@ -534,6 +556,10 @@ export default function Register() {
             <Button onPress={onSubmit} disabled={isSubmitting} className="my-4">
               <Text>Submit</Text>
             </Button>
+
+            <Link href={'/signin'} asChild replace>
+              <Text className="text-center text-sm font-semibold text-primary">Change Number?</Text>
+            </Link>
           </View>
         </Animated.View>
       </KeyboardAwareScrollView>

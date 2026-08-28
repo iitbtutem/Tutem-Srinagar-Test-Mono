@@ -1,6 +1,7 @@
 import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
 import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { subYears } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -17,10 +18,10 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useMutation, useAction } from 'convex/react';
+import { useMutation, useAction, useQuery } from 'convex/react';
 import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api } from '@tutem/api';
-import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { GENDER } from '@/constants';
 import { useToast } from '@/components/CustomToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,6 +54,18 @@ export default function Register() {
   const registerExpoPushToken = useAuthenticatedMutation(api.routes.rider.registerExpoPushToken);
   const createSession = useAction(api.actions.auth.createSessionForUser);
   const { rider, isLoading: riderIsLoading } = useRider();
+  const ageSettings = useQuery(api.routes.settings.getUserAgeSettings);
+
+  const dobMinDate = useMemo(
+    () =>
+      ageSettings?.maxRiderAge != null ? subYears(new Date(), ageSettings.maxRiderAge) : undefined,
+    [ageSettings?.maxRiderAge]
+  );
+  const dobMaxDate = useMemo(
+    () =>
+      ageSettings?.minRiderAge != null ? subYears(new Date(), ageSettings.minRiderAge) : undefined,
+    [ageSettings?.minRiderAge]
+  );
 
   console.log('in register screen');
 
@@ -111,16 +124,21 @@ export default function Register() {
   }, []);
 
   if (riderIsLoading === undefined) return <ActivityIndicator />;
+  if (ageSettings === undefined) return <ActivityIndicator />;
 
   if (rider) return <Redirect href="/" />;
 
   return (
-    <ScrollView className="flex-1 bg-background">
+    <ScrollView className="flex-1 bg-background px-4">
       <Stack.Screen options={{ headerShown: false }} />
       {isSubmitting && <Loader subtitle="Submitting..." />}
 
-      <Text className="my-4 mb-2 px-3 text-lg font-semibold">Fill in your details</Text>
-      <View className="gap-3 px-3 pb-20 pt-2">
+      <Text className="mt-2 text-center text-xl font-bold text-primary">Registration</Text>
+
+      <Text className="mb-3 mt-0.5 px-6 text-center text-sm text-muted-foreground">
+        Fill in your details to create your account.
+      </Text>
+      <View className="gap-3 pb-20">
         {/* First name */}
         <View>
           <View className="mb-1 flex-row items-center gap-1.5">
@@ -132,7 +150,7 @@ export default function Register() {
             rules={{ required: true }}
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                placeholder="John"
+                placeholder="First Name"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -159,7 +177,7 @@ export default function Register() {
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 ref={lastNameRef}
-                placeholder="Doe"
+                placeholder="Last Name"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -211,6 +229,8 @@ export default function Register() {
                   setDate={(date) => {
                     field.onChange(date);
                   }}
+                  minimumDate={dobMinDate}
+                  maximumDate={dobMaxDate}
                 />
                 {fieldState.error && (
                   <Text className="text-md text-destructive">{fieldState.error.message}</Text>
@@ -255,6 +275,10 @@ export default function Register() {
         <Button onPress={onSubmit} className="my-4">
           <Text>Submit</Text>
         </Button>
+
+        <Link href={'/signin'} asChild replace>
+          <Text className="text-center text-sm font-semibold text-primary">Change Number?</Text>
+        </Link>
       </View>
     </ScrollView>
   );
