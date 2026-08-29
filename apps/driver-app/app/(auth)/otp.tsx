@@ -116,7 +116,7 @@ export default function OtpScreen() {
       </Text>
 
       {/* OTP input boxes */}
-      <View className="my-6 w-full flex-row gap-2">
+      <View className="my-6 w-full flex-row items-center justify-center gap-2">
         {inputArr.map((_, idx) => (
           <Input
             key={idx}
@@ -170,16 +170,14 @@ export default function OtpScreen() {
             <Text>Resend{timer > 0 ? ` (0:${String(timer).padStart(2, '0')})` : null}</Text>
           </Button>
         </View>
-      </View>
 
-      {/* Back button */}
-      <Button
-        className="h-18 mt-auto self-start rounded-3xl bg-slate-950/5"
-        onPress={() => router.canGoBack() && router.back()}
-        disabled={loading}>
-        <ArrowLeft size={20} color="#000" strokeWidth={3} />
-        <Text className="text-base text-black">Back</Text>
-      </Button>
+        <Button
+          variant="link"
+          onPress={() => router.canGoBack() && router.back()}
+          className="mt-auto">
+          <Text className="text-center text-sm font-semibold text-primary">Change Number?</Text>
+        </Button>
+      </View>
 
       {loading && <Loader subtitle="verifying" />}
     </View>

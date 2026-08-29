@@ -46,7 +46,7 @@ export default function HomeScreenHeader({ user }: { user: User }) {
           />
 
           <View className="flex-1 items-start">
-            <Text className="text-md text-title font-semibold">{`${user.firstName}`}</Text>
+            <Text className="text-md text-title font-semibold capitalize">{`${user.firstName.toLowerCase()}`}</Text>
             <Text className="text-title/80 text-xs italic">{`${user.driverDetails?.isAvailableForRide ? 'Available' : 'Not Available'}`}</Text>
           </View>
         </View>

@@ -40,7 +40,9 @@ type PickupImageKey = 'rcImageKey' | 'insuranceImageKey';
 const vehicleSchema = z.object({
   registrationNumber: z
     .string('Registration number is required.')
-    .min(10, 'Registration number must be atleast 10 characters long.'),
+    .trim()
+    .min(5, 'Registration number must be at least 5 characters')
+    .max(15, 'Registration number must not exceed 15 characters'),
   type: z.enum(VEHICLE_TYPE),
   model: z
     .string('Enter your vehicle model')
@@ -246,7 +248,9 @@ export default function CreateVehicle() {
             <View>
               <View className="mb-1 flex-row items-center gap-1.5">
                 <Feather name="truck" size={14} color="gray" />
-                <Text className="text-sm font-medium text-muted-foreground">Vehicle Model</Text>
+                <Text className="text-sm font-medium text-muted-foreground">
+                  Vehicle Make & Model
+                </Text>
               </View>
               <Controller
                 control={control}
@@ -254,7 +258,7 @@ export default function CreateVehicle() {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     ref={modelRef}
-                    placeholder="e.g. Toyota Corolla"
+                    placeholder="e.g. Suzuki WagonR"
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}

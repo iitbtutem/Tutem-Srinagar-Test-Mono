@@ -77,7 +77,7 @@ function ProfileDropdown({ user }: { user: User }) {
           </View>
           <View>
             <Text className="text-title text-sm font-semibold">Hello</Text>
-            <Text className="text-md text-title font-semibold">{`${user.firstName} ${user.lastName}`}</Text>
+            <Text className="text-md text-title font-semibold capitalize">{`${user.firstName.toLowerCase()} ${user.lastName?.toLowerCase()}`}</Text>
           </View>
         </TouchableOpacity>
       </DropdownMenuTrigger>
