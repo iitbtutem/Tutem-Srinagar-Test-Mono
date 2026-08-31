@@ -825,6 +825,9 @@ export default function WhereTo() {
           userLocationUpdateInterval={5000}
           style={{ height: '100%', width: 'auto' }}
           onRegionChangeComplete={onRegionChangeComplete}
+          onPanDrag={() => {
+            if (sheetState === 'FULL') setSheetIndex(0);
+          }}
           initialRegion={{
             ...currentLocation,
             latitudeDelta: 0.3,
@@ -1224,6 +1227,14 @@ export default function WhereTo() {
                       </View>
                     </TouchableOpacity>
                   </View>
+
+                  {/* Edit Route button */}
+                  <TouchableOpacity
+                    onPress={handleBackToPlanning}
+                    className="mb-2 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 py-2.5">
+                    <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.pickup} />
+                    <Text className="text-sm font-semibold text-primary">Edit Route</Text>
+                  </TouchableOpacity>
 
                   {/* Confirm button */}
                   <Button
