@@ -789,8 +789,9 @@ export default function WhereTo() {
         fare: selectedDriver.fare,
       });
       showToast({
-        title: 'Ride booked successfully',
-        type: 'success',
+        title: 'Ride requested',
+        description: 'Wait for driver to accept',
+        type: 'info',
       });
       if (router.canDismiss()) router.dismissAll();
       router.push({ pathname: '/ride/rideRequest', params: { id: rideId } });
