@@ -244,8 +244,8 @@ export default defineSchema({
     .index("by_userId", ["userId"]),
 
   // Active driver locations (available + online only)
-  // One row per driver — upserted every ~30s, deleted when driver goes unavailable/offline.
-  // updatedAt is used to filter stale entries in getNearbyDrivers (> 35s old = stale).
+  // One row per driver — upserted every 60 or 45 or 30s based on driver speed, deleted when driver goes unavailable/offline.
+  // updatedAt is used to filter stale entries in getNearbyDrivers (> 65s old = stale).
   availableDriverLocation: defineTable({
     driverId: v.id("driver"),
     latitude: v.number(),
@@ -254,4 +254,14 @@ export default defineSchema({
     heading: v.optional(v.number()), // degrees
     updatedAt: v.number(), // Unix ms
   }).index("by_driver", ["driverId"]),
+
+  // Last 5 locations a rider has searched (pickup or destination).
+  // Deduplicated by title; newest entry wins and rises to the top.
+  // Ordered by built-in _creationTime (no extra timestamp needed).
+  riderRecentLocation: defineTable({
+    riderId: v.id("rider"),
+    title: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+  }).index("by_rider", ["riderId"]),
 });

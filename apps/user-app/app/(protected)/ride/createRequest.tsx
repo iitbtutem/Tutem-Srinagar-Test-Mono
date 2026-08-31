@@ -1,7 +1,14 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import uuid from 'react-native-uuid';
 import Constants from 'expo-constants';
-import { View, TouchableOpacity, Keyboard, ActivityIndicator, BackHandler, Image } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  Keyboard,
+  ActivityIndicator,
+  BackHandler,
+  Image,
+} from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -23,7 +30,11 @@ import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { cn, distanceFormat, formatFare } from '@/lib/utils';
-import { useAuthenticatedAction } from '@/hooks/customApi';
+import {
+  useAuthenticatedAction,
+  useAuthenticatedMutation,
+  useAuthenticatedQuery,
+} from '@/hooks/customApi';
 import { api } from '@tutem/api';
 import { FunctionReturnType } from 'convex/server';
 import { VEHICLE_CLASS } from '../../../../../packages/api/convex/CONSTANTS';
@@ -352,15 +363,21 @@ export default function WhereTo() {
   const [mapSelectionMode, setMapSelectionMode] = useState<'pickup' | 'destination' | null>(
     'destination'
   );
-  const [isSetLocationExpanded, setIsSetLocationExpanded] = useState(false);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isUpdatingFromMap, setIsUpdatingFromMap] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
   const [isSearchingDrivers, setIsSearchingDrivers] = useState(false);
-  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(null);
+  const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
+    null
+  );
 
   const getNearbyDriversAction = useAuthenticatedAction(api.actions.nearbyDrivers.getNearbyDrivers);
+  const saveRecentLocation = useAuthenticatedMutation(api.routes.rider.saveRecentLocation);
+  const recentLocations = useAuthenticatedQuery(
+    api.routes.rider.getRecentLocations,
+    rider?.riderDetails?._id ? { riderId: rider.riderDetails._id } : 'skip'
+  );
 
   // Track if we're in driver selection mode
   const [showDrivers, setShowDrivers] = useState(false);
@@ -481,17 +498,25 @@ export default function WhereTo() {
 
   const handlePickupSelect = async (data: any, details: any = null) => {
     if (details?.geometry?.location) {
+      const title =
+        data.description || data.structured_formatting?.main_text || 'Selected Location';
       const coords = {
         latitude: details.geometry.location.lat,
         longitude: details.geometry.location.lng,
       };
-      setPickupLocation({
-        title: data.description || data.structured_formatting?.main_text || 'Selected Location',
-        coords,
-      });
+      setPickupLocation({ title, coords });
       fitMap(coords);
-
       setMapSelectionMode(null);
+
+      // Persist to recent locations
+      if (rider?.riderDetails?._id) {
+        saveRecentLocation({
+          riderId: rider.riderDetails._id,
+          title,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        }).catch(() => {});
+      }
 
       if (destination) {
         setShowDrivers(true);
@@ -504,16 +529,24 @@ export default function WhereTo() {
 
   const handleDestinationSelect = async (data: any, details: any = null) => {
     if (details?.geometry?.location) {
+      const title =
+        data.description || data.structured_formatting?.main_text || 'Selected Destination';
       const dropoffCoords = {
         latitude: details.geometry.location.lat,
         longitude: details.geometry.location.lng,
       };
-      setDestination({
-        title: data.description || data.structured_formatting?.main_text || 'Selected Destination',
-        coords: dropoffCoords,
-      });
-
+      setDestination({ title, coords: dropoffCoords });
       fitMap(dropoffCoords);
+
+      // Persist to recent locations
+      if (rider?.riderDetails?._id) {
+        saveRecentLocation({
+          riderId: rider.riderDetails._id,
+          title,
+          latitude: dropoffCoords.latitude,
+          longitude: dropoffCoords.longitude,
+        }).catch(() => {});
+      }
 
       // If pickup location is null, set it to current location
       if (!pickupLocation && !isPickupSetAutomatically) {
@@ -547,21 +580,19 @@ export default function WhereTo() {
     if (!tempLocation) return;
 
     const { title, latitude, longitude } = tempLocation;
+    // Capture mode before any state updates so the setTimeout closure is reliable
+    const mode = mapSelectionMode;
     let isBoth = false;
 
-    if (mapSelectionMode === 'pickup') {
+    if (mode === 'pickup') {
       setPickupLocation({ title, coords: { latitude, longitude } });
-      pickupRef.current?.setAddressText(title);
-
       if (destination) {
         setShowDrivers(true);
         setHasSearchedDrivers(false);
         isBoth = true;
       }
-    } else if (mapSelectionMode === 'destination') {
+    } else if (mode === 'destination') {
       setDestination({ title, coords: { latitude, longitude } });
-      destinationRef.current?.setAddressText(title);
-
       if (pickupLocation) {
         setShowDrivers(true);
         setHasSearchedDrivers(false);
@@ -574,12 +605,33 @@ export default function WhereTo() {
       }
     }
 
+    // Persist confirmed map pin to recent locations
+    if (rider?.riderDetails?._id) {
+      saveRecentLocation({
+        riderId: rider.riderDetails._id,
+        title,
+        latitude,
+        longitude,
+      }).catch(() => {});
+    }
+
     setTempLocation(null);
-    setSheetIndex(isBoth || (mapSelectionMode === 'destination' && pickupLocation) ? 0 : 1);
+    setSheetIndex(isBoth || (mode === 'destination' && pickupLocation) ? 0 : 1);
     setMapSelectionMode(null);
+
+    // Delay so the sheet/inputs are mounted before we interact with them
     setTimeout(() => {
-      if (mapSelectionMode === 'pickup') pickupRef.current?.blur();
-      else if (mapSelectionMode === 'destination') destinationRef.current?.blur();
+      if (mode === 'pickup') {
+        pickupRef.current?.setAddressText(title);
+        pickupRef.current?.blur();
+        // If no destination yet, focus destination so the user can type it
+        if (!destination) {
+          destinationRef.current?.focus();
+        }
+      } else if (mode === 'destination') {
+        destinationRef.current?.setAddressText(title);
+        destinationRef.current?.blur();
+      }
     }, 300);
   };
 
@@ -684,10 +736,6 @@ export default function WhereTo() {
 
     return () => backHandler.remove();
   }, [showDrivers, confirmSheetOpen, handleBackToPlanning]);
-
-  const rotationStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: withTiming(isSetLocationExpanded ? '180deg' : '0deg') }],
-  }));
 
   const handleSheetChanges = useCallback((index: number) => {
     setSheetIndex(index);
@@ -1072,10 +1120,60 @@ export default function WhereTo() {
                     </View>
                   </View>
 
+                  {/* Recent locations */}
+                  {recentLocations && recentLocations.length > 0 && (
+                    <View className="-z-10 mt-4 px-4">
+                      <View className="mb-1 flex-row items-center gap-1.5">
+                        <Ionicons name="time-outline" size={14} color="#9ca3af" />
+                        <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Recent
+                        </Text>
+                      </View>
+                      {recentLocations.map((loc) => (
+                        <TouchableOpacity
+                          key={loc._id}
+                          onPress={() => {
+                            const coords = { latitude: loc.latitude, longitude: loc.longitude };
+                            if (mapSelectionMode === 'pickup') {
+                              setPickupLocation({ title: loc.title, coords });
+                              pickupRef.current?.setAddressText(loc.title);
+                              fitMap(coords);
+                              setMapSelectionMode(null);
+                              if (destination) {
+                                setShowDrivers(true);
+                                setHasSearchedDrivers(false);
+                                setSheetIndex(0);
+                                Keyboard.dismiss();
+                              }
+                            } else {
+                              setDestination({ title: loc.title, coords });
+                              destinationRef.current?.setAddressText(loc.title);
+                              fitMap(coords);
+                              setMapSelectionMode(null);
+                              setShowDrivers(true);
+                              setHasSearchedDrivers(false);
+                              setSheetIndex(0);
+                              Keyboard.dismiss();
+                            }
+                          }}
+                          className="flex-row items-center gap-3 border-b border-muted/30 py-1.5">
+                          <View className="h-8 w-8 items-center justify-center rounded-full bg-muted/30">
+                            <Ionicons name="time-outline" size={16} color="#6b7280" />
+                          </View>
+                          <Text
+                            numberOfLines={1}
+                            className="flex-1 text-sm font-medium text-foreground">
+                            {loc.title}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
                   {/* Set location on map accordion */}
-                  <View className="-z-10 mt-12 px-4">
+                  <View className="-z-10 mt-2 px-4">
                     <TouchableOpacity
-                      onPress={() => setIsSetLocationExpanded(!isSetLocationExpanded)}
+                      onPress={() => setSheetIndex(0)}
                       className="flex-row items-center py-2">
                       <View className="mr-3 w-10 items-center justify-center">
                         <MaterialIcons name="location-pin" size={20} color={'black'} />
@@ -1083,56 +1181,7 @@ export default function WhereTo() {
                       <Text className="flex-1 text-base font-bold text-foreground">
                         Set location on map
                       </Text>
-                      <Animated.View style={rotationStyle}>
-                        <Feather name="chevron-down" size={20} color={'black'} />
-                      </Animated.View>
                     </TouchableOpacity>
-
-                    {isSetLocationExpanded && (
-                      <View className="ml-10 gap-2 pb-4">
-                        <Button
-                          variant="ghost"
-                          className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
-                          onPress={async () => {
-                            setMapSelectionMode('pickup');
-                            setSheetIndex(0);
-                            setHasSearchedDrivers(false);
-                            if (pickupLocation?.coords) {
-                              fitMap(pickupLocation.coords, 500);
-                            } else {
-                              fitCurrentMapToCenter();
-                            }
-                            setTimeout(() => Keyboard.dismiss(), 100);
-                          }}>
-                          <View
-                            className="mr-2 h-2 w-2 rounded-full"
-                            style={{ backgroundColor: colors.pickup }}
-                          />
-                          <Text className="font-semibold text-foreground">Pick up</Text>
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          className="h-auto flex-row justify-start rounded-xl bg-muted/20 px-4 py-2"
-                          onPress={async () => {
-                            setMapSelectionMode('destination');
-                            setSheetIndex(0);
-                            setHasSearchedDrivers(false);
-                            if (destination?.coords) {
-                              fitMap(destination.coords, 500);
-                            } else {
-                              fitCurrentMapToCenter();
-                            }
-                            setTimeout(() => Keyboard.dismiss(), 100);
-                          }}>
-                          <View
-                            className="mr-2 h-2 w-2 rounded-full"
-                            style={{ backgroundColor: colors.destination }}
-                          />
-                          <Text className="font-semibold text-foreground">Destination</Text>
-                        </Button>
-                      </View>
-                    )}
                   </View>
                 </View>
               </SheetLayer>

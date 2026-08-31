@@ -4,6 +4,7 @@ import {
   authenticatedQuery,
   authenticatedMutation,
   riderMutation,
+  riderQuery,
 } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
@@ -206,3 +207,68 @@ export const toggleGenderMatching = riderMutation({
     });
   },
 });
+
+/**
+ * Saves a location to the rider's recent searches.
+ * - Deduplicates by title (same title → remove old entry first)
+ * - Keeps only the 5 most recent entries (trims the oldest)
+ */
+export const saveRecentLocation = riderMutation({
+  args: {
+    riderId: v.id("rider"),
+    title: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { riderId, title, latitude, longitude } = args;
+
+    // Remove any existing entry with the same title for this rider (dedup)
+    const existing = await ctx.db
+      .query("riderRecentLocation")
+      .withIndex("by_rider", (q) => q.eq("riderId", riderId))
+      .collect();
+
+    const duplicate = existing.find((e) => e.title === title);
+    if (duplicate) {
+      await ctx.db.delete(duplicate._id);
+    }
+
+    // Insert the new entry (_creationTime is set automatically by Convex)
+    await ctx.db.insert("riderRecentLocation", {
+      riderId,
+      title,
+      latitude,
+      longitude,
+    });
+
+    // Trim to 5: fetch all again sorted by _creationTime desc, delete extras
+    const all = await ctx.db
+      .query("riderRecentLocation")
+      .withIndex("by_rider", (q) => q.eq("riderId", riderId))
+      .order("desc")
+      .collect();
+
+    const toDelete = all.slice(5);
+    for (const entry of toDelete) {
+      await ctx.db.delete(entry._id);
+    }
+  },
+});
+
+/**
+ * Returns the last 5 searched locations for a rider, newest first.
+ */
+export const getRecentLocations = riderQuery({
+  args: {
+    riderId: v.id("rider"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("riderRecentLocation")
+      .withIndex("by_rider", (q) => q.eq("riderId", args.riderId))
+      .order("desc")
+      .take(5);
+  },
+});
+
