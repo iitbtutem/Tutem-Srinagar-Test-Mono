@@ -30,6 +30,7 @@ import {
 import { distanceFormat, formatFare } from '@/lib/utils';
 import { HomeScreenHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
+import { Sos, Track } from '@/components/SafetyActions';
 import { FunctionReturnType } from 'convex/server';
 import { useState } from 'react';
 
@@ -84,6 +85,7 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <Sos variant="compact" className="absolute bottom-2 right-2" />
       {user && <HomeScreenHeader user={user} />}
       {currentRide && (
         <ActiveRideDialog
@@ -177,67 +179,76 @@ export default function HomeScreen() {
 }
 
 export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<CurrentRide> }) {
-  const { vehicle, distance, pickup, destination, fare } = currentRide;
+  const {
+    vehicle,
+    distance,
+    pickup,
+    destination,
+    fare,
+    driver: { userDetails: driverDetails },
+  } = currentRide;
 
   return (
     <View className="p-4">
-      <Text className="mb-3 text-xl font-bold">Active Ride</Text>
+      <View className="flex-row items-center justify-between py-1">
+        <Text className="mb-3 text-xl font-bold">Active Ride</Text>
+        <Track variant="full" />
+      </View>
       <Card className="rounded-2xl border-2 border-green-500 bg-card shadow-xl">
         <CardContent className="gap-3 p-4">
-          {/* Header: Status + OTP */}
+          {/* Header: Status */}
           <RideStatusBanner ride={currentRide} className="-m-4 mb-1 rounded-b-none border-0 py-2" />
 
           {/* Route */}
-          <View className="gap-1">
-            <View className="flex-row items-center gap-2">
-              <MaterialCommunityIcons name="map-marker" size={16} color="green" />
-              <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
-                {pickup.address}
-              </Text>
+          <View className="flex-row items-center justify-between gap-1">
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <MaterialCommunityIcons name="map-marker" size={16} color="green" />
+                <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                  {pickup.address}
+                </Text>
+              </View>
+              <View className="ml-2 h-4 w-px self-start bg-black/10" />
+              <View className="flex-row items-center gap-2">
+                <MaterialCommunityIcons name="map-marker" size={16} color="red" />
+                <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                  {destination.address}
+                </Text>
+              </View>
             </View>
-            <View className="ml-2 h-4 w-px self-start bg-black/10" />
-            <View className="flex-row items-center gap-2">
-              <MaterialCommunityIcons name="map-marker" size={16} color="red" />
-              <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
-                {destination.address}
+
+            <View className="shrink-0 items-end gap-0.5 pl-3">
+              <Text className="text-lg font-extrabold tracking-wider text-green-400">
+                {formatFare(fare)}
               </Text>
+              <Text className="text-xs text-muted-foreground">{distanceFormat(distance)}</Text>
             </View>
           </View>
 
           <Separator />
 
           {/* Vehicle + Distance + Fare */}
-          <View className="flex-row items-center justify-between gap-1">
-            <View className="flex-1 flex-row items-center gap-2">
-              <Image
-                source={
-                  currentRide.driver.userDetails.profilePictureKey?.trim()
-                    ? { uri: currentRide.driver.userDetails.profilePictureKey }
-                    : require('@/assets/images/avatar.jpg')
-                }
-                className="h-10 w-10 rounded-full border border-slate-200"
-                resizeMode="cover"
-              />
+          <View className="flex-1 flex-row items-center gap-2">
+            <Image
+              source={
+                driverDetails.profilePictureKey?.trim()
+                  ? { uri: driverDetails.profilePictureKey }
+                  : require('@/assets/images/avatar.jpg')
+              }
+              className="h-10 w-10 rounded-full border border-slate-200"
+              resizeMode="cover"
+            />
 
-              <View className="flex-1 gap-0.5">
-                <Text className="font-semibold text-primary">
-                  {currentRide.driver.userDetails.firstName}{' '}
-                  {currentRide.driver.userDetails.lastName}
-                </Text>
-
-                {vehicle && (
-                  <Text className="text-sm text-slate-600" ellipsizeMode="tail">
-                    {vehicle.model} • {vehicle.color} • {vehicle.registrationNumber}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View className="shrink-0 items-end gap-0.5">
-              <Text className="text-lg font-extrabold tracking-wider text-green-400">
-                {formatFare(fare)}
+            <View className="flex-1 gap-0.5">
+              <Text className="font-semibold capitalize text-primary">
+                {(driverDetails.firstName + ' ' + driverDetails.lastName).toLowerCase()}
               </Text>
-              <Text className="text-xs text-muted-foreground">{distanceFormat(distance)}</Text>
+
+              {vehicle && (
+                <Text className="text-sm text-slate-600" ellipsizeMode="tail">
+                  {vehicle.model} • {vehicle.color} • {vehicle.registrationNumber}
+                </Text>
+              )}
             </View>
           </View>
         </CardContent>

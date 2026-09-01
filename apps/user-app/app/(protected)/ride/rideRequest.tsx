@@ -48,6 +48,7 @@ import { useAuthenticatedQuery, useAuthenticatedAction } from '@/hooks/customApi
 import { BasicHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
+import { Sos, Track } from '@/components/SafetyActions';
 
 // types
 
@@ -468,7 +469,11 @@ export default function RideRequest() {
 
   const cancelReasons = ride.status === 'Active' ? CANCEL_REASONS_ACTIVE : CANCEL_REASONS_OPEN;
 
-  const locatingDriver = ride.driver && !driverLocation && ride.requestStatus === 'Accepted' && (ride.status === "Active" || ride.status === "Driver Arrived")
+  const locatingDriver =
+    ride.driver &&
+    !driverLocation &&
+    ride.requestStatus === 'Accepted' &&
+    (ride.status === 'Active' || ride.status === 'Driver Arrived');
 
   return (
     <View className="flex-1 bg-background">
@@ -555,13 +560,31 @@ export default function RideRequest() {
 
           <Pressable
             onPress={() => setIsMapMaximized(!isMapMaximized)}
-            className="absolute right-3 top-3 h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md active:bg-white">
+            className={cn(
+              'absolute right-3 top-3 aspect-square w-10 items-center justify-center rounded-full border-2 border-white bg-primary shadow-md',
+              {
+                'w-12': isMapMaximized,
+              }
+            )}>
             {isMapMaximized ? (
               <Ionicons name="close" size={24} color="#111827" />
             ) : (
-              <MaterialCommunityIcons name="map" size={20} color="#3b82f6" />
+              <MaterialCommunityIcons name="map" size={20} color="white" />
             )}
           </Pressable>
+
+          <Sos
+            variant="compact"
+            size={isMapMaximized ? 'md' : 'sm'}
+            className={`absolute right-3 top-16`}
+          />
+          <Track
+            variant="compact"
+            size={isMapMaximized ? 'md' : 'sm'}
+            className={cn('absolute right-3 top-28 bg-teal-600', {
+              'top-[116px]': isMapMaximized,
+            })}
+          />
 
           <Pressable
             onPress={() =>
@@ -574,8 +597,8 @@ export default function RideRequest() {
               ])
             }
             className={cn(
-              'absolute bottom-3 right-3 h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md active:bg-white',
-              { 'right-3 top-16': isMapMaximized }
+              'absolute right-3 top-40 aspect-square w-10 items-center justify-center rounded-full border-2 border-primary bg-white/90 shadow-md',
+              { 'top-[170px] w-12': isMapMaximized }
             )}>
             <MaterialIcons name="my-location" size={20} color="#3b82f6" />
           </Pressable>
