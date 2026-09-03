@@ -1,6 +1,9 @@
 import { ConvexError, v } from "convex/values";
 import { internalQuery, query } from "../_generated/server";
 import { adminMutation, authenticatedQuery } from "../helpers/sessionFunctions";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3Client } from "../s3";
 
 export const rideSettings = authenticatedQuery({
   args: {},
@@ -129,5 +132,119 @@ export const userAgeSettingsInternal = internalQuery({
     const settings = await ctx.db.query("userAgeSettings").first();
 
     return settings;
+  },
+});
+
+// Home Screen Content
+
+export const getHomeScreenVideos = query({
+  args: {},
+  handler: async (ctx) => {
+    const videos = await ctx.db
+      .query("userHomeScreenVideos")
+      .filter((q) => q.eq(q.field("status"), "Active"))
+      .collect();
+
+    return videos;
+  },
+});
+
+export const getAllHomeScreenVideos = authenticatedQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("userHomeScreenVideos").collect();
+  },
+});
+
+export const getHomeScreenFooterImage = query({
+  args: {},
+  handler: async (ctx) => {
+    const image = await ctx.db.query("userHomeScreenFooterImage").first();
+    if (!image) return null;
+    const signedUrl = image.imageKey
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({
+            Bucket: process.env.MINIO_BUCKET,
+            Key: image.imageKey,
+          }),
+          { expiresIn: 3600 },
+        )
+      : undefined;
+
+    return { ...image, signedUrl };
+  },
+});
+export const addHomeScreenVideo = adminMutation({
+  args: {
+    title: v.string(),
+    description: v.optional(v.string()),
+    videoUrl: v.string(),
+    status: v.union(v.literal("Active"), v.literal("Inactive")),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("userHomeScreenVideos", {
+      title: args.title,
+      description: args.description,
+      videoUrl: args.videoUrl,
+      status: args.status,
+    });
+  },
+});
+
+export const updateHomeScreenVideo = adminMutation({
+  args: {
+    id: v.id("userHomeScreenVideos"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    videoUrl: v.string(),
+    status: v.union(v.literal("Active"), v.literal("Inactive")),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new ConvexError("Video not found");
+    await ctx.db.patch(args.id, {
+      title: args.title,
+      description: args.description,
+      videoUrl: args.videoUrl,
+      status: args.status,
+    });
+  },
+});
+
+export const deleteHomeScreenVideo = adminMutation({
+  args: { id: v.id("userHomeScreenVideos") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) throw new ConvexError("Video not found");
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const setHomeScreenFooterImage = adminMutation({
+  args: { imageUrl: v.string(), imageKey: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("userHomeScreenFooterImage").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        imageUrl: args.imageUrl,
+        imageKey: args.imageKey,
+      });
+    } else {
+      await ctx.db.insert("userHomeScreenFooterImage", {
+        imageUrl: args.imageUrl,
+        imageKey: args.imageKey,
+      });
+    }
+  },
+});
+
+export const deleteHomeScreenFooterImage = adminMutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("userHomeScreenFooterImage").first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
   },
 });

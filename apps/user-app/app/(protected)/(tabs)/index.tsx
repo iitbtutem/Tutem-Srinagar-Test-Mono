@@ -6,11 +6,12 @@ import {
   Image,
   ScrollView,
   ImageBackground,
-  Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useAuthenticatedQuery } from '@/hooks/customApi';
+import { useQuery } from 'convex/react';
 import { api, Id } from '@tutem/api';
 import { useRider } from '@/hooks/useRider';
 
@@ -28,6 +29,7 @@ import {
   DialogTitle,
 } from '@tutem/ui';
 import { distanceFormat, formatFare } from '@/lib/utils';
+import { openVideo, getYoutubeId } from '@/lib/linking';
 import { HomeScreenHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { Sos, Track } from '@/components/SafetyActions';
@@ -57,7 +59,7 @@ const services = [
   },
 ] as const;
 
-const youtubeVideos = [
+const DEFAULT_VIDEOS = [
   { id: 'theytLvdnaE', title: 'Ride Booking', subtitle: 'Watch quick ride booking insights' },
   { id: '6e7vblkc4eM', title: 'SOS', subtitle: 'Watch quick SOS insights' },
   { id: 'bpDMl2VgqJw', title: 'User Pairing', subtitle: 'Watch quick user pairing insights' },
@@ -66,26 +68,32 @@ const youtubeVideos = [
 export default function HomeScreen() {
   const { rider: user } = useRider();
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
 
   const [showRideDialog, setShowRideDialog] = useState(false);
+  const [footerImageError, setFooterImageError] = useState(false);
 
   const currentRide = useAuthenticatedQuery(
     api.routes.rides.getRiderCurrentRideByRiderId,
     user && user.riderDetails ? { riderId: user.riderDetails._id } : 'skip'
   );
 
-  const openVideo = async (videoId: string) => {
-    const appUrl = `youtube://watch?v=${videoId}`;
-    const webUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const dbVideos = useQuery(api.routes.settings.getHomeScreenVideos);
+  const dbFooterImage = useQuery(api.routes.settings.getHomeScreenFooterImage);
 
-    const supported = await Linking.canOpenURL(appUrl);
-
-    await Linking.openURL(supported ? appUrl : webUrl);
-  };
+  // Use DB videos if available and non-empty, otherwise fall back to defaults
+  const videos =
+    dbVideos && dbVideos.length > 0
+      ? dbVideos.map((v) => ({
+          id: v.videoUrl,
+          title: v.title,
+          subtitle: v.description ?? '',
+        }))
+      : DEFAULT_VIDEOS;
 
   return (
     <View className="flex-1 bg-background">
-      <Sos variant="compact" className="absolute bottom-2 right-2" />
+      <Sos variant="compact" className="absolute bottom-2 right-2 w-14" />
       {user && <HomeScreenHeader user={user} />}
       {currentRide && (
         <ActiveRideDialog
@@ -132,7 +140,7 @@ export default function HomeScreen() {
         <Text className="mx-6 mb-3 text-xl font-bold">Insights</Text>
 
         <FlatList
-          data={youtubeVideos}
+          data={videos}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
@@ -140,26 +148,31 @@ export default function HomeScreen() {
             paddingHorizontal: 24,
             gap: 14,
           }}
-          renderItem={({ item }) => (
-            <View className="h-52 w-72 overflow-hidden rounded-2xl bg-primary/10">
-              {/* Thumbnail */}
-              <ImageBackground
-                className="flex-1 items-center justify-center"
-                source={{
-                  uri: `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`,
-                }}>
-                <TouchableOpacity onPress={() => openVideo(item.id)}>
-                  <MaterialIcons name="play-circle" size={48} color="#fff" />
-                </TouchableOpacity>
-              </ImageBackground>
+          renderItem={({ item }) => {
+            const ytId = getYoutubeId(item.id);
+            const thumbnailUri = ytId
+              ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+              : undefined;
 
-              {/* Footer */}
-              <View className="p-3 pt-1">
-                <Text className="text-sm font-semibold text-foreground">{item.title}</Text>
-                <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
+            return (
+              <View className="h-52 w-72 overflow-hidden rounded-2xl bg-primary/10">
+                {/* Thumbnail */}
+                <ImageBackground
+                  className="flex-1 items-center justify-center"
+                  source={thumbnailUri ? { uri: thumbnailUri } : undefined}>
+                  <TouchableOpacity onPress={() => openVideo(item.id)}>
+                    <MaterialIcons name="play-circle" size={48} color="#fff" />
+                  </TouchableOpacity>
+                </ImageBackground>
+
+                {/* Footer */}
+                <View className="p-3 pt-1">
+                  <Text className="text-sm font-semibold text-foreground">{item.title}</Text>
+                  <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
         />
 
         <View className="my-2">
@@ -169,9 +182,14 @@ export default function HomeScreen() {
           <Text className="text-center text-lg font-bold tracking-wide">No commission charged</Text>
         </View>
         <Image
-          source={require('@/assets/images/footer.png')}
-          style={{ width: '100%', height: 130 }}
-          resizeMode="cover"
+          source={
+            !footerImageError && (dbFooterImage?.signedUrl ?? dbFooterImage?.imageUrl)
+              ? { uri: dbFooterImage?.signedUrl ?? dbFooterImage?.imageUrl }
+              : require('@/assets/images/footer.png')
+          }
+          onError={() => setFooterImageError(true)}
+          style={{ width: screenWidth, height: screenWidth / 3 }}
+          resizeMode="contain"
         />
       </ScrollView>
     </View>

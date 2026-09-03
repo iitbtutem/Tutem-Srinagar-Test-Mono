@@ -264,4 +264,16 @@ export default defineSchema({
     latitude: v.number(),
     longitude: v.number(),
   }).index("by_rider", ["riderId"]),
+
+  userHomeScreenVideos: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    videoUrl: v.string(),
+    status: v.union(v.literal("Active"), v.literal("Inactive")),
+  }),
+
+  userHomeScreenFooterImage: defineTable({
+    imageUrl: v.string(),
+    imageKey: v.optional(v.string()),
+  }),
 });

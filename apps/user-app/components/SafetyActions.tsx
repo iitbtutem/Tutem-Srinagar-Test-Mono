@@ -10,8 +10,8 @@ import Animated, {
   useAnimatedStyle,
   Easing,
 } from 'react-native-reanimated';
-import { EMERGENCY_NUMBER } from '@/constants';
 import { cn } from '@/lib/utils';
+import { callEmergencyServices, shareLocationOnWhatsApp } from '@/lib/linking';
 
 function SosPulse() {
   const scale = useSharedValue(1);
@@ -41,42 +41,8 @@ function SosPulse() {
   );
 }
 
-async function handleSOS() {
-  Alert.alert(
-    '🆘 Call Emergency Services?',
-    'This will call 112 (Police / Ambulance / Fire).',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Call 112',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await Linking.openURL(`tel:${EMERGENCY_NUMBER}`);
-          } catch {
-            Alert.alert('Error', 'Unable to make calls on this device.');
-          }
-        },
-      },
-    ],
-    { cancelable: true }
-  );
-}
-
 async function handleTrack() {
-  const whatsappApp = 'whatsapp://';
-  const whatsappWeb = 'https://wa.me';
-
-  try {
-    const supported = await Linking.canOpenURL(whatsappApp);
-    await Linking.openURL(supported ? whatsappApp : whatsappWeb);
-  } catch {
-    Alert.alert(
-      'WhatsApp not found',
-      'Please install WhatsApp to share your live location with a contact.',
-      [{ text: 'OK' }]
-    );
-  }
+  await shareLocationOnWhatsApp();
 }
 
 export function Sos({
@@ -94,7 +60,7 @@ export function Sos({
     return (
       <TouchableOpacity
         activeOpacity={0.75}
-        onPress={handleSOS}
+        onPress={callEmergencyServices}
         style={style}
         className={cn(
           'z-40 aspect-square items-center justify-center overflow-hidden rounded-full border-2 border-white bg-red-600 shadow-md',
@@ -127,7 +93,7 @@ export function Sos({
   return (
     <TouchableOpacity
       activeOpacity={0.8}
-      onPress={handleSOS}
+      onPress={callEmergencyServices}
       style={style}
       className={`z-40 w-fit flex-row items-center justify-center gap-2 overflow-hidden rounded-xl bg-destructive px-3 py-2 shadow-lg ${className}`}
       accessibilityLabel="SOS emergency call"
