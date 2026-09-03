@@ -93,7 +93,6 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Sos variant="compact" className="absolute bottom-2 right-2 w-14" />
       {user && <HomeScreenHeader user={user} />}
       {currentRide && (
         <ActiveRideDialog
@@ -192,6 +191,7 @@ export default function HomeScreen() {
           resizeMode="contain"
         />
       </ScrollView>
+      <Sos variant="compact" draggable className="w-14" />
     </View>
   );
 }

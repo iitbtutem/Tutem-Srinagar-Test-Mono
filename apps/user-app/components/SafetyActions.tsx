@@ -12,8 +12,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { callEmergencyServices, shareLocationOnWhatsApp } from '@/lib/linking';
+import { DraggableSos } from './DraggableSos';
 
-function SosPulse() {
+export { DraggableSos };
+
+export function SosPulse() {
   const scale = useSharedValue(1);
 
   useEffect(() => {
@@ -35,7 +38,7 @@ function SosPulse() {
   return (
     <Animated.View
       style={pulseStyle}
-      className="absolute h-full w-full rounded-xl bg-red-500"
+      className="absolute h-full w-full rounded-full bg-red-500"
       pointerEvents="none"
     />
   );
@@ -50,12 +53,33 @@ export function Sos({
   className,
   style,
   size = 'lg',
+  draggable = false,
+  storageKey,
+  topOffset,
+  bottomOffset,
 }: {
   variant?: 'full' | 'compact';
   className?: string;
   style?: StyleProp<ViewStyle>;
   size?: 'sm' | 'md' | 'lg';
+  draggable?: boolean;
+  storageKey?: string;
+  topOffset?: number;
+  bottomOffset?: number;
 }) {
+  if (draggable) {
+    return (
+      <DraggableSos
+        size={size}
+        className={className}
+        style={style}
+        storageKey={storageKey}
+        topOffset={topOffset}
+        bottomOffset={bottomOffset}
+      />
+    );
+  }
+
   if (variant === 'compact') {
     return (
       <TouchableOpacity
@@ -67,7 +91,7 @@ export function Sos({
           {
             'text-2 w-10 font-bold': size === 'sm',
             'text-3 w-12 font-bold': size === 'md',
-            'text-4 w-4 font-bold': size === 'lg',
+            'text-4 w-14 font-bold': size === 'lg',
           },
           className
         )}
