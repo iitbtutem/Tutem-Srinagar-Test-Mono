@@ -77,7 +77,7 @@ Purpose: Stores rider-specific profile state linked to a `user`.
 
 | Field            | Type                                 | Required | Default             | Description                                | Relationship / Reference              |
 | ---------------- | ------------------------------------ | -------: | ------------------- | ------------------------------------------ | ------------------------------------- |
-| `isVerified`     | `Pending`, `Rejected`, or `Verified` |      Yes | Usually `"Pending"` | Rider verification status.                 | None                                  |
+| `isVerified`     | `Unverified`, `Rejected`, or `Verified` |      Yes | Usually `"Unverified"` | Rider verification status.                 | None                                  |
 | `userId`         | `Id<"user">`                         |      Yes | None                | Owning user document.                      | References `user._id`                 |
 | `expoPushToken`  | `string`                             |       No | None                | Expo push token for rider notifications.   | Expo push service                     |
 | `genderMatching` | `boolean`                            |      Yes | Usually `false`     | Rider preference for same-gender matching. | Compared against driver user's gender |
@@ -103,7 +103,7 @@ Purpose: Stores driver-specific profile, license, online/availability state, org
 | `licenseImageFrontKey` | `string`                             |       No | None                               | Object-storage key for front license image.       | MinIO/S3 object key                        |
 | `licenseImageBackKey`  | `string`                             |       No | None                               | Object-storage key for back license image.        | MinIO/S3 object key                        |
 | `paymentQrCodeKey`     | `string`                             |       No | None                               | Object-storage key for payment QR image.          | MinIO/S3 object key                        |
-| `isLicenseVerified`    | `Pending`, `Rejected`, or `Verified` |      Yes | Derived from organization settings | License verification state.                       | Controlled by organization requirements    |
+| `isLicenseVerified`    | `Unverified`, `Rejected`, or `Verified` |      Yes | Derived from organization settings | License verification state.                       | Controlled by organization requirements    |
 | `isOnline`             | `boolean`                            |      Yes | Usually `true` on creation         | Whether the driver is online.                     | Used by discovery and availability toggles |
 | `isAvailableForRide`   | `boolean`                            |      Yes | Usually `true` on creation         | Whether driver can receive or accept rides.       | Mutated by ride lifecycle                  |
 | `organizationId`       | `Id<"organization">`                 |      Yes | None                               | Driver's organization.                            | References `organization._id`              |
@@ -178,7 +178,7 @@ Purpose: Stores a driver's registered vehicle and verification state.
 
 | Field                | Type                                    | Required | Default                            | Description                             | Relationship / Reference                  |
 | -------------------- | --------------------------------------- | -------: | ---------------------------------- | --------------------------------------- | ----------------------------------------- |
-| `isVerified`         | `Pending`, `Rejected`, or `Verified`    |      Yes | Derived from organization settings | Vehicle verification status.            | Controlled by organization settings       |
+| `isVerified`         | `Unverified`, `Rejected`, or `Verified` |      Yes | Derived from organization settings | Vehicle verification status.            | Controlled by organization settings       |
 | `registrationNumber` | `string`                                |      Yes | None                               | Vehicle registration number.            | Application code checks uniqueness        |
 | `rcImageKey`         | `string`                                |       No | None                               | Object-storage key for RC image.        | MinIO/S3 object key                       |
 | `insuranceImageKey`  | `string`                                |       No | None                               | Object-storage key for insurance image. | MinIO/S3 object key                       |

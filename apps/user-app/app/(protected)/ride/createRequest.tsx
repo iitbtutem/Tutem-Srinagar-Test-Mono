@@ -216,7 +216,7 @@ function NearbyDriversPanel({
 
                 const licenseVerification = verificationStatus
                   ? VERIFICATION_CONFIG[verificationStatus]
-                  : VERIFICATION_CONFIG['Pending'];
+                  : VERIFICATION_CONFIG['Unverified'];
 
                 return (
                   <TouchableOpacity
@@ -261,7 +261,7 @@ function NearbyDriversPanel({
 
                     {/* Middle Content */}
                     <View className="min-w-0 flex-1">
-                      {/* Name + Verified */}
+                      {/* Name +  */}
                       <Text className="font-semibold text-primary">
                         {driver.driver.userDetails.firstName} {driver.driver.userDetails.lastName}
                       </Text>
@@ -284,20 +284,18 @@ function NearbyDriversPanel({
                         <Rating rating={driver.driver.rating} />
 
                         {/* Verified Badge (inline, not floating) */}
-                        {driver.driver.isLicenseVerified === 'Verified' && (
-                          <View className="flex-row items-center gap-1">
-                            <Feather
-                              name={licenseVerification.icon as any}
-                              size={12}
-                              color={licenseVerification.color}
-                            />
-                            <Text
-                              style={{ color: licenseVerification.color }}
-                              className="text-[10px] font-semibold">
-                              {licenseVerification.label}
-                            </Text>
-                          </View>
-                        )}
+                        <View className="flex-row items-center gap-1">
+                          <Feather
+                            name={licenseVerification.icon as any}
+                            size={12}
+                            color={licenseVerification.color}
+                          />
+                          <Text
+                            style={{ color: licenseVerification.color }}
+                            className="text-[10px] font-semibold">
+                            {licenseVerification.label}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -809,7 +807,7 @@ export default function WhereTo() {
 
   const licenseVerification = verificationStatus
     ? VERIFICATION_CONFIG[verificationStatus]
-    : VERIFICATION_CONFIG['Pending'];
+    : VERIFICATION_CONFIG['Unverified'];
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -914,13 +912,13 @@ export default function WhereTo() {
         // enableContentPanningGesture={!nearbyDrivers?.length || !!selectedDriver}
       >
         <View style={{ flex: 1, paddingBottom: insets.bottom }}>
-          {/* ── OVERLAY LAYERS ────────────────────────────────────────────────
+          {/* OVERLAY LAYERS
               Three layers total. Only one is ever visible at a time:
 
               1. DRIVERS LAYER   — both locations set, sheet FULL
               2. PLANNING LAYER  — location not fully set, sheet FULL
               3. MAP-PIN LAYER   — sheet COLLAPSED (map drag selection)
-          ──────────────────────────────────────────────────────────────────── */}
+          */}
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* LAYER 1: Both locations set — show nearby drivers */}
             {bothSelected && showDrivers && !selectedDriver && (

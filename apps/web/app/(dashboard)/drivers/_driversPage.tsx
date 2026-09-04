@@ -16,7 +16,7 @@ export type Driver = {
   _creationTime: number;
   isOnline: boolean;
   isAvailableForRide: boolean;
-  isVerified: "Pending" | "Verified" | "Rejected";
+  isVerified: "Unverified" | "Verified" | "Rejected";
   genderMatching: boolean;
   userDetails: {
     firstName: string;
@@ -162,7 +162,7 @@ const filterFields = [
     id: "license",
     label: "Verification",
     options: [
-      { label: "Pending", value: "Pending" },
+      { label: "Unverified", value: "Unverified" },
       { label: "Verified", value: "Verified" },
       { label: "Rejected", value: "Rejected" },
     ],

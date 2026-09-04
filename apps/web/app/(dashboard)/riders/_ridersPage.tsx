@@ -14,7 +14,7 @@ import { Star, Eye } from "lucide-react";
 export type Rider = {
   _id: string;
   _creationTime: number;
-  isVerified: "Pending" | "Verified" | "Rejected";
+  isVerified: "Unverified" | "Verified" | "Rejected";
   genderMatching: boolean;
   userDetails: {
     firstName: string;
@@ -127,7 +127,7 @@ const filterFields = [
     id: "status",
     label: "Status",
     options: [
-      { label: "Pending", value: "Pending" },
+      { label: "Unverified", value: "Unverified" },
       { label: "Verified", value: "Verified" },
       { label: "Rejected", value: "Rejected" },
     ],

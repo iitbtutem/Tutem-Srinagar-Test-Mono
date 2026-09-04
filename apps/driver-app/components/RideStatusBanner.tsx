@@ -4,6 +4,8 @@ import PulseDot from "./PulseDot";
 import LiveTimer from "./LiveTimer";
 import { FunctionReturnType } from "convex/server";
 import { api } from "@tutem/api";
+import { useEffect, useState } from "react";
+import { useAuthenticatedQuery } from "@/hooks/customApi";
 
 type CurrentRide = NonNullable<FunctionReturnType<typeof api.routes.rides.getDriverCurrentRideByDriverId>>;
 
@@ -142,15 +144,75 @@ function formatDate(ts: number | undefined) {
   });
 }
 
+function getCountdownRemainingSeconds(
+  requestedAt: number | undefined,
+  driverResponseTimeMinutes: number
+): number {
+  if (!requestedAt) return Math.max(0, Math.round(driverResponseTimeMinutes * 60));
+  const expiryTimestamp = requestedAt + driverResponseTimeMinutes * 60 * 1000;
+  return Math.max(0, Math.floor((expiryTimestamp - Date.now()) / 1000));
+}
+
+function formatMinutesAndSeconds(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function CountdownTimer({
+  startTimestamp,
+  driverResponseTimeMinutes = 10,
+  colorClass,
+}: {
+  startTimestamp: number | undefined;
+  driverResponseTimeMinutes?: number;
+  colorClass?: string;
+}) {
+  const [remainingSec, setRemainingSec] = useState(() =>
+    getCountdownRemainingSeconds(startTimestamp, driverResponseTimeMinutes)
+  );
+
+  useEffect(() => {
+    setRemainingSec(getCountdownRemainingSeconds(startTimestamp, driverResponseTimeMinutes));
+    const id = setInterval(() => {
+      setRemainingSec(getCountdownRemainingSeconds(startTimestamp, driverResponseTimeMinutes));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [startTimestamp, driverResponseTimeMinutes]);
+
+  const isUrgent = remainingSec <= 30;
+  const display = formatMinutesAndSeconds(remainingSec);
+
+  return (
+    <Text
+      className={cn(
+        "text-xl font-extrabold tabular-nums tracking-tight",
+        isUrgent ? "text-red-400" : colorClass || "text-yellow-400"
+      )}
+    >
+      {display}
+    </Text>
+  );
+}
+
 interface Props {
   ride: CurrentRide;
   className?: string;
+  driverResponseTime?: number;
 }
 
-export function RideStatusBanner({ ride, className }: Props) {
+export function RideStatusBanner({ ride, className, driverResponseTime: propDriverResponseTime }: Props) {
+  const settings = useAuthenticatedQuery(
+    api.routes.settings.rideSettings,
+    propDriverResponseTime !== undefined ? "skip" : {}
+  );
+  const driverResponseTime = propDriverResponseTime ?? settings?.driverResponseTime ?? 10;
+
   const config = getStatusConfig(ride);
 
   if (!config) return null;
+
+  const isPending = ride.status === "Open" && ride.requestStatus === "Pending";
 
   return (
     <View
@@ -179,9 +241,17 @@ export function RideStatusBanner({ ride, className }: Props) {
       </View>
 
       {config.kind === "pulse" ? (
-        <Text className={cn("text-base font-extrabold tabular-nums", config.text)}>
-          <LiveTimer startTimestamp={config.timestamp} />
-        </Text>
+        isPending ? (
+          <CountdownTimer
+            startTimestamp={config.timestamp}
+            driverResponseTimeMinutes={driverResponseTime}
+            colorClass={config.text}
+          />
+        ) : (
+          <Text className={cn("text-base font-extrabold tabular-nums", config.text)}>
+            <LiveTimer startTimestamp={config.timestamp} />
+          </Text>
+        )
       ) : (
         <Text className={cn("text-xs font-semibold tabular-nums", config.text)}>
           {formatDate(config.timestamp)}

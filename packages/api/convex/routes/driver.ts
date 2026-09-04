@@ -137,7 +137,7 @@ export const addDriver = mutation({
       isAvailableForRide: true,
       isOnline: true,
       isLicenseVerified: organization.isLicenseVerficationRequired
-        ? "Pending"
+        ? "Unverified"
         : "Verified",
       genderMatching: false,
       isBlacklisted: false,
@@ -186,7 +186,7 @@ export const registerAsDriver = driverMutation({
       isAvailableForRide: true,
       isOnline: true,
       isLicenseVerified: organization.isLicenseVerficationRequired
-        ? "Pending"
+        ? "Unverified"
         : "Verified",
       organizationId: args.organizationId,
       genderMatching: false,
@@ -425,7 +425,7 @@ export const updateDriver = driverMutation({
 
     const isLicenseVerified =
       organization.isLicenseVerficationRequired && licenseDetailsChanged
-        ? "Pending"
+        ? "Unverified"
         : "Verified";
 
     await ctx.db.patch(ctx.user._id, {
@@ -542,7 +542,7 @@ export const updateLicense = driverMutation({
       licenseImageFrontKey: args.frontImageKey,
       licenseImageBackKey: args.backImageKey,
       isLicenseVerified: organisation.isLicenseVerficationRequired
-        ? "Pending"
+        ? "Unverified"
         : "Verified",
     });
   },

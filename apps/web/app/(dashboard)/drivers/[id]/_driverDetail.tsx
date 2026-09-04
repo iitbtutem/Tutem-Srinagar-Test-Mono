@@ -87,7 +87,7 @@ export function DriverDetailPage({
     gender: "Male" as "Male" | "Female" | "Other",
     phoneNumber: "",
     licenseNumber: "",
-    isLicenseVerified: "Pending" as "Pending" | "Verified" | "Rejected",
+    isLicenseVerified: "Unverified" as "Unverified" | "Verified" | "Rejected",
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -201,7 +201,7 @@ export function DriverDetailPage({
       gender: driver.userDetails.gender ?? "Male",
       phoneNumber: driver.userDetails.phoneNumber ?? "",
       licenseNumber: driver.licenseNumber ?? "",
-      isLicenseVerified: driver.isLicenseVerified ?? "Pending",
+      isLicenseVerified: driver.isLicenseVerified ?? "Unverified",
     });
     setEditError(null);
     setIsEditDialogOpen(true);
@@ -1102,7 +1102,7 @@ export function DriverDetailPage({
                       setEditForm((f) => ({
                         ...f,
                         isLicenseVerified: v as
-                          | "Pending"
+                          | "Unverified"
                           | "Verified"
                           | "Rejected",
                       }))
@@ -1112,7 +1112,7 @@ export function DriverDetailPage({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Unverified">Unverified</SelectItem>
                       <SelectItem value="Verified">Verified</SelectItem>
                       <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectContent>

@@ -15,7 +15,7 @@ export function StatusBadge({ status, className }: BadgeProps) {
 }
 
 interface VerificationBadgeProps {
-  status: "Pending" | "Verified" | "Rejected";
+  status: "Pending" | "Unverified" | "Verified" | "Rejected";
 }
 
 export function VerificationBadge({ status }: VerificationBadgeProps) {

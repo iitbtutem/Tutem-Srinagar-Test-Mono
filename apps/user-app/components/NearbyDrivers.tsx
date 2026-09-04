@@ -123,7 +123,7 @@ export default function NearbyDrivers({
 
             const licenseVerification = verificationStatus
               ? VERIFICATION_CONFIG[verificationStatus]
-              : VERIFICATION_CONFIG['Pending'];
+              : VERIFICATION_CONFIG['Unverified'];
 
             return (
               <TouchableOpacity
@@ -192,20 +192,18 @@ export default function NearbyDrivers({
                     <Rating rating={driver.driver.rating} />
 
                     {/* Verified Badge (inline, not floating) */}
-                    {driver.driver.isLicenseVerified === 'Verified' && (
-                      <View className="flex-row items-center gap-1">
-                        <Feather
-                          name={licenseVerification.icon as any}
-                          size={12}
-                          color={licenseVerification.color}
-                        />
-                        <Text
-                          style={{ color: licenseVerification.color }}
-                          className="text-[10px] font-semibold">
-                          {licenseVerification.label}
-                        </Text>
-                      </View>
-                    )}
+                    <View className="flex-row items-center gap-1">
+                      <Feather
+                        name={licenseVerification.icon as any}
+                        size={12}
+                        color={licenseVerification.color}
+                      />
+                      <Text
+                        style={{ color: licenseVerification.color }}
+                        className="text-[10px] font-semibold">
+                        {licenseVerification.label}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 

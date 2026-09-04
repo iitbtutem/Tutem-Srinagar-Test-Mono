@@ -235,7 +235,7 @@ export function DashboardPage({
                       id: "status",
                       label: "Status",
                       options: [
-                        { label: "Pending", value: "Pending" },
+                        { label: "Unverified", value: "Unverified" },
                         { label: "Verified", value: "Verified" },
                         { label: "Rejected", value: "Rejected" },
                       ],
@@ -278,7 +278,7 @@ export function DashboardPage({
                       id: "license",
                       label: "License Verification",
                       options: [
-                        { label: "Pending", value: "Pending" },
+                        { label: "Unverified", value: "Unverified" },
                         { label: "Verified", value: "Verified" },
                         { label: "Rejected", value: "Rejected" },
                       ],
@@ -342,7 +342,7 @@ export function DashboardPage({
                       id: "license",
                       label: "License Verification",
                       options: [
-                        { label: "Pending", value: "Pending" },
+                        { label: "Unverified", value: "Unverified" },
                         { label: "Verified", value: "Verified" },
                         { label: "Rejected", value: "Rejected" },
                       ],

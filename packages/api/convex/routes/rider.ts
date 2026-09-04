@@ -82,7 +82,7 @@ export const addRider = mutation({
     if (userId === undefined) throw new ConvexError("Failed to create user");
 
     await ctx.db.insert("rider", {
-      isVerified: "Pending",
+      isVerified: "Unverified",
       userId,
       genderMatching: false,
       isBlacklisted: false,
@@ -114,7 +114,7 @@ export const registerAsRider = riderMutation({
     validateAge(ctx.user.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
 
     await ctx.db.insert("rider", {
-      isVerified: "Pending",
+      isVerified: "Unverified",
       userId: ctx.user._id,
       genderMatching: false,
       isBlacklisted: false,

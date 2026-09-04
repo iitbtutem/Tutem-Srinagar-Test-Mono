@@ -74,7 +74,7 @@ export function RiderDetailPage({
     dob: "",
     gender: "Male" as "Male" | "Female" | "Other",
     phoneNumber: "",
-    isVerified: "Pending" as "Pending" | "Verified" | "Rejected",
+    isVerified: "Unverified" as "Unverified" | "Verified" | "Rejected",
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -152,7 +152,7 @@ export function RiderDetailPage({
       dob: toDateInputValue(rider.userDetails.dob),
       gender: rider.userDetails.gender ?? "Male",
       phoneNumber: rider.userDetails.phoneNumber ?? "",
-      isVerified: rider.isVerified ?? "Pending",
+      isVerified: rider.isVerified ?? "Unverified",
     });
     setEditError(null);
     setIsEditDialogOpen(true);
@@ -747,7 +747,7 @@ export function RiderDetailPage({
                     onValueChange={(v) =>
                       setEditForm((f) => ({
                         ...f,
-                        isVerified: v as "Pending" | "Verified" | "Rejected",
+                        isVerified: v as "Unverified" | "Verified" | "Rejected",
                       }))
                     }
                   >
@@ -755,7 +755,7 @@ export function RiderDetailPage({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Unverified">Unverified</SelectItem>
                       <SelectItem value="Verified">Verified</SelectItem>
                       <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectContent>

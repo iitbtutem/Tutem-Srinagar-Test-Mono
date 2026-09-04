@@ -10,7 +10,7 @@ import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { validateAge, getAgeSettingsOrThrow } from "../helpers/validation";
 
-// ─── Riders ────────────────────────────────────────────────────────────────
+// Riders
 
 export const getAllRiders = adminQuery({
   args: {
@@ -144,7 +144,7 @@ export const updateRiderAdmin = adminMutation({
     gender: v.union(v.literal("Male"), v.literal("Female"), v.literal("Other")),
     phoneNumber: v.string(),
     isVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -155,7 +155,12 @@ export const updateRiderAdmin = adminMutation({
 
     // Validate rider age based on DB settings
     const ageSettings = await getAgeSettingsOrThrow(ctx);
-    validateAge(args.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
+    validateAge(
+      args.dob,
+      ageSettings.minRiderAge,
+      ageSettings.maxRiderAge,
+      "Rider",
+    );
 
     // Check phone number uniqueness if changed
     const currentUser = await ctx.db.get(rider.userId);
@@ -189,7 +194,7 @@ export const updateRiderAdmin = adminMutation({
   },
 });
 
-// ─── Drivers ───────────────────────────────────────────────────────────────
+// Drivers
 
 export const getAllDrivers = adminQuery({
   args: {
@@ -462,7 +467,7 @@ export const updateDriverAdmin = adminMutation({
     phoneNumber: v.string(),
     licenseNumber: v.string(),
     isLicenseVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -473,7 +478,12 @@ export const updateDriverAdmin = adminMutation({
 
     // Validate driver age based on DB settings
     const ageSettings = await getAgeSettingsOrThrow(ctx);
-    validateAge(args.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
+    validateAge(
+      args.dob,
+      ageSettings.minDriverAge,
+      ageSettings.maxDriverAge,
+      "Driver",
+    );
 
     // Check phone number uniqueness if changed
     const currentUser = await ctx.db.get(driver.userId);
@@ -562,7 +572,7 @@ export const updateDriverVehicleAdmin = adminMutation({
   },
 });
 
-// ─── Rides ─────────────────────────────────────────────────────────────────
+// Rides
 
 export const getAllRidesAdmin = adminQuery({
   args: {
@@ -722,7 +732,7 @@ export const getRideByIdAdmin = adminQuery({
   },
 });
 
-// ─── Admin Users ────────────────────────────────────────────────────────────
+// Admin Users
 
 export const getAllAdminUsers = adminQuery({
   args: {
@@ -1003,7 +1013,7 @@ export const deleteAdminUser = superAdminMutation({
   },
 });
 
-// ─── Settings ──────────────────────────────────────────────────────────────
+// Settings
 
 export const updateRideSettings = adminMutation({
   args: {
@@ -1024,7 +1034,7 @@ export const updateRideSettings = adminMutation({
   },
 });
 
-// ─── Admin Profile ──────────────────────────────────────────────────────────
+// Admin Profile
 
 export const getAdminProfile = adminQuery({
   args: {},
@@ -1109,7 +1119,7 @@ export const verifyRiderAdmin = adminMutation({
   args: {
     riderId: v.id("rider"),
     isVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -1127,7 +1137,7 @@ export const verifyDriverLicenseAdmin = adminMutation({
   args: {
     driverId: v.id("driver"),
     isLicenseVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -1145,7 +1155,7 @@ export const verifyVehicleAdmin = adminMutation({
   args: {
     vehicleId: v.id("vehicle"),
     isVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),

@@ -64,7 +64,7 @@ const settingsSchema = z.object({
     .min(100, "Min 100 meters")
     .max(50000, "Max 50km"),
   arrivedDistance: z.coerce.number().min(10, "Min 10 meters").max(1000),
-  driverResponseTime: z.coerce.number().min(5, "Min 5 seconds").max(120),
+  driverResponseTime: z.coerce.number().min(1, "Min 1 minute").max(120),
   maxDriverRideRequests: z.coerce.number().min(1).max(10).optional(),
   cancellationPenalty: z.coerce.number().min(0).optional(),
 });
@@ -600,8 +600,8 @@ export function SettingsPage() {
               id="driverResponseTime"
               label="Driver Response Time"
               description="Time driver has to accept a request"
-              suffix="seconds"
-              placeholder="30"
+              suffix="minutes"
+              placeholder="5"
               error={errors.driverResponseTime?.message}
               {...register("driverResponseTime")}
             />

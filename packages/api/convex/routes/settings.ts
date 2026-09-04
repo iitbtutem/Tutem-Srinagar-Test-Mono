@@ -46,7 +46,8 @@ export const updateRideSettings = adminMutation({
     if (!settings) {
       throw new ConvexError("Settings not found");
     }
-    await ctx.db.patch(args.id, args);
+    const { id, ...rest } = args;
+    await ctx.db.patch(id, rest);
   },
 });
 

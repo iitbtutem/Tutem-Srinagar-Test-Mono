@@ -459,7 +459,7 @@ export default function RideRequest() {
 
   const licenseVerification = verificationStatus
     ? VERIFICATION_CONFIG[verificationStatus]
-    : VERIFICATION_CONFIG['Pending'];
+    : VERIFICATION_CONFIG['Unverified'];
 
   const isSheetOpen = sheetIndex !== -1 || cancelSheetIndex !== -1;
 

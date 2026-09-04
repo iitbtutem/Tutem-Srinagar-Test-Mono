@@ -93,7 +93,7 @@ export const addVehicle = driverMutation({
     const newVehicle = await ctx.db.insert("vehicle", {
       ...args,
       isVerified: organization.isVehicleRCVerificationRequired
-        ? "Pending"
+        ? "Unverified"
         : "Verified",
     });
 
@@ -148,7 +148,7 @@ export const updateVehicle = driverMutation({
     await ctx.db.patch(vehicle._id, {
       ...input,
       isVerified: organization.isVehicleRCVerificationRequired
-        ? "Pending"
+        ? "Unverified"
         : "Verified",
       rcImageKey: organization.isVehicleRCVerificationRequired
         ? input.rcImageKey

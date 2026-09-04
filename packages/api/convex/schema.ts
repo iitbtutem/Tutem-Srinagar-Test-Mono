@@ -23,7 +23,7 @@ export default defineSchema({
   //riders
   rider: defineTable({
     isVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -42,7 +42,7 @@ export default defineSchema({
     licenseImageBackKey: v.optional(v.string()),
     paymentQrCodeKey: v.optional(v.string()),
     isLicenseVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),
@@ -118,7 +118,7 @@ export default defineSchema({
   //vehciles
   vehicle: defineTable({
     isVerified: v.union(
-      v.literal("Pending"),
+      v.literal("Unverified"),
       v.literal("Rejected"),
       v.literal("Verified"),
     ),

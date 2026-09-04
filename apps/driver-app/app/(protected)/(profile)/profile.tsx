@@ -173,8 +173,8 @@ export default function Profile() {
     return <ErrorScreen message="Account not found" />;
 
   const licenseVerification =
-    VERIFICATION_CONFIG[driver.driverDetails?.isLicenseVerified ?? 'Pending'];
-  const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Pending'];
+    VERIFICATION_CONFIG[driver.driverDetails?.isLicenseVerified ?? 'Unverified'];
+  const vehicleVerification = VERIFICATION_CONFIG[vehicle?.isVerified || 'Unverified'];
 
   return (
     <View className="flex-1 bg-secondary">

@@ -109,6 +109,7 @@ export const RideRequests = memo(
       api.routes.rides.getRideRequests,
       driver.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
     );
+    const settings = useAuthenticatedQuery(api.routes.settings.rideSettings);
     const acceptRide = useAuthenticatedAction(api.actions.ride.acceptRideAction);
     const rejectRide = useAuthenticatedAction(api.actions.ride.rejectRide);
     const toggleGenderMatching = useAuthenticatedMutation(api.routes.driver.toggleGenderMatching);
@@ -334,6 +335,7 @@ export const RideRequests = memo(
               <CurrentRideCard
                 key={currentRide._id}
                 ride={currentRide}
+                driverResponseTime={settings?.driverResponseTime}
                 onPress={handleClick}
                 onViewRiderImage={(uri, name) => setViewerImage({ uri, name })}
               />
@@ -371,6 +373,7 @@ export const RideRequests = memo(
                       <RideCard
                         key={ride._id}
                         ride={ride}
+                        driverResponseTime={settings?.driverResponseTime}
                         acceptCheck={acceptCheck}
                         handleAccept={handleAccept}
                         handleReject={handleReject}
