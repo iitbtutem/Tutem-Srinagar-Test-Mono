@@ -25,6 +25,8 @@ import {
   X,
   CheckCircle2,
   XCircle,
+  House,
+  RotateCcw,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -925,7 +927,7 @@ export function SettingsPage() {
               </p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
                 <span className="font-medium">Size</span>
-                <span>1080 × 360 px</span>
+                <span>300 × 100 px</span>
                 <span className="font-medium">Aspect ratio</span>
                 <span>3 : 1 (banner)</span>
                 <span className="font-medium">Format</span>
@@ -1033,13 +1035,9 @@ export function SettingsPage() {
                     </div>
 
                     {/* Bottom tab bar */}
-                    <div className="h-8 border-t border-border bg-background flex items-center justify-around px-4 shrink-0">
-                      {[...Array(2)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="h-3 w-3 rounded-full bg-muted"
-                        />
-                      ))}
+                    <div className="h-8 border-t border-border bg-primary flex items-center justify-around px-4 shrink-0">
+                      <House className="h-4 w-4 text-white" />
+                      <RotateCcw className="h-4 w-4 text-white" />
                     </div>
                   </div>
                 </div>
