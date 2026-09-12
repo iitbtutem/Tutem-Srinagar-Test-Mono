@@ -23,7 +23,7 @@ export default function LiveTimer({ startTimestamp }: { startTimestamp: number |
     return () => clearInterval(id);
   }, [startTimestamp]);
   return (
-    <Text className="text-emerald-400 text-xl font-extrabold tracking-tight tabular-nums">
+    <Text className="text-primary text-xl font-extrabold tracking-tight tabular-nums">
       {display}
     </Text>
   );

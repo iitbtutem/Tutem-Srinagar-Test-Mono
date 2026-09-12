@@ -1,6 +1,21 @@
 import { EMERGENCY_NUMBER } from '@/constants';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import * as Location from 'expo-location';
+
+export async function openNavigation(latitude: number, longitude: number) {
+  const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+  const url = Platform.select({
+    ios: `maps://?daddr=${latitude},${longitude}`,
+    android: `google.navigation:q=${latitude},${longitude}`,
+    default: fallbackUrl,
+  });
+
+  try {
+    await Linking.openURL(url).catch(() => Linking.openURL(fallbackUrl));
+  } catch {
+    Alert.alert('Navigation unavailable', 'Unable to open maps. Please try again.');
+  }
+}
 
 /**
  * Extracts a YouTube video ID from a bare ID or any YouTube URL.

@@ -20,20 +20,32 @@ import {
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { api, Id } from '@tutem/api';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { subscribeDriverLocation, unsubscribeDriverLocation } from '@/lib/pusher';
 import { fetchRoute } from '@/lib/maps';
+import { openNavigation } from '@/lib/linking';
 import ErrorScreen from '@/components/ErrorScreen';
-import * as Location from 'expo-location';
+import { useRideLocation } from '@/hooks/useRideLocation';
 import { mapStyle } from '@/constants/mapStyles';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useSharedValue } from 'react-native-reanimated';
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
+import {
+  Extrapolation,
+  interpolate,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import NearbyDrivers from '@/components/NearbyDrivers';
 import DriverMarker from '@/components/DriverMarker';
@@ -49,6 +61,8 @@ import { BasicHeader } from '@/components/CustomHeader';
 import { RideStatusBanner } from '@/components/RideStatusBanner';
 import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react-native';
 import { Sos, Track } from '@/components/SafetyActions';
+
+const RIDE_SNAP_POINTS = ['26%', '55%', '80%'];
 
 // types
 
@@ -142,14 +156,48 @@ export default function RideRequest() {
     hasReachedDestination: boolean;
   } | null>(null);
 
-  const [riderLocation, setRiderLocation] = useState<Cords | null>(null);
+  const {
+    location: riderLocation,
+    error: locationError,
+    needsSettings: locationNeedsSettings,
+    retry: retryLocation,
+  } = useRideLocation();
 
-  const [isMapMaximized, setIsMapMaximized] = useState(false);
+  // Snap changes should not rerender the map or remount sheet content.
+  const activeSheetIndex = useRef(1);
+  const animatedRideSheetIndex = useSharedValue(1);
+  const expandedDetailsStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(animatedRideSheetIndex.value, [0.15, 0.6], [0, 1], Extrapolation.CLAMP),
+  }));
+  const expandedDetailsProps = useAnimatedProps(() => ({
+    pointerEvents: animatedRideSheetIndex.value > 0.15 ? ('box-none' as const) : ('none' as const),
+    accessibilityElementsHidden: animatedRideSheetIndex.value <= 0.15,
+    importantForAccessibility:
+      animatedRideSheetIndex.value <= 0.15 ? ('no-hide-descendants' as const) : ('auto' as const),
+  }));
+  const handleSheetChange = useCallback((index: number) => {
+    activeSheetIndex.current = index;
+  }, []);
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [mapReady, setMapReady] = useState(false);
+  const activeSheetRef = useRef<BottomSheet>(null);
 
-  const [driverLocation, setDriverLocation] = useState<{
+  const [driverLocationUpdate, setDriverLocation] = useState<{
     latitude: number;
     longitude: number;
+    driverId: string;
+    rideId: string;
   } | null>(null);
+  const canShareDriverLocation =
+    ride?.requestStatus === 'Accepted' &&
+    (ride.status === 'Open' || ride.status === 'Driver Arrived' || ride.status === 'Active');
+  // Hide stale data immediately, before effect cleanup runs after a status change.
+  const driverLocation =
+    canShareDriverLocation &&
+    driverLocationUpdate?.driverId === ride?.driver?._id &&
+    driverLocationUpdate?.rideId === ride?._id
+      ? { latitude: driverLocationUpdate.latitude, longitude: driverLocationUpdate.longitude }
+      : null;
   const [route, setRoute] = useState<Route | null>(null);
   const [selectedDriver, setSelectedDriver] = useState<NearbyDriver | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
@@ -161,8 +209,9 @@ export default function RideRequest() {
   const [filters, setFilters] = useState<VehicleClass[]>([]);
   const [genderMatch, setGenderMatch] = useState(false);
 
-  // Center on driver when location is first received
   const [hasCenteredOnDriver, setHasCenteredOnDriver] = useState(false);
+  // Hide the "Locating driver" spinner after 15 s even if no Pusher update arrives
+  const [locatingDriverTimedOut, setLocatingDriverTimedOut] = useState(false);
 
   const [sheetIndex, setSheetIndex] = useState(-1);
   const [cancelSheetIndex, setCancelSheetIndex] = useState(-1);
@@ -176,7 +225,7 @@ export default function RideRequest() {
   const getNearbyDriversAction = useAuthenticatedAction(api.actions.nearbyDrivers.getNearbyDrivers);
   const changeDriver = useAuthenticatedAction(api.actions.ride.changeDriver);
 
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     if (!ride) return;
     setIsSearchingDrivers(true);
     try {
@@ -202,27 +251,40 @@ export default function RideRequest() {
     } finally {
       setIsSearchingDrivers(false);
     }
-  };
+  }, [ride, getNearbyDriversAction, genderMatch, filters]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (!ride) return;
-    // Use multi-step cancel flow for all statuses
+    
+    if(ride.status === "Open" || ride.status === "Driver Arrived"){
+      handleConfirmCancel();
+      return;
+    }
     setCancelStep('reason');
     cancelSheetRef.current?.expand();
-  };
+  }, [ride]);
 
   const calculateCancelCharges = async () => {
     if (!ride) return;
+    if (ride.status === 'Active' && !effectiveDriverLocation) {
+      retryLocation();
+      showToast({
+        type: 'error',
+        title: 'Location unavailable',
+        description: locationError ?? 'Waiting for your location. Please try again.',
+      });
+      return;
+    }
     setCancelling(true);
     try {
       const result =
         ride.status !== 'Active'
           ? null
-          : driverLocation === null
+          : effectiveDriverLocation === null
             ? null
             : await calculateRiderCancelRideCharges({
                 rideId: id,
-                driverLocation,
+                driverLocation: effectiveDriverLocation,
               });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
@@ -239,13 +301,23 @@ export default function RideRequest() {
 
   const handleConfirmCancel = async () => {
     if (!ride || selectedReason === null) return;
+    if (ride.status === 'Active' && (!effectiveDriverLocation || !canceledRideCharges)) {
+      setCancelStep('reason');
+      setCanceledRideCharges(null);
+      showToast({
+        type: 'error',
+        title: 'Location unavailable',
+        description: 'Check location access and review the fare again before ending your ride.',
+      });
+      return;
+    }
     setCancelling(true);
     try {
       await riderCancelRide({
         rideId: id,
         riderId: ride.riderId,
         reason: selectedReason,
-        ...(driverLocation ? { driverLocation } : {}),
+        ...(effectiveDriverLocation ? { driverLocation: effectiveDriverLocation } : {}),
       });
       setCancelStep(null);
       setSelectedReason(null);
@@ -267,14 +339,14 @@ export default function RideRequest() {
     }
   };
 
-  const handleShowNearbyDrivers = async () => {
+  const handleShowNearbyDrivers = useCallback(async () => {
     try {
       await fetchDrivers();
       bottomSheetRef.current?.expand();
     } catch (error) {
       console.log('Error : ', error);
     }
-  };
+  }, [fetchDrivers]);
 
   const handleChangeDriver = async () => {
     if (!ride || !selectedDriver) return;
@@ -304,7 +376,7 @@ export default function RideRequest() {
     if (extra) coords.push(...extra);
     if (coords.length === 0) return;
     mapRef.current?.fitToCoordinates(coords, {
-      edgePadding: { top: 50, right: 30, bottom: 40, left: 30 },
+      edgePadding: { top: 100, right: 30, bottom: 60, left: 30 },
       animated: true,
     });
   };
@@ -366,50 +438,49 @@ export default function RideRequest() {
     }
 
     lastStatusRef.current = ride.status;
-  }, [ride]);
+  }, [ride, mapReady, containerHeight]);
 
   useEffect(() => {
     fetchDrivers();
   }, [filters, genderMatch]);
 
   useEffect(() => {
-    if (!ride?.driver?._id) {
-      setDriverLocation(null);
-      return;
-    }
+    setDriverLocation(null);
+    setHasCenteredOnDriver(false);
+    if (!canShareDriverLocation || !ride?.driver?._id) return;
 
     const driverId = ride.driver._id;
+    const rideId = ride._id;
     console.log('[rideRequest] Subscribing to location updates for driver:', driverId);
 
     let cancelled = false;
 
-    // Seed location if driver info from nearby list is available
-    const driverInfo = nearbyDrivers?.find((d) => d.driver._id === driverId);
-    if (driverInfo?.cords) {
-      setDriverLocation({
-        latitude: Number(driverInfo.cords.latitude),
-        longitude: Number(driverInfo.cords.longitude),
-      });
-    }
-
     const handleLocationUpdate = (payload: any) => {
-      if (cancelled) return;
+      if (cancelled || payload.driverId !== driverId) return;
       const latitude = Number(payload.latitude);
       const longitude = Number(payload.longitude);
       console.log('[rideRequest] Received location update:', payload);
       if (!isNaN(latitude) && !isNaN(longitude) && latitude !== 0 && longitude !== 0) {
-        setDriverLocation({ latitude, longitude });
+        setDriverLocation({ latitude, longitude, driverId, rideId });
       }
     };
 
     // Subscribe to real-time driver location updates via Pusher
-    subscribeDriverLocation(driverId, handleLocationUpdate);
+    void subscribeDriverLocation(driverId, handleLocationUpdate, () => !cancelled);
 
     return () => {
       cancelled = true;
       unsubscribeDriverLocation(driverId);
     };
-  }, [ride?.driver?._id]);
+  }, [canShareDriverLocation, ride?.driver?._id, ride?._id]);
+
+  // Reset + start the 15-s locating-driver timeout whenever the driver changes
+  useEffect(() => {
+    setLocatingDriverTimedOut(false);
+    if (!canShareDriverLocation || !ride?.driver?._id) return;
+    const timer = setTimeout(() => setLocatingDriverTimedOut(true), 15_000);
+    return () => clearTimeout(timer);
+  }, [canShareDriverLocation, ride?.driver?._id, ride?._id]);
 
   useEffect(() => {
     if (driverLocation && !hasCenteredOnDriver && mapRef.current) {
@@ -425,22 +496,6 @@ export default function RideRequest() {
     }
   }, [driverLocation, hasCenteredOnDriver]);
 
-  // live GPS and fetch route
-  useEffect(() => {
-    let sub: Location.LocationSubscription | null = null;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, distanceInterval: 15 },
-        (loc) =>
-          setRiderLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude })
-      );
-    })();
-    return () => {
-      sub?.remove();
-    };
-  }, []);
   useEffect(() => {
     if (ride?.status === 'Abort') {
       bottomSheetRef.current?.close();
@@ -449,6 +504,96 @@ export default function RideRequest() {
       setCancelSheetIndex(-1);
     }
   }, [ride?.status]);
+
+  const isSheetOpen = sheetIndex !== -1 || cancelSheetIndex !== -1;
+  // Gorhom renders this callback as a component; keep its identity stable so
+  // location updates do not remount/re-measure the footer during a gesture.
+  const renderRideFooter = useCallback(
+    (props: BottomSheetFooterProps) => (
+      <BottomSheetFooter {...props}>
+        <View
+          pointerEvents={isSheetOpen ? 'none' : 'auto'}
+          style={{ backgroundColor: BottomSheetBackgroundColor }}
+          className="px-5 pb-5 pt-3">
+          {/* Cancel button — Open, Driver Arrived, or Active (before destination reached) */}
+          {(ride?.status === 'Open' ||
+            ride?.status === 'Driver Arrived' ||
+            (ride?.status === 'Active' && !ride?.hasReachedDestination)) && (
+            <View className="flex-row items-center gap-3">
+              {(ride?.status === 'Open' || ride?.status === 'Driver Arrived') && (
+                <Button
+                  accessibilityLabel="Change driver"
+                  onPress={handleShowNearbyDrivers}
+                  disabled={cancelling || isSearchingDrivers || changingDriver}
+                  className={cn(
+                    'min-h-[52px] flex-1 flex-row items-center justify-center gap-2 rounded-2xl',
+                    ride?.requestStatus === 'Rejected' || ride?.requestStatus === 'No Response'
+                      ? 'bg-red-500'
+                      : 'bg-primary'
+                  )}>
+                  {isSearchingDrivers ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <MaterialIcons name="edit" size={18} color="white" />
+                  )}
+                  <Text className="text-sm font-semibold">
+                    Change Driver
+                  </Text>
+                </Button>
+              )}
+              <Button
+                onPress={handleCancel}
+                variant={'destructive'}
+                disabled={cancelling}
+                className={cn(
+                  'min-h-[52px] flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50',
+                  { 'pointer-events-none': isSheetOpen }
+                )}>
+                <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
+                <Text className="text-sm font-semibold text-red-600">
+                  {ride?.status === 'Active'
+                    ? 'Abort Ride'
+                    : ride?.status === 'Driver Arrived'
+                      ? 'Cancel Ride'
+                      : 'Cancel Ride Request'}
+                </Text>
+              </Button>
+            </View>
+          )}
+
+          {/* feedback button */}
+          {(ride?.status === 'Completed' || ride?.status === 'Abort') && (
+            <Button
+              className="min-h-[52px] rounded-2xl"
+              onPress={() => {
+                router.push({
+                  pathname: '/ride/feedback',
+                  params: {
+                    rideId: id,
+                  },
+                });
+              }}>
+              <Text className="">Give Feedback</Text>
+            </Button>
+          )}
+        </View>
+      </BottomSheetFooter>
+    ),
+    [
+      BottomSheetBackgroundColor,
+      isSheetOpen,
+      ride?.status,
+      ride?.hasReachedDestination,
+      cancelling,
+      handleCancel,
+      handleShowNearbyDrivers,
+      isSearchingDrivers,
+      changingDriver,
+      ride?.requestStatus,
+      router,
+      id,
+    ]
+  );
 
   if (ride === undefined) return <Loader subtitle="Loading..." />;
   if (ride === null) return <ErrorScreen message="Ride Not found" code="Failed to fetch ride" />;
@@ -461,8 +606,6 @@ export default function RideRequest() {
     ? VERIFICATION_CONFIG[verificationStatus]
     : VERIFICATION_CONFIG['Unverified'];
 
-  const isSheetOpen = sheetIndex !== -1 || cancelSheetIndex !== -1;
-
   const rideAborted = ride.status === 'Abort';
   const riderCancelReason = ride.rideReasons.find((reason) => reason.driverId === undefined);
   const driverAbortReason = ride.rideReasons.find((reason) => reason.driverId === ride.driverId);
@@ -472,11 +615,19 @@ export default function RideRequest() {
   const locatingDriver =
     ride.driver &&
     !driverLocation &&
+    !locatingDriverTimedOut &&
     ride.requestStatus === 'Accepted' &&
     (ride.status === 'Active' || ride.status === 'Driver Arrived');
 
+  // For active-ride aborts, use rider's own GPS as the best available fallback
+  // when driver hasn't sent a Pusher location update yet.
+  const effectiveDriverLocation =
+    driverLocation ?? (ride.status === 'Active' ? riderLocation : null);
+
   return (
-    <View className="flex-1 bg-background">
+    <View
+      className="flex-1 bg-background"
+      onLayout={({ nativeEvent }) => setContainerHeight(nativeEvent.layout.height)}>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -485,484 +636,457 @@ export default function RideRequest() {
         }}
       />
 
-      <ScrollView
-        className={cn('flex-1 px-3', { 'pointer-events-none': isSheetOpen })}
-        contentContainerStyle={{ gap: 16, paddingBottom: 50 }}
-        showsVerticalScrollIndicator={false}>
-        {/* map */}
-        <View
-          className={cn('-mx-3 h-56', {
-            'pointer-events-none': isSheetOpen,
-            'h-full': isMapMaximized,
-          })}>
-          <MapView
-            ref={mapRef}
-            provider={PROVIDER_GOOGLE}
-            style={{ flex: 1 }}
-            rotateEnabled={true}
-            customMapStyle={mapStyle.light}
-            // mapPadding={{ top: 10, right: 10, bottom: 0, left: 0 }}
-            initialRegion={{
-              latitude: (ride.pickup.latitude + ride.destination.latitude) / 2,
-              longitude: (ride.pickup.longitude + ride.destination.longitude) / 2,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}>
-            {/* Main Ride Route (Pickup -> Destination) */}
-            {route && (
-              <Polyline coordinates={route.polyline} strokeWidth={3} strokeColor="#000000" />
-            )}
-            {/* Driver Marker — uses proper vehicle class PNG icon from @/assets/images */}
-            {driverLocation && (
-              <DriverMarker
-                location={driverLocation}
-                vehicleClass={(ride.vehicle?.class as any) ?? 'Cab'}
-              />
-            )}
+      {/* Keep the route centered in the map area above the ride sheet. */}
+      <View pointerEvents={isSheetOpen ? 'none' : 'auto'} className="absolute inset-0">
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={{ flex: 1}}
+          rotateEnabled={true}
+          customMapStyle={mapStyle.light}
+          mapPadding={{
+            top: 0,
+            right: 0,
+            left: 0,
+            bottom: containerHeight * 0.25,
+          }}
+          onMapReady={() => setMapReady(true)}
+          showsMyLocationButton={false}
+          showsCompass={false}
+          toolbarEnabled={false}
+          initialRegion={{
+            latitude: (ride.pickup.latitude + ride.destination.latitude) / 2,
+            longitude: (ride.pickup.longitude + ride.destination.longitude) / 2,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}>
+          {/* Main Ride Route (Pickup -> Destination) */}
+          {route && <Polyline coordinates={route.polyline} strokeWidth={3} strokeColor="#000000" />}
+          {/* Driver Marker — uses proper vehicle class PNG icon from @/assets/images */}
+          {driverLocation && (
+            <DriverMarker
+              location={driverLocation}
+              vehicleClass={(ride.vehicle?.class as any) ?? 'Cab'}
+            />
+          )}
 
-            {/* Pickup Marker */}
-            <Marker
-              coordinate={{ latitude: ride.pickup.latitude, longitude: ride.pickup.longitude }}
-              anchor={{ x: 0.5, y: 1 }}>
-              <MaterialCommunityIcons name="map-marker" size={30} color={colors.pickup} />
-            </Marker>
+          {/* Pickup Marker */}
+          <Marker
+            coordinate={{ latitude: ride.pickup.latitude, longitude: ride.pickup.longitude }}
+            anchor={{ x: 0.5, y: 1 }}>
+            <MaterialCommunityIcons name="map-marker" size={30} color={colors.pickup} />
+          </Marker>
 
-            {/* Destination Marker */}
+          {/* Destination Marker */}
+          <Marker
+            coordinate={{
+              latitude: ride.destination.latitude,
+              longitude: ride.destination.longitude,
+            }}
+            anchor={{ x: 0.5, y: 1 }}>
+            <MaterialCommunityIcons name="map-marker" size={30} color={colors.destination} />
+          </Marker>
+
+          {/* Dropoff Marker (Abort status) */}
+          {ride.status === 'Abort' && ride.dropOff && (
             <Marker
               coordinate={{
-                latitude: ride.destination.latitude,
-                longitude: ride.destination.longitude,
+                latitude: ride.dropOff.latitude,
+                longitude: ride.dropOff.longitude,
               }}
               anchor={{ x: 0.5, y: 1 }}>
-              <MaterialCommunityIcons name="map-marker" size={30} color={colors.destination} />
+              <MaterialCommunityIcons name="map-marker" size={30} color="#f97316" />
             </Marker>
-
-            {/* Dropoff Marker (Abort status) */}
-            {ride.status === 'Abort' && ride.dropOff && (
-              <Marker
-                coordinate={{
-                  latitude: ride.dropOff.latitude,
-                  longitude: ride.dropOff.longitude,
-                }}
-                anchor={{ x: 0.5, y: 1 }}>
-                <MaterialCommunityIcons name="map-marker" size={30} color="#f97316" />
-              </Marker>
-            )}
-          </MapView>
-
-          {/* Loading driver live location indicator */}
-          {locatingDriver && (
-            <View className="absolute left-3 top-3 flex-row items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-md">
-              <ActivityIndicator size="small" color="#3b82f6" />
-              <Text className="text-xs font-medium text-gray-700">Locating driver...</Text>
-            </View>
           )}
+        </MapView>
+      </View>
 
-          <Pressable
-            onPress={() => setIsMapMaximized(!isMapMaximized)}
-            className={cn(
-              'absolute right-3 top-3 aspect-square w-10 items-center justify-center rounded-full border-2 border-white bg-primary shadow-md',
-              {
-                'w-12': isMapMaximized,
-              }
-            )}>
-            {isMapMaximized ? (
-              <Ionicons name="close" size={24} color="#111827" />
-            ) : (
-              <MaterialCommunityIcons name="map" size={20} color="white" />
-            )}
-          </Pressable>
-
-          <Sos
-            variant="compact"
-            size={isMapMaximized ? 'md' : 'sm'}
-            className={`absolute right-3 top-16`}
-          />
-          <Track
-            variant="compact"
-            size={isMapMaximized ? 'md' : 'sm'}
-            className={cn('absolute right-3 top-28 bg-teal-600', {
-              'top-[116px]': isMapMaximized,
-            })}
-          />
-
-          <Pressable
-            onPress={() =>
-              fitMap([
-                { latitude: ride.pickup.latitude, longitude: ride.pickup.longitude },
-                { latitude: ride.destination.latitude, longitude: ride.destination.longitude },
-                ...(driverLocation
-                  ? [{ latitude: driverLocation.latitude, longitude: driverLocation.longitude }]
-                  : []),
-              ])
-            }
-            className={cn(
-              'absolute right-3 top-40 aspect-square w-10 items-center justify-center rounded-full border-2 border-primary bg-white/90 shadow-md',
-              { 'top-[170px] w-12': isMapMaximized }
-            )}>
-            <MaterialIcons name="my-location" size={20} color="#3b82f6" />
-          </Pressable>
-          <Separator />
+      {/* Status and safety controls stay on the map, as on the driver screen. */}
+      <View
+        className="absolute left-3 right-3 top-3 gap-3"
+        pointerEvents={isSheetOpen ? 'none' : 'box-none'}>
+        <View pointerEvents="none">
+          <RideStatusBanner ride={ride} />
         </View>
 
-        {/* OTP */}
-        {ride.status === 'Driver Arrived' && ride.otp && (
-          <View className="items-center rounded-2xl bg-indigo-50 px-6 py-7">
-            <Text className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
-              Share with your driver
-            </Text>
-            <Text className="mt-4 h-14 text-5xl font-extrabold tracking-[12px] text-indigo-900">
-              {ride.otp}
-            </Text>
-            <View className="mt-4 flex-row items-center gap-1.5">
-              <Ionicons name="lock-closed-outline" size={12} color="#a5b4fc" />
-              <Text className="text-xs text-indigo-300">Do not share with anyone else</Text>
-            </View>
-
-            {/* Confirm prompt */}
-            <View className="-mx-2 mt-2 rounded-xl bg-emerald-50 px-4 py-2">
-              <Text className="text-center text-sm font-semibold text-emerald-700">
-                {`Confirm once you are ${ride.vehicle?.class === 'Bike' ? 'on the bike' : 'inside the vehicle'}`}
-              </Text>
-            </View>
+        <View className="flex-row justify-between">
+          <View>
+            {locatingDriver && (
+              <View className="flex-row items-center gap-2 self-start rounded-full bg-white/95 px-3 py-1.5 shadow-sm">
+                <ActivityIndicator size="small" color="#3b82f6" />
+                <Text className="text-xs font-medium text-gray-700">Locating driver...</Text>
+              </View>
+            )}
+            {canShareDriverLocation && !driverLocation && locatingDriverTimedOut && (
+              <View className="self-start rounded-full bg-white/95 px-3 py-1.5 shadow-sm">
+                <Text className="text-xs font-medium text-gray-700">
+                  Driver location unavailable
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-
-        <RideStatusBanner ride={ride} />
-
-        {/* Driver Abort Reason Banner */}
-        {ride.status === 'Abort' && (
-          <View className="mb-4 rounded-2xl border border-red-200 bg-red-50/80 p-4">
-            <View className="flex-row items-start gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                <Ionicons name="alert-circle" size={24} color="#f97316" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-destructive">
-                  {driverAbortReason ? 'Ride Aborted by Driver' : 'You Aborted the Ride'}
-                </Text>
-                <Text className="mt-1 text-xs text-destructive/85">
-                  Reason:{' '}
-                  <Text className="text-sm font-semibold">
-                    {driverAbortReason?.reason || riderCancelReason?.reason || ''}
-                  </Text>
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Driver card */}
-        <View
-          className={cn('mb-4 rounded-2xl border bg-white p-4 shadow-sm', {
-            'pointer-events-none': isSheetOpen,
-            'border-red-200': ride.requestStatus === 'Rejected',
-            'border-gray-100': ride.requestStatus !== 'Rejected',
-          })}>
-          {/* Rejection banner */}
-          {ride.requestStatus === 'Rejected' && (
-            <View className="mb-3 flex-row items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
-              <MaterialIcons name="cancel" size={16} color="#dc2626" style={{ marginTop: 1 }} />
-              <View className="flex-1">
-                <Text className="text-[13px] font-semibold text-red-700">
-                  Driver declined your request
-                </Text>
-                <Text className="mt-0.5 text-[12px] text-red-500">
-                  Tap the edit icon to choose a new driver.
-                </Text>
-              </View>
-            </View>
-          )}
-          {/* No response banner */}
-          {ride.requestStatus === 'No Response' && (
-            <View className="mb-3 flex-row items-start gap-2 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2.5">
-              <View className="flex-1">
-                <Text className="text-[13px] font-semibold text-orange-700">
-                  Driver didn't respond, please request some other driver.
-                </Text>
-                <Text className="mt-0.5 text-[12px] text-orange-500">
-                  Tap the edit icon to choose a new driver.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            Your Driver
-          </Text>
-
-          {/* driver details */}
-          <View className="flex-row justify-between gap-2">
-            <TouchableOpacity
-              activeOpacity={0.8}
+          <View className="flex-row justify-end gap-2" pointerEvents="box-none">
+            <Sos variant="compact" size="sm" />
+            <Track variant="compact" size="sm" className="bg-teal-600" />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Center ride route"
               onPress={() =>
-                setViewerImage({
-                  uri: ride.driver.userDetails.profilePictureKey,
-                  name: `${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails?.lastName ?? ''}`.trim(),
-                })
+                fitMap([ride.pickup, rideAborted && ride.dropOff ? ride.dropOff : ride.destination])
               }
-              className={cn('items-center justify-center gap-1.5 rounded-full', {
-                'border-2 border-red-500':
-                  ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
-              })}>
-              <Avatar alt="Profile pic" className="h-[45px] w-[45px]">
-                <AvatarImage
-                  source={
-                    ride.driver.userDetails.profilePictureKey?.trim()
-                      ? { uri: ride.driver.userDetails.profilePictureKey }
-                      : require('@/assets/images/avatar.jpg')
-                  }
-                />
-                <AvatarFallback className="bg-white/20">
-                  <Text className="text-xs font-bold text-primary">
-                    {ride.driver.userDetails.firstName?.[0]}
-                    {ride.driver.userDetails?.lastName?.[0]}
-                  </Text>
-                </AvatarFallback>
-              </Avatar>
-            </TouchableOpacity>
+              className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm">
+              <MaterialIcons name="my-location" size={20} color="#2563eb" />
+            </Pressable>
+          </View>
+        </View>
+      </View>
 
-            <View className="flex-1 gap-0.5">
-              <Text
-                className={cn('my-0 px-px py-0 text-base font-bold', {
-                  'text-gray-400':
+      <BottomSheet
+        ref={activeSheetRef}
+        index={1}
+        snapPoints={RIDE_SNAP_POINTS}
+        animatedIndex={animatedRideSheetIndex}
+        onChange={handleSheetChange}
+        enableDynamicSizing={false}
+        enablePanDownToClose={false}
+        enableHandlePanningGesture={!isSheetOpen}
+        enableContentPanningGesture={!isSheetOpen}
+        backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
+        handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}
+        footerComponent={renderRideFooter}>
+        {/* The summary stays fixed; only details scroll. Content dimensions do not
+            change during a drag, so the sheet owns the movement. */}
+        <View style={{ flex: 1 }}>
+          {/* Driver card */}
+          <View
+            className={cn('mx-5 mb-4 mt-1 rounded-2xl border bg-white p-3', {
+              'pointer-events-none': isSheetOpen,
+              'border-red-200': ride.requestStatus === 'Rejected',
+              'border-gray-100': ride.requestStatus !== 'Rejected',
+            })}>
+            {/* driver details */}
+            <View className="flex-row justify-between gap-2">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() =>
+                  setViewerImage({
+                    uri: ride.driver.userDetails.profilePictureKey,
+                    name: `${ride.driver.userDetails.firstName ?? ''} ${ride.driver.userDetails?.lastName ?? ''}`.trim(),
+                  })
+                }
+                className={cn('items-center justify-center gap-1.5 rounded-full', {
+                  'border-2 border-red-500':
                     ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
                 })}>
-                {`${ride.driver.userDetails.firstName} ${ride.driver.userDetails.lastName ?? ''}`.trim() ||
-                  'Driver'}
-              </Text>
-              <GenderAge
-                gender={ride.driver.userDetails.gender}
-                dob={ride.driver.userDetails.dob}
-              />
-              <View className="mt-0.5 flex-row items-center gap-2">
-                <Rating rating={ride.driver.rating} />
-                {ride.driver.isLicenseVerified !== 'Verified' && (
-                  <View className="flex-row items-center gap-1">
-                    <Feather name="check" size={12} color="green" />
-                    <Text style={{ color: 'green' }} className="text-xs font-semibold">
-                      Verified
+                <Avatar alt="Profile pic" className="h-[45px] w-[45px]">
+                  <AvatarImage
+                    source={
+                      ride.driver.userDetails.profilePictureKey?.trim()
+                        ? { uri: ride.driver.userDetails.profilePictureKey }
+                        : require('@/assets/images/avatar.jpg')
+                    }
+                  />
+                  <AvatarFallback className="bg-white/20">
+                    <Text className="text-xs font-bold text-primary">
+                      {ride.driver.userDetails.firstName?.[0]}
+                      {ride.driver.userDetails?.lastName?.[0]}
                     </Text>
+                  </AvatarFallback>
+                </Avatar>
+              </TouchableOpacity>
+
+              <View className="flex-1 gap-0.5">
+                <Text
+                  numberOfLines={2}
+                  className={cn('my-0 px-px py-0 text-base font-bold capitalize', {
+                    'text-gray-400':
+                      ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response',
+                  })}>
+                  {`${ride.driver.userDetails.firstName.toLowerCase()} ${ride.driver.userDetails.lastName?.toLocaleLowerCase() ?? ''}`.trim() ||
+                    'Driver'}
+                </Text>
+                <GenderAge
+                  gender={ride.driver.userDetails.gender}
+                  dob={ride.driver.userDetails.dob}
+                />
+                <View className="mt-0.5 flex-row flex-wrap items-center gap-2">
+                  <Rating rating={ride.driver.rating} />
+                  {ride.driver.isLicenseVerified !== 'Verified' && (
+                    <View className="flex-row items-center gap-1">
+                      <Feather name="check" size={12} color="green" />
+                      <Text style={{ color: 'green' }} className="text-xs font-semibold">
+                        Verified
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View className="items-end justify-center">
+                <Text className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                  {ride.status === 'Completed' || rideAborted ? 'Fare' : 'Est. Fare'}
+                </Text>
+                <Text className="text-xl font-extrabold tracking-tight text-emerald-600">
+                  {formatFare(ride.fare)}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <BottomSheetScrollView
+            style={{ flex: 1 }}
+            enableFooterMarginAdjustment
+            scrollEnabled={!isSheetOpen}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 4,
+              paddingBottom: 20,
+              gap: 16,
+            }}
+            showsVerticalScrollIndicator={false}>
+            {/* Only the driver summary and pinned actions remain when collapsed. */}
+            <Animated.View style={expandedDetailsStyle} animatedProps={expandedDetailsProps}>
+
+              {/* Vehicle details */}
+              {vehicle && (
+                <View
+                  className={cn('mb-2 flex-row items-center gap-3 rounded-xl px-3', {
+                    'bg-gray-50': ride.requestStatus !== 'Rejected',
+                    'bg-red-50/60 opacity-60': ride.requestStatus === 'Rejected',
+                  })}>
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 p-1">
+                    <Image
+                      source={VEHICLE_ICONS[vehicle.class] || VEHICLE_ICONS.Cab}
+                      style={{ width: 28, height: 28 }}
+                      resizeMode="contain"
+                    />
+                  </View>
+
+                  <View className="flex-1 gap-0.5">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-sm font-bold text-gray-900">{vehicle.model}</Text>
+
+                      <View className="rounded-full bg-indigo-100 px-2.5 py-0.5">
+                        <Text className="text-xs font-semibold">{vehicle.fuelType}</Text>
+                      </View>
+                    </View>
+                    <Text className="text-xs font-semibold tracking-widest text-gray-700">
+                      {vehicle.registrationNumber}
+                    </Text>
+                  </View>
+
+                  <View className="items-center gap-0.5">
+                    <Ionicons name="people-outline" size={14} color="#27272a" />
+                    <Text className="text-xs font-semibold text-gray-600">
+                      {vehicle.seatingCapacity}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Rejection banner */}
+              {ride.requestStatus === 'Rejected' && (
+                <View className="mb-2 flex-row items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
+                  <MaterialIcons
+                    name="cancel"
+                    size={16}
+                    color="#dc2626"
+                    style={{ marginTop: 1 }}
+                  />
+                  <View className="flex-1">
+                    <Text className="text-[13px] font-semibold text-red-700">
+                      Driver declined your request
+                    </Text>
+                    <Text className="mt-0.5 text-[12px] text-red-500">
+                      Use the change-driver button below to choose a new driver.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Driver Abort Reason Banner */}
+              {ride.status === 'Abort' && (
+                <View className="mb-2 rounded-2xl border border-red-200 bg-red-50/80 p-4">
+                  <View className="flex-row items-start gap-3">
+                    <View className="h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                      <Ionicons name="alert-circle" size={24} color="#f97316" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-destructive">
+                        {driverAbortReason ? 'Ride Aborted by Driver' : 'You Aborted the Ride'}
+                      </Text>
+                      <Text className="mt-1 text-xs text-destructive/85">
+                        Reason:{' '}
+                        <Text className="text-sm font-semibold">
+                          {driverAbortReason?.reason || riderCancelReason?.reason || ''}
+                        </Text>
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+              {/* No response banner */}
+              {ride.requestStatus === 'No Response' && (
+                <View className="mb-2 flex-row items-start gap-2 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2.5">
+                  <View className="flex-1">
+                    <Text className="text-[13px] font-semibold text-orange-700">
+                      Driver didn't respond, please request some other driver.
+                    </Text>
+                    <Text className="mt-0.5 text-[12px] text-orange-500">
+                      Use the change-driver button below to choose a new driver.
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
+              {/* OTP */}
+              {ride.status === 'Driver Arrived' && ride.otp && (
+                <View className="mb-2 items-center rounded-2xl bg-indigo-50 px-6 py-7">
+                  <Text className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+                    Share with your driver
+                  </Text>
+                  <Text className="mt-4 h-14 text-5xl font-extrabold tracking-[12px] text-indigo-900">
+                    {ride.otp}
+                  </Text>
+                  <View className="mt-4 flex-row items-center gap-1.5">
+                    <Ionicons name="lock-closed-outline" size={12} color="#a5b4fc" />
+                    <Text className="text-xs text-indigo-300">Do not share with anyone else</Text>
+                  </View>
+
+                  {/* Confirm prompt */}
+                  <View className="-mx-2 mt-2 rounded-xl bg-emerald-50 px-4 py-2">
+                    <Text className="text-center text-sm font-semibold text-emerald-700">
+                      {`Confirm once you are ${ride.vehicle?.class === 'Bike' ? 'on the bike' : 'inside the vehicle'}`}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Route */}
+              <View className="rounded-2xl border border-slate-200 bg-white p-4">
+                <View className='flex-row justify-between'>
+                  <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Route
+                  </Text>
+                  <Text className="text-base font-bold text-gray-900">
+                    {distanceFormat(ride.distance)}
+                  </Text>
+                </View>
+
+                {rideAborted ? (
+                  <View className="flex-row gap-3">
+                    <View className="mb-1 items-center pt-[5px]">
+                      <MaterialCommunityIcons name="map-marker" size={14} color={colors.pickup} />
+                      <View className="h-10 w-px bg-gray-200" />
+                      <MaterialCommunityIcons name="map-marker" size={14} color="#f97316" />
+                      <View className="h-10 w-px border-l border-dashed border-gray-300" />
+                      <MaterialCommunityIcons
+                        name="map-marker-outline"
+                        size={14}
+                        color="#9ca3af"
+                      />
+                    </View>
+
+                    <View className="flex-1 gap-3">
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Navigate to pickup"
+                        onPress={() => openNavigation(ride.pickup.latitude, ride.pickup.longitude)}
+                        activeOpacity={0.75}>
+                        <Text
+                          className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: colors.pickup }}>
+                          Pickup
+                        </Text>
+                        <Text className="text-sm font-semibold leading-5 text-gray-900">
+                          {ride.pickup?.address ?? 'Not set'}
+                        </Text>
+                        <Text className="text-xs font-bold" style={{ color: colors.pickup }}>
+                          Navigate →
+                        </Text>
+                      </TouchableOpacity>
+                      <View>
+                        <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-orange-500">
+                          Dropoff (Actual End)
+                        </Text>
+                        <Text className="text-sm font-semibold leading-5 text-gray-900">
+                          {ride.dropOff?.address ?? 'Not set'}
+                        </Text>
+                      </View>
+                      <View className="opacity-60">
+                        <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                          Original Destination (Not Reached)
+                        </Text>
+                        <Text className="text-sm font-semibold leading-5 text-gray-500">
+                          {ride.destination?.address ?? 'Not set'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <View className="flex-row gap-3">
+                    <View className="mb-1 items-center pt-[5px]">
+                      <MaterialCommunityIcons name="map-marker" size={14} color={colors.pickup} />
+                      <View className="w-px flex-1 bg-gray-200" />
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={14}
+                        color={colors.destination}
+                      />
+                    </View>
+
+                    <View className="flex-1 gap-3">
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Navigate to pickup"
+                        onPress={() => openNavigation(ride.pickup.latitude, ride.pickup.longitude)}
+                        activeOpacity={0.75}>
+                        <Text
+                          className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: colors.pickup }}>
+                          Pickup
+                        </Text>
+                        <Text className="text-sm font-semibold leading-5 text-gray-900">
+                          {ride.pickup?.address ?? 'Not set'}
+                        </Text>
+                        <Text className="text-xs font-bold" style={{ color: colors.pickup }}>
+                          Navigate →
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Navigate to destination"
+                        onPress={() =>
+                          openNavigation(ride.destination.latitude, ride.destination.longitude)
+                        }
+                        activeOpacity={0.75}>
+                        <Text
+                          className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: colors.destination }}>
+                          Destination
+                        </Text>
+                        <Text className="text-sm font-semibold leading-5 text-gray-900">
+                          {ride.destination?.address ?? 'Not set'}
+                        </Text>
+                        <Text className="text-xs font-bold" style={{ color: colors.destination }}>
+                          Navigate →
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>
-            </View>
-
-            {/* Edit button — highlighted on rejection */}
-            {(ride.status === 'Open' || ride.status === 'Driver Arrived') && (
-              <TouchableOpacity
-                onPress={handleShowNearbyDrivers}
-                className={cn(
-                  'h-10 w-10 items-center justify-center rounded-full',
-                  ride.requestStatus === 'Rejected' || ride.requestStatus === 'No Response'
-                    ? 'bg-red-500'
-                    : 'bg-primary'
-                )}>
-                <MaterialIcons name="edit" size={18} color="white" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Vehicle details */}
-          {vehicle && (
-            <View
-              className={cn('mt-4 flex-row items-center gap-3 rounded-xl p-3', {
-                'bg-gray-50': ride.requestStatus !== 'Rejected',
-                'bg-red-50/60 opacity-60': ride.requestStatus === 'Rejected',
-              })}>
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 p-1">
-                <Image
-                  source={VEHICLE_ICONS[vehicle.class] || VEHICLE_ICONS.Cab}
-                  style={{ width: 28, height: 28 }}
-                  resizeMode="contain"
-                />
-              </View>
-
-              <View className="flex-1 gap-0.5">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-sm font-bold text-gray-900">{vehicle.model}</Text>
-
-                  <View className="rounded-full bg-indigo-100 px-2.5 py-0.5">
-                    <Text className="text-xs font-semibold">{vehicle.fuelType}</Text>
-                  </View>
-                </View>
-                <Text className="text-xs font-semibold tracking-widest text-gray-700">
-                  {vehicle.registrationNumber}
-                </Text>
-              </View>
-
-              <View className="items-center gap-0.5">
-                <Ionicons name="people-outline" size={14} color="#27272a" />
-                <Text className="text-xs font-semibold text-gray-600">
-                  {vehicle.seatingCapacity}
-                </Text>
-              </View>
-            </View>
-          )}
+              
+            </Animated.View>
+          </BottomSheetScrollView>
         </View>
-
-        {/* Route */}
-        <View className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            Route
-          </Text>
-
-          {rideAborted ? (
-            <View className="flex-row gap-3">
-              <View className="mb-1 items-center pt-[5px]">
-                <MaterialCommunityIcons name="map-marker" size={14} color={colors.pickup} />
-                <View className="h-10 w-px bg-gray-200" />
-                <MaterialCommunityIcons name="map-marker" size={14} color="#f97316" />
-                <View className="h-10 w-px border-l border-dashed border-gray-300" />
-                <MaterialCommunityIcons name="map-marker-outline" size={14} color="#9ca3af" />
-              </View>
-
-              <View className="flex-1 gap-3">
-                <View>
-                  <Text
-                    className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: colors.pickup }}>
-                    Pickup
-                  </Text>
-                  <Text className="text-sm font-semibold leading-5 text-gray-900">
-                    {ride.pickup?.address ?? 'Not set'}
-                  </Text>
-                </View>
-                <View>
-                  <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-orange-500">
-                    Dropoff (Actual End)
-                  </Text>
-                  <Text className="text-sm font-semibold leading-5 text-gray-900">
-                    {ride.dropOff?.address ?? 'Not set'}
-                  </Text>
-                </View>
-                <View className="opacity-60">
-                  <Text className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    Original Destination (Not Reached)
-                  </Text>
-                  <Text className="text-sm font-semibold leading-5 text-gray-500">
-                    {ride.destination?.address ?? 'Not set'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View className="flex-row gap-3">
-              <View className="mb-1 items-center pt-[5px]">
-                <MaterialCommunityIcons name="map-marker" size={14} color={colors.pickup} />
-                <View className="w-px flex-1 bg-gray-200" />
-                <MaterialCommunityIcons name="map-marker" size={14} color={colors.destination} />
-              </View>
-
-              <View className="flex-1 gap-3">
-                <View>
-                  <Text
-                    className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: colors.pickup }}>
-                    Pickup
-                  </Text>
-                  <Text className="text-sm font-semibold leading-5 text-gray-900">
-                    {ride.pickup?.address ?? 'Not set'}
-                  </Text>
-                </View>
-                <View>
-                  <Text
-                    className="mb-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color: colors.destination }}>
-                    Destination
-                  </Text>
-                  <Text className="text-sm font-semibold leading-5 text-gray-900">
-                    {ride.destination?.address ?? 'Not set'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Ride details est. */}
-        <>
-          <Text className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            {ride.status === 'Completed' || ride.status === 'Abort'
-              ? 'Trip Summary'
-              : 'Ride Details Est.'}
-          </Text>
-          <View className="mb-4 flex-row gap-2">
-            <View className="flex-1 items-center gap-0.5 rounded-2xl bg-gray-50 py-3">
-              <Ionicons name="map-outline" size={18} color="#6b7280" />
-              <Text className="mt-1 text-[11px] text-gray-400">Distance</Text>
-              <Text className="text-base font-bold text-gray-900">
-                {distanceFormat(ride.distance)}
-              </Text>
-            </View>
-
-            <View className="flex-1 items-center gap-0.5 rounded-2xl bg-gray-50 py-3">
-              <Ionicons name="time-outline" size={18} color="#6b7280" />
-              <Text className="mt-1 text-[11px] text-gray-400">
-                {ride.status === 'Completed' || ride.status === 'Abort' ? 'Duration' : 'ETA'}
-              </Text>
-              <Text className="text-base font-bold text-gray-900">
-                {ride.status === 'Completed' || ride.status === 'Abort'
-                  ? formatActualDuration(
-                      ride.startedAt,
-                      ride.status === 'Completed' ? ride.completedAt : ride.updatedAt
-                    )
-                  : (route?.duration ?? ride.expectedDuration ?? '—')}
-              </Text>
-            </View>
-
-            <View className="flex-1 items-center gap-0.5 rounded-2xl bg-gray-50 py-3">
-              <Ionicons name={'cash-outline'} size={18} color="#2563eb" />
-              <Text className="mt-1 text-[11px] text-gray-400">
-                {ride.status !== 'Completed' && ride.status !== 'Abort' ? 'Est. Fare' : 'Fare'}
-              </Text>
-              <Text className="text-base font-bold text-blue-600">{formatFare(ride.fare)}</Text>
-            </View>
-          </View>
-        </>
-
-        {/* Cancel button — Open, Driver Arrived, or Active (before destination reached) */}
-        {(ride.status === 'Open' ||
-          ride.status === 'Driver Arrived' ||
-          (ride.status === 'Active' && !ride.hasReachedDestination)) && (
-          <Button
-            onPress={handleCancel}
-            variant={'destructive'}
-            disabled={cancelling}
-            className={cn(
-              'mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50',
-              { 'pointer-events-none': isSheetOpen }
-            )}>
-            <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
-            <Text className="text-sm font-semibold text-red-600">
-              {ride.status === 'Active'
-                ? 'Abort Ride'
-                : ride.status === 'Driver Arrived'
-                  ? 'Cancel Ride'
-                  : 'Cancel Ride Request'}
-            </Text>
-          </Button>
-        )}
-
-        {/* feedback button */}
-        {(ride.status === 'Completed' || ride.status === 'Abort') && (
-          <Button
-            onPress={() => {
-              router.push({
-                pathname: '/ride/feedback',
-                params: {
-                  rideId: id,
-                },
-              });
-            }}>
-            <Text className="">Give Feedback</Text>
-          </Button>
-        )}
-      </ScrollView>
+      </BottomSheet>
 
       {/* change driver */}
       <BottomSheet
         ref={bottomSheetRef}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+        )}
         index={sheetIndex}
         animatedIndex={animatedIndex}
         onChange={(index) => {
@@ -1182,6 +1306,9 @@ export default function RideRequest() {
       {/*  Cancel / Abort BottomSheet  */}
       <BottomSheet
         ref={cancelSheetRef}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+        )}
         index={cancelSheetIndex}
         onChange={setCancelSheetIndex}
         enablePanDownToClose={true}
@@ -1234,6 +1361,33 @@ export default function RideRequest() {
                   );
                 })}
               </View>
+
+              {/* Location required notice for Active ride abort */}
+              {ride.status === 'Active' && effectiveDriverLocation === null && (
+                <View className="mb-3 flex-row items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
+                  <Ionicons name="location-outline" size={16} color="#f97316" />
+                  <Text className="flex-1 text-xs font-semibold text-orange-700">
+                    {locationError ?? 'Waiting for your location to calculate the fare.'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (locationNeedsSettings) {
+                        void Linking.openSettings().catch(() =>
+                          showToast({
+                            type: 'error',
+                            title: 'Settings unavailable',
+                            description:
+                              'Open your phone settings and allow location access for this app.',
+                          }),
+                        );
+                      } else retryLocation();
+                    }}>
+                    <Text className="text-xs font-bold text-orange-700">
+                      {locationNeedsSettings ? 'Open Settings' : 'Retry location'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Action buttons */}
               <View className="flex-row gap-3">

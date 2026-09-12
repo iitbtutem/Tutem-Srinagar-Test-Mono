@@ -212,10 +212,10 @@ export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<Curre
         <Text className="mb-3 text-xl font-bold">Active Ride</Text>
         <Track variant="full" />
       </View>
-      <Card className="rounded-2xl border-2 border-green-500 bg-card shadow-xl">
+      <Card className="rounded-2xl border-2 border-primary/25 bg-card shadow-xl">
         <CardContent className="gap-3 p-4">
           {/* Header: Status */}
-          <RideStatusBanner ride={currentRide} className="-m-4 mb-1 rounded-b-none border-0 py-2" />
+          <RideStatusBanner ride={currentRide} className="-m-4 mb-1 rounded-b-none border-0 py-2 bg-primary/10" />
 
           {/* Route */}
           <View className="flex-row items-center justify-between gap-1">

@@ -6,8 +6,15 @@ import {
 } from '@/hooks/customApi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import Animated, {
+  Extrapolation,
+  FadeInUp,
+  interpolate,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import BottomSheet, { BottomSheetFooter, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
@@ -116,14 +123,14 @@ function RouteCard({
   destination: { address: string } & Cords;
 }) {
   return (
-    <View className="bg-primary-background mb-1 rounded-2xl border border-slate-800 p-4">
-      <View className="mb-3 flex-row items-stretch pl-0.5">
+    <View className="rounded-2xl border border-slate-200 bg-white p-4">
+      <View className="flex-row items-stretch pl-0.5">
         <View className="w-4 items-center">
           <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.pickup }} />
           <View className="my-1 w-px flex-1 bg-slate-700" />
           <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.destination }} />
         </View>
-        <View className="ml-3 flex-1 gap-2.5">
+        <View className="ml-3 flex-1 gap-2">
           <TouchableOpacity
             onPress={() => openNavigation(pickup.latitude, pickup.longitude)}
             activeOpacity={0.75}
@@ -133,8 +140,8 @@ function RouteCard({
               style={{ color: colors.pickup }}>
               Pickup
             </Text>
-            <Text className="text-title text-[14px] font-semibold leading-5">
-              {pickup?.address ?? 'Pickup not set'}
+            <Text className="text-title text-[12px] font-semibold leading-5 truncate" numberOfLines={2}>
+              {pickup?.address ?? 'Pickup not set'} 
             </Text>
             <Text className="text-xs font-bold" style={{ color: colors.pickup }}>
               Navigate →
@@ -150,8 +157,8 @@ function RouteCard({
               style={{ color: colors.destination }}>
               Destination
             </Text>
-            <Text className="text-title text-[14px] font-semibold leading-5">
-              {destination?.address ?? 'Destination not set'}
+            <Text className="text-title text-[12px] font-semibold leading-5 truncate" numberOfLines={2}>
+              {destination?.address ?? 'Destination not set'}  
             </Text>
             <Text className="text-xs font-bold" style={{ color: colors.destination }}>
               Navigate →
@@ -194,6 +201,18 @@ export default function Ride() {
   const driverLocation = useDriverLiveLocation();
   const mapRef = useRef<MapView>(null);
   const activeSheetRef = useRef<BottomSheet>(null);
+  const animatedSheetIndex = useSharedValue(1);
+  const rideDetailsHeight = useSharedValue(0);
+  const rideDetailsStyle = useAnimatedStyle(() => ({
+    height:
+      rideDetailsHeight.value *
+      interpolate(animatedSheetIndex.value, [0, 1], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(animatedSheetIndex.value, [0.2, 0.5], [0, 1], Extrapolation.CLAMP),
+    overflow: 'hidden',
+  }));
+  const rideDetailsProps = useAnimatedProps(() => ({
+    pointerEvents: animatedSheetIndex.value > 0.23 ? ('box-none' as const) : ('none' as const),
+  }));
 
   const ride = useAuthenticatedQuery(api.routes.rides.getDriverRide, id ? { id } : 'skip');
   const settings = useAuthenticatedQuery(api.routes.settings.rideSettings);
@@ -410,15 +429,17 @@ export default function Ride() {
 
   const calculateCancelRide = async () => {
     if (driverLocation === null || !ride) return;
+
+    if(ride.status === "Open" || ride.status === "Driver Arrived"){
+      handleConfirmCancel();
+      return;
+    }
     setLoading('canceling');
     try {
-      const result =
-        ride.status !== 'Active'
-          ? null
-          : await calculateDriverCancelRideCharges({
-              id,
-              driverLocation,
-            });
+      const result = await calculateDriverCancelRideCharges({
+        id,
+        driverLocation,
+      });
       setCanceledRideCharges(result);
       setCancelStep('confirm');
     } catch (error) {
@@ -430,8 +451,10 @@ export default function Ride() {
 
   useEffect(() => {
     if (!ride || ride.status !== 'Abort') return;
-    calculateCancelRide();
-  }, [ride?.status]);
+    // The server has finalized the fare (including any rider cancellation penalty).
+    // Do not recalculate it using driver cancellation rules or live GPS.
+    setCancelStep('confirm');
+  }, [ride?._id, ride?.status]);
 
   // Guards
   if (ride === undefined || vehicle === undefined || settings === undefined)
@@ -467,6 +490,9 @@ export default function Ride() {
 
   const rideCanceled = ride.status === 'Canceled';
   const rideAborted = ride.status === 'Abort';
+  const cancelSummary = rideAborted
+    ? { calculatedFare: ride.fare, chargableDistance: ride.distance, remainingDistance: null }
+    : canceledRideCharges;
   const rideCompleted = ride.status === 'Completed';
   const riderCancelReason = ride.rideReasons.find((reason) => reason.driverId === undefined);
   const driverCancelReason = ride.rideReasons.find((reason) => reason.driverId === driverId);
@@ -543,38 +569,189 @@ export default function Ride() {
         </MapView>
       </View>
 
-      {/* Map controls */}
+      {/* Ride status and map controls */}
       <View
         style={{ position: 'absolute', top: 10, left: 10, right: 10 }}
-        className="flex-row items-start justify-between"
+        className="gap-2"
         pointerEvents="box-none">
-        <View pointerEvents="none">
-          <Animated.View entering={FadeInUp.springify()}>
-            <RouteLegend labelA="Pickup" labelB="Destination" />
-          </Animated.View>
+        <View pointerEvents="none" className="rounded-2xl bg-white">
+          <RideStatusBanner ride={ride} />
         </View>
-        <TouchableOpacity
-          onPress={() => handleLocateDriver()}
-          activeOpacity={0.8}
-          style={{ elevation: 5 }}
-          className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
-          <MaterialCommunityIcons
-            name="crosshairs-gps"
-            size={24}
-            color={isDark ? '#60a5fa' : '#1a73e8'}
-          />
-        </TouchableOpacity>
+        <View className="flex-row items-start justify-between" pointerEvents="box-none">
+          <View pointerEvents="none">
+            <Animated.View entering={FadeInUp.springify()}>
+              <RouteLegend labelA="Pickup" labelB="Destination" />
+            </Animated.View>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleLocateDriver()}
+            activeOpacity={0.8}
+            style={{ elevation: 5 }}
+            className="h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white shadow-lg">
+            <MaterialCommunityIcons
+              name="crosshairs-gps"
+              size={24}
+              color={isDark ? '#60a5fa' : '#1a73e8'}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Bottom Sheet */}
       <BottomSheet
         ref={activeSheetRef}
         index={1}
-        snapPoints={['23%', '55%']}
+        animatedIndex={animatedSheetIndex}
+        snapPoints={['25%', '55%']}
+        // animationConfigs={{ damping: 50, overshootClamping: true, stiffness: 500 }}
+        footerComponent={(props) => (
+          <BottomSheetFooter {...props}>
+            {/* The parent safe area handles the system inset; keep 20px of extra bottom space. */}
+            <View
+              style={{
+                backgroundColor: BottomSheetBackgroundColor,
+                paddingHorizontal: 20,
+                paddingTop: 12,
+                paddingBottom: 20,
+              }}>
+              {cancelStep === 'reason' ? (
+                <View className="flex-row gap-3">
+                  <Button
+                    disabled={loading === 'canceling'}
+                    onPress={() => {
+                      setCancelStep(null);
+                      setSelectedReason(null);
+                    }}
+                    className="flex-1 border-primary/90">
+                    <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
+                  </Button>
+                  <Button
+                    disabled={selectedReason === null || loading === 'canceling'}
+                    onPress={() => calculateCancelRide()}
+                    className={`flex-1 ${
+                      selectedReason === null
+                        ? 'border-red-900/40 bg-red-900/20'
+                        : 'border-red-500/60 bg-red-500/20'
+                    }`}>
+                    <Text
+                      className={`text-[15px] font-extrabold ${
+                        selectedReason === null ? 'text-red-900' : 'text-red-400'
+                      }`}>
+                      Continue →
+                    </Text>
+                  </Button>
+                </View>
+              ) : cancelStep === 'confirm' ? (
+                ride.status === 'Abort' ? (
+                  <Button
+                    onPress={pushToPayments}
+                    className="min-h-[52px] items-center justify-center rounded-2xl">
+                    <Text className="text-[15px] font-bold">Continue →</Text>
+                  </Button>
+                ) : (
+                  <View className="flex-row gap-3">
+                    <Button
+                      onPress={() => setCancelStep('reason')}
+                      className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
+                      <Text className="text-[15px] font-bold">← Back</Text>
+                    </Button>
+
+                    <Button
+                      disabled={loading === 'canceling'}
+                      onPress={handleConfirmCancel}
+                      className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
+                      <View className="flex-row items-center gap-2">
+                        <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
+                        <Text className="text-[15px] font-extrabold text-red-400">
+                          {ride.status === 'Open' ? 'Cancel Ride' : 'Abort Ride'}
+                        </Text>
+                      </View>
+                    </Button>
+                  </View>
+                )
+              ) : rideAborted && (driverCancelReason || riderCancelReason) ? (
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[52px] items-center justify-center rounded-2xl">
+                  <Text className="text-[15px] font-bold">Continue →</Text>
+                </Button>
+              ) : rideCompleted ? (
+                <Button
+                  onPress={pushToPayments}
+                  className="min-h-[54px] items-center justify-center rounded-2xl bg-emerald-500">
+                  <Text className="text-[15px] font-bold text-white">Continue to Payment →</Text>
+                </Button>
+              ) : (
+                <View className="flex-row items-center justify-between gap-2">
+                  {/* Arrived button */}
+                  {isRideOpen && isDriverNearby && (
+                    <View className="flex-1">
+                      <Button
+                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
+                        disabled={loading === 'driverArrived'}
+                        onPress={handleDriverArrived}>
+                        <MapPinCheck size={20} color="#fff" />
+                        <Text className="text-[17px] font-bold tracking-tight text-white">
+                          I've Arrived
+                        </Text>
+                      </Button>
+                    </View>
+                  )}
+
+                  {/* Start Ride button */}
+                  {isDriverArrivedStatus && (
+                    <View className="flex-1">
+                      <Button
+                        className="items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
+                        disabled={loading === 'starting'}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/ride/startRide',
+                            params: { driverId, rideId: id },
+                          })
+                        }>
+                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                          ▶ Enter OTP
+                        </Text>
+                      </Button>
+                    </View>
+                  )}
+
+                  {/* Complete / Cancel */}
+                  <View className="flex-1">
+                    {isDestinationReached && ride.status === 'Active' ? (
+                      <Button
+                        className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
+                        disabled={loading === 'completing'}
+                        onPress={handleCompleteRide}>
+                        <Text className="text-[17px] font-extrabold tracking-tight text-white">
+                          {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
+                        </Text>
+                      </Button>
+                    ) : (
+                      <Button
+                        onPress={() => setCancelStep('reason')}
+                        disabled={loading === 'canceling'}
+                        variant="destructive"
+                        className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
+                        <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+                        <Text className="text-sm font-semibold text-red-600">
+                          {ride.status === 'Active' ? 'Abort Ride' : 'Cancel Ride'}
+                        </Text>
+                      </Button>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </BottomSheetFooter>
+        )}
+        enableDynamicSizing={false}
         enablePanDownToClose={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
         <BottomSheetScrollView
+          enableFooterMarginAdjustment
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 }}>
           {/* CANCEL FLOW — Step 1: Reason selection */}
           {cancelStep === 'reason' && (
@@ -623,34 +800,6 @@ export default function Ride() {
                   );
                 })}
               </View>
-
-              {/* Action buttons */}
-              <View className="flex-row gap-3">
-                <Button
-                  disabled={loading === 'canceling'}
-                  onPress={() => {
-                    setCancelStep(null);
-                    setSelectedReason(null);
-                  }}
-                  className="flex-1 border-primary/90">
-                  <Text className="text-[15px] font-bold text-slate-200">← Back</Text>
-                </Button>
-                <Button
-                  disabled={selectedReason === null || loading === 'canceling'}
-                  onPress={() => calculateCancelRide()}
-                  className={`flex-1 ${
-                    selectedReason === null
-                      ? 'border-red-900/40 bg-red-900/20'
-                      : 'border-red-500/60 bg-red-500/20'
-                  }`}>
-                  <Text
-                    className={`text-[15px] font-extrabold ${
-                      selectedReason === null ? 'text-red-900' : 'text-red-400'
-                    }`}>
-                    Continue →
-                  </Text>
-                </Button>
-              </View>
             </Animated.View>
           )}
 
@@ -684,7 +833,7 @@ export default function Ride() {
               </View>
 
               {/* Trip stats card */}
-              {canceledRideCharges &&
+              {cancelSummary &&
                 ride.status !== 'Open' &&
                 ride.status !== 'Driver Arrived' && (
                   <View className="mb-3 overflow-hidden rounded-2xl border border-slate-700/70">
@@ -702,18 +851,22 @@ export default function Ride() {
                           <Text className="font-lighter text-xs text-primary/50">
                             Distance Covered
                           </Text>
-                          <Text className="font-lighter text-xs text-primary/50">
-                            Remaining Distance
-                          </Text>
+                          {cancelSummary.remainingDistance !== null && (
+                            <Text className="font-lighter text-xs text-primary/50">
+                              Remaining Distance
+                            </Text>
+                          )}
                         </View>
                       </View>
                       <View>
                         <Text className="font-lighter text-right text-xs text-emerald-400">
-                          {distanceFormat(canceledRideCharges.chargableDistance)}
+                          {distanceFormat(cancelSummary.chargableDistance)}
                         </Text>
-                        <Text className="font-lighter text-right text-xs text-amber-400">
-                          {distanceFormat(canceledRideCharges.remainingDistance)}
-                        </Text>
+                        {cancelSummary.remainingDistance !== null && (
+                          <Text className="font-lighter text-right text-xs text-amber-400">
+                            {distanceFormat(cancelSummary.remainingDistance)}
+                          </Text>
+                        )}
                       </View>
                     </View>
 
@@ -726,30 +879,32 @@ export default function Ride() {
                           </View>
                           <View>
                             <Text className="pb-0.5 text-sm font-semibold">Calculated Fare</Text>
-                            <View className="hidden flex-row justify-between gap-2">
-                              <View className="gap-1">
-                                <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
-                                <Text className="text-[10px] text-slate-600">
-                                  {formatFare(canceledRideCharges.ratePerKm)}
-                                </Text>
+                            {!rideAborted && canceledRideCharges && (
+                              <View className="hidden flex-row justify-between gap-2">
+                                <View className="gap-1">
+                                  <Text className="text-[10px] text-slate-600/60">Rate/Km</Text>
+                                  <Text className="text-[10px] text-slate-600">
+                                    {formatFare(canceledRideCharges.ratePerKm)}
+                                  </Text>
+                                </View>
+                                <View className="gap-1">
+                                  <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
+                                  <Text className="text-[10px] text-slate-600">
+                                    {distanceFormat(canceledRideCharges.baseDistance)}
+                                  </Text>
+                                </View>
+                                <View className="gap-1">
+                                  <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
+                                  <Text className="text-[10px] text-slate-600">
+                                    {formatFare(canceledRideCharges.basePrice)}
+                                  </Text>
+                                </View>
                               </View>
-                              <View className="gap-1">
-                                <Text className="text-[10px] text-slate-600/60">Base Dist.</Text>
-                                <Text className="text-[10px] text-slate-600">
-                                  {distanceFormat(canceledRideCharges.baseDistance)}
-                                </Text>
-                              </View>
-                              <View className="gap-1">
-                                <Text className="text-[10px] text-slate-600/60">Base Fare.</Text>
-                                <Text className="text-[10px] text-slate-600">
-                                  {formatFare(canceledRideCharges.basePrice)}
-                                </Text>
-                              </View>
-                            </View>
+                            )}
                           </View>
                         </View>
                         <Text className="text-2xl font-extrabold tracking-tight text-red-400">
-                          {formatFare(canceledRideCharges.calculatedFare)}
+                          {formatFare(cancelSummary.calculatedFare)}
                         </Text>
                       </View>
                     </View>
@@ -787,38 +942,11 @@ export default function Ride() {
                 </View>
               )}
 
-              {/* Action buttons */}
-              {ride.status === 'Abort' ? (
-                <Button
-                  onPress={pushToPayments}
-                  className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                  <Text className="text-[15px] font-bold">Continue →</Text>
-                </Button>
-              ) : (
-                <View className="flex-row gap-3">
-                  <Button
-                    onPress={() => setCancelStep('reason')}
-                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                    <Text className="text-[15px] font-bold">← Back</Text>
-                  </Button>
-
-                  <Button
-                    disabled={loading === 'canceling'}
-                    onPress={handleConfirmCancel}
-                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/15">
-                    <View className="flex-row items-center gap-2">
-                      <Ionicons name="stop-circle-outline" size={18} color="#ef4444" />
-                      <Text className="text-[15px] font-extrabold text-red-400">
-                        {ride.status === 'Open' ? 'Cancel Ride' : 'Abort Ride'}
-                      </Text>
-                    </View>
-                  </Button>
-                </View>
-              )}
-
               {/* Disclaimer */}
               <Text className="mt-3 text-center text-[11px] leading-4 text-slate-600">
-                Fare will be charged based on distance covered.{'\n'}
+                {rideAborted
+                  ? 'Final fare includes any applicable cancellation charges.'
+                  : 'Fare will be charged based on distance covered.'}{'\n'}
                 {ride.status !== 'Abort'
                   ? 'Repeated cancellations may affect your driver rating.'
                   : ''}
@@ -858,11 +986,6 @@ export default function Ride() {
                       </Text>
                     </View>
                   </View>
-                  <Button
-                    onPress={pushToPayments}
-                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                    <Text className="text-[15px] font-bold">Continue →</Text>
-                  </Button>
                 </View>
               ) : rideAborted && riderCancelReason ? (
                 <View className="gap-5">
@@ -892,11 +1015,6 @@ export default function Ride() {
                       </Text>
                     </View>
                   </View>
-                  <Button
-                    onPress={pushToPayments}
-                    className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
-                    <Text className="text-[15px] font-bold">Continue →</Text>
-                  </Button>
                 </View>
               ) : rideCompleted ? (
                 <View className="gap-4">
@@ -919,18 +1037,10 @@ export default function Ride() {
                       details.
                     </Text>
                   </View>
-
-                  <Button
-                    onPress={pushToPayments}
-                    className="min-h-[54px] flex-1 items-center justify-center rounded-2xl bg-emerald-500">
-                    <Text className="text-[15px] font-bold text-white">Continue to Payment →</Text>
-                  </Button>
                 </View>
               ) : (
+                // Rider details
                 <View>
-                  {/* Status banner */}
-                  <RideStatusBanner ride={ride} />
-
                   {/* Rider + fare */}
                   <View className="my-2 flex-row items-center justify-between">
                     <View className="flex-1 flex-row items-center gap-3">
@@ -942,8 +1052,8 @@ export default function Ride() {
                             name: `${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim(),
                           })
                         }
-                        className="h-14 w-14 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/20 p-0.5">
-                        <Avatar alt="Profile pic" className="h-12 w-12">
+                        className="bg-primborder-primary/20 items-center justify-center rounded-full border border-primary/30">
+                        <Avatar alt="Profile pic" className="h-10 w-10">
                           <AvatarImage
                             source={
                               ride.rider.details.profilePictureKey
@@ -962,7 +1072,7 @@ export default function Ride() {
                         <Text
                           numberOfLines={2}
                           ellipsizeMode="tail"
-                          className="text-title mb-0.5 text-[22px] font-extrabold tracking-tight">
+                          className="text-title mb-0.5 text-[18px] font-bold tracking-tight">
                           {`${ride.rider.details.firstName ?? ''} ${ride.rider.details?.lastName ?? ''}`.trim() ||
                             'Rider'}
                         </Text>
@@ -987,74 +1097,23 @@ export default function Ride() {
                       <Text className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                         Est. Fare
                       </Text>
-                      <Text className="text-2xl font-extrabold tracking-tight text-emerald-600">
+                      <Text className="text-xl font-extrabold tracking-tight text-emerald-600">
                         {formatFare(ride.fare)}
                       </Text>
                     </View>
                   </View>
 
-                  <RouteCard pickup={ride.pickup} destination={ride.destination} />
-
-                  <View className="my-2 flex-row items-center justify-between gap-2">
-                    {/* Arrived button */}
-                    {isRideOpen && isDriverNearby && (
-                      <View className="flex-1">
-                        <Button
-                          className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-primary/90 bg-primary"
-                          disabled={loading === 'driverArrived'}
-                          onPress={handleDriverArrived}>
-                          <MapPinCheck size={20} color="#fff" />
-                          <Text className="text-[17px] font-bold tracking-tight text-white">
-                            I've Arrived
-                          </Text>
-                        </Button>
-                      </View>
-                    )}
-
-                    {/* Start Ride button */}
-                    {isDriverArrivedStatus && (
-                      <View className="flex-1">
-                        <Button
-                          className="items-center justify-center rounded-2xl border-2 border-emerald-500 bg-emerald-600"
-                          disabled={loading === 'starting'}
-                          onPress={() =>
-                            router.push({
-                              pathname: '/ride/startRide',
-                              params: { driverId, rideId: id },
-                            })
-                          }>
-                          <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                            ▶ Start Ride
-                          </Text>
-                        </Button>
-                      </View>
-                    )}
-
-                    {/* Complete / Cancel */}
-                    <View className="flex-1">
-                      {isDestinationReached && ride.status === 'Active' ? (
-                        <Button
-                          className="items-center justify-center rounded-2xl border-2 border-primary/90 bg-primary"
-                          disabled={loading === 'completing'}
-                          onPress={handleCompleteRide}>
-                          <Text className="text-[17px] font-extrabold tracking-tight text-white">
-                            {loading === 'completing' ? 'Completing…' : '✓ Complete Ride'}
-                          </Text>
-                        </Button>
-                      ) : (
-                        <Button
-                          onPress={() => setCancelStep('reason')}
-                          disabled={loading === 'canceling'}
-                          variant="destructive"
-                          className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
-                          <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
-                          <Text className="text-sm font-semibold text-red-600">
-                            {ride.status === 'Active' ? 'End Ride' : 'Cancel Ride'}
-                          </Text>
-                        </Button>
-                      )}
+                  <Animated.View style={rideDetailsStyle} animatedProps={rideDetailsProps}>
+                    {/* Measure natural content height independently of the collapsing wrapper. */}
+                    <View
+                      collapsable={false}
+                      style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+                      onLayout={({ nativeEvent }) => {
+                        rideDetailsHeight.value = nativeEvent.layout.height;
+                      }}>
+                      <RouteCard pickup={ride.pickup} destination={ride.destination} />
                     </View>
-                  </View>
+                  </Animated.View>
                 </View>
               )}
             </Animated.View>

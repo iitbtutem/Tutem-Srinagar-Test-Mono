@@ -152,7 +152,9 @@ export function RideRequestCard({
     api.routes.settings.rideSettings,
     propDriverResponseTime !== undefined ? 'skip' : {}
   );
-  const driverResponseTime = propDriverResponseTime ?? settings?.driverResponseTime ?? 10;
+  const driverResponseTimeResolved =
+    propDriverResponseTime !== undefined ? propDriverResponseTime : settings?.driverResponseTime;
+  const driverResponseTime = driverResponseTimeResolved ?? 10;
 
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -202,7 +204,7 @@ export function RideRequestCard({
             <Text className="text-xl font-extrabold tracking-tight text-emerald-400">
               {formatFare(ride.fare)}
             </Text>
-            {ride.requestStatus === 'Pending' && (
+            {ride.requestStatus === 'Pending' && driverResponseTimeResolved !== undefined && (
               <RideCountdownBadge
                 requestedAt={ride.requestedAt}
                 driverResponseTimeMinutes={driverResponseTime}
@@ -262,6 +264,7 @@ export function RideRequestCard({
     </Animated.View>
   );
 }
+
 
 export function RideHistoryCard({
   ride,
@@ -347,7 +350,9 @@ export function CurrentRideCard({
     api.routes.settings.rideSettings,
     propDriverResponseTime !== undefined ? 'skip' : {}
   );
-  const driverResponseTime = propDriverResponseTime ?? settings?.driverResponseTime ?? 10;
+  const driverResponseTimeResolved =
+    propDriverResponseTime !== undefined ? propDriverResponseTime : settings?.driverResponseTime;
+  const driverResponseTime = driverResponseTimeResolved ?? 10;
 
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -372,7 +377,7 @@ export function CurrentRideCard({
         <View className="flex-row items-center justify-between border-b border-slate-950 pb-2">
           <Text className="font-bold text-primary">Current Ride</Text>
           <View className="flex-row items-center gap-2">
-            {ride.requestStatus === 'Pending' && (
+            {ride.requestStatus === 'Pending' && driverResponseTimeResolved !== undefined && (
               <RideCountdownBadge
                 requestedAt={ride.requestedAt}
                 driverResponseTimeMinutes={driverResponseTime}

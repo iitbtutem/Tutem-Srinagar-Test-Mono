@@ -76,10 +76,11 @@ export async function ensureConnected(): Promise<boolean> {
  */
 export async function subscribeDriverLocation(
   driverId: string,
-  onLocation: (payload: DriverLocationPayload) => void
+  onLocation: (payload: DriverLocationPayload) => void,
+  isActive: () => boolean = () => true
 ): Promise<PusherChannel | null> {
   const connected = await ensureConnected();
-  if (!connected) return null;
+  if (!connected || !isActive()) return null;
 
   const channelName = `private-driver-location-${driverId}`;
   console.log(`[pusher.ts] Subscribing to native channel: ${channelName}`);
@@ -89,7 +90,7 @@ export async function subscribeDriverLocation(
     const channel = await pusher.subscribe({
       channelName,
       onEvent: (event: PusherEvent) => {
-        if (event.eventName === 'client-locationUpdate') {
+        if (isActive() && event.eventName === 'client-locationUpdate') {
           try {
             console.log('[pusher.ts] Received client-locationUpdate:', event.data);
             const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;

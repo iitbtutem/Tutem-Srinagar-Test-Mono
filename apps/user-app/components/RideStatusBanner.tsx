@@ -23,10 +23,6 @@ type CurrentRide = NonNullable<
 
 type PulseConfig = {
   kind: 'pulse';
-  dot: string;
-  border: string;
-  bg: string;
-  text: string;
   label: string;
   sub: string;
   timestamp: number | undefined;
@@ -34,10 +30,6 @@ type PulseConfig = {
 
 type StaticConfig = {
   kind: 'static';
-  border: string;
-  bg: string;
-  text: string;
-  iconBg: string;
   icon: string;
   label: string;
   sub: string;
@@ -54,10 +46,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Open' && requestStatus === 'Pending') {
     return {
       kind: 'pulse',
-      dot: 'bg-yellow-400',
-      border: 'border-yellow-500/30',
-      bg: 'bg-yellow-500/10',
-      text: 'text-yellow-400',
       label: 'Requested',
       sub: 'Waiting for driver response',
       timestamp: ride.requestedAt,
@@ -67,10 +55,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Open' && requestStatus === 'No Response') {
     return {
       kind: 'pulse',
-      dot: 'bg-orange-400',
-      border: 'border-orange-500/30',
-      bg: 'bg-orange-500/10',
-      text: 'text-orange-400',
       label: 'No Response',
       sub: "Driver didn't accept the ride",
       timestamp: ride.requestedAt,
@@ -80,10 +64,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Open' && requestStatus === 'Accepted') {
     return {
       kind: 'pulse',
-      dot: 'bg-amber-400',
-      border: 'border-amber-500/30',
-      bg: 'bg-amber-500/10',
-      text: 'text-amber-400',
       label: 'Accepted',
       sub: 'Driver is on the way',
       timestamp: ride.acceptedAt,
@@ -93,10 +73,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Driver Arrived') {
     return {
       kind: 'pulse',
-      dot: 'bg-purple-400',
-      border: 'border-purple-500/30',
-      bg: 'bg-purple-500/10',
-      text: 'text-purple-400',
       label: 'Driver Arrived',
       sub: 'Driver is waiting for you to board',
       timestamp: ride.arrivedAt,
@@ -106,10 +82,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Active') {
     return {
       kind: 'pulse',
-      dot: 'bg-green-400',
-      border: 'border-green-500/30',
-      bg: 'bg-green-500/10',
-      text: 'text-green-400',
       label: 'Ride in Progress',
       sub: 'Heading towards destination',
       timestamp: ride.startedAt,
@@ -119,10 +91,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Completed') {
     return {
       kind: 'static',
-      border: 'border-emerald-500/30',
-      bg: 'bg-emerald-500/10',
-      text: 'text-emerald-400',
-      iconBg: 'bg-emerald-500/20',
       icon: '✓',
       label: 'Completed',
       sub: 'Ride has ended',
@@ -133,10 +101,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Canceled') {
     return {
       kind: 'static',
-      border: 'border-red-500/30',
-      bg: 'bg-red-500/10',
-      text: 'text-red-400',
-      iconBg: 'bg-red-500/20',
       icon: '✕',
       label: 'Canceled',
       sub: 'You canceled the ride',
@@ -147,10 +111,6 @@ function getStatusConfig(ride: RideDetails): StatusConfig | null {
   if (status === 'Abort') {
     return {
       kind: 'static',
-      border: 'border-orange-500/30',
-      bg: 'bg-orange-500/10',
-      text: 'text-orange-400',
-      iconBg: 'bg-orange-500/20',
       icon: '!',
       label: 'Aborted',
       sub: 'Ride was aborted',
@@ -197,7 +157,10 @@ function RideStatusBanner({ ride, className, driverResponseTime: propDriverRespo
     api.routes.settings.rideSettings,
     propDriverResponseTime !== undefined ? 'skip' : {}
   );
-  const driverResponseTime = propDriverResponseTime ?? settings?.driverResponseTime ?? 10;
+  // Don't show timer with a stale default — wait until we have the real setting.
+  const driverResponseTimeResolved =
+    propDriverResponseTime !== undefined ? propDriverResponseTime : settings?.driverResponseTime;
+  const driverResponseTime = driverResponseTimeResolved ?? 10;
 
   const config = getStatusConfig(ride);
 
@@ -208,38 +171,37 @@ function RideStatusBanner({ ride, className, driverResponseTime: propDriverRespo
   return (
     <View
       className={cn(
-        'flex-row items-center gap-3 rounded-2xl border px-4 py-3',
-        config.border,
-        config.bg,
+        'flex-row items-center gap-3 rounded-2xl border px-4 py-3 border-emerald-500/30 bg-white',
         className
       )}>
       {config.kind === 'pulse' ? (
-        <PulseDot color={config.dot} />
+        <PulseDot color="bg-primary" />
       ) : (
-        <View className={cn('h-7 w-7 items-center justify-center rounded-full', config.iconBg)}>
-          <Text className={cn('text-xs font-black', config.text)}>{config.icon}</Text>
+        <View className="h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20">
+          <Text className="text-xs font-black text-emerald-400">{config.icon}</Text>
         </View>
       )}
 
       <View className="flex-1">
-        <Text className={cn('text-sm font-extrabold', config.text)}>{config.label}</Text>
+        <Text className="text-sm font-extrabold text-primary">{config.label}</Text>
         <Text className="mt-0.5 text-[11px] font-medium text-slate-500">{config.sub}</Text>
       </View>
 
       {config.kind === 'pulse' ? (
         isPending ? (
-          <CountdownTimer
-            startTimestamp={config.timestamp}
-            driverResponseTimeMinutes={driverResponseTime}
-            colorClass={config.text}
-          />
+          driverResponseTimeResolved !== undefined ? (
+            <CountdownTimer
+              startTimestamp={config.timestamp}
+              driverResponseTimeMinutes={driverResponseTime}
+            />
+          ) : null
         ) : (
-          <Text className={cn('text-base font-extrabold tabular-nums', config.text)}>
+          <Text className="text-base font-extrabold tabular-nums text-primary">
             <LiveTimer startTimestamp={config.timestamp} />
           </Text>
         )
       ) : (
-        <Text className={cn('text-xs font-semibold tabular-nums', config.text)}>
+        <Text className="text-xs font-semibold tabular-nums text-primary">
           {formatDate(config.timestamp)}
         </Text>
       )}
@@ -264,7 +226,7 @@ function LiveTimer({ startTimestamp }: { startTimestamp: number | undefined }) {
     return () => clearInterval(id);
   }, [startTimestamp]);
   return (
-    <Text className="text-xl font-extrabold tabular-nums tracking-tight text-emerald-400">
+    <Text className="text-xl font-extrabold tabular-nums tracking-tight text-primary">
       {display}
     </Text>
   );
@@ -273,11 +235,9 @@ function LiveTimer({ startTimestamp }: { startTimestamp: number | undefined }) {
 function CountdownTimer({
   startTimestamp,
   driverResponseTimeMinutes = 10,
-  colorClass,
 }: {
   startTimestamp: number | undefined;
   driverResponseTimeMinutes?: number;
-  colorClass?: string;
 }) {
   const [remainingSec, setRemainingSec] = useState(() =>
     getCountdownRemainingSeconds(startTimestamp, driverResponseTimeMinutes)
@@ -291,15 +251,11 @@ function CountdownTimer({
     return () => clearInterval(id);
   }, [startTimestamp, driverResponseTimeMinutes]);
 
-  const isUrgent = remainingSec <= 30;
   const display = formatMinutesAndSeconds(remainingSec);
 
   return (
     <Text
-      className={cn(
-        'text-xl font-extrabold tabular-nums tracking-tight',
-        isUrgent ? 'text-red-400' : colorClass || 'text-yellow-400'
-      )}>
+      className="text-xl font-extrabold tabular-nums tracking-tight text-primary">
       {display}
     </Text>
   );
