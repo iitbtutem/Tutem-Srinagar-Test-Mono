@@ -52,6 +52,7 @@ interface LocationManagerOptions {
   isAvailableForRide?: boolean;
   isLicenseVerified?: boolean | string;
   hasActiveRide?: boolean;
+  stateResolved?: boolean;
 }
 
 export function useLocationManager({
@@ -61,6 +62,7 @@ export function useLocationManager({
   isAvailableForRide = false,
   isLicenseVerified: _isLicenseVerified = false,
   hasActiveRide = false,
+  stateResolved = true,
 }: LocationManagerOptions) {
   const setLocation = useSetAtom(locationAtom);
   const isNativePusherReadyRef = useRef<boolean>(false);
@@ -76,8 +78,12 @@ export function useLocationManager({
   // 1. Manage Background Location Foreground Service
   //    Also updates SecureStore with current mode so background task routes correctly.
   useEffect(() => {
+    // Do not stop a persisted native task while auth/Convex state is still
+    // hydrating. Once state is resolved, the explicit driver status below is
+    // authoritative.
+    if (!stateResolved) return;
+
     if (!driverId || !userId) {
-      stopLocationTracking();
       return;
     }
 
@@ -86,12 +92,23 @@ export function useLocationManager({
     if (shouldTrack) {
       const currentMode = hasActiveRide ? 'on-ride' : 'available';
       console.log('[useLocationManager] Starting background location service, mode:', currentMode);
-      startLocationTracking(driverId, currentMode);
+      void startLocationTracking(driverId, currentMode);
     } else {
       console.log('[useLocationManager] Stopping background location service...');
-      stopLocationTracking();
+      void stopLocationTracking();
     }
-  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide]);
+
+    // Retry/refresh native registration whenever the app becomes active. This
+    // also safely applies a mode change that occurred while Android was unable
+    // to restart a foreground service from the background.
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && shouldTrack) {
+        void startLocationTracking(driverId, hasActiveRide ? 'on-ride' : 'available');
+      }
+    });
+
+    return () => appStateSub.remove();
+  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, stateResolved]);
 
   // 2. Native Pusher connection — initialised once per driver session.
   //    Only needed for on-ride mode (direct client events to Pusher).

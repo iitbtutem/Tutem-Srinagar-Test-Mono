@@ -12,7 +12,6 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CurrentRideCard, RideRequestCard as RideCard } from '@/components/RideCard';
 import DriverMarker from '@/components/DriverMarker';
 import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
-import { useLocationManager } from '@/hooks/useLocationManager';
 import { useAuth } from '@/hooks/useAuth';
 import { router } from 'expo-router';
 import {
@@ -63,17 +62,6 @@ export default function Home() {
     api.routes.rides.getDriverCurrentRideByDriverId,
     driver?.driverDetails ? { driverId: driver.driverDetails._id } : 'skip'
   );
-
-  const driverDetails = driver?.driverDetails;
-
-  useLocationManager({
-    driverId: driverDetails?._id,
-    userId: driver?._id,
-    isOnline: driverDetails?.isOnline,
-    isAvailableForRide: driverDetails?.isAvailableForRide,
-    isLicenseVerified: driverDetails?.isLicenseVerified,
-    hasActiveRide: !!currentRide,
-  });
 
   useEffect(() => {
     if (currentRide && !router.canGoBack())

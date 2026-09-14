@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Location from 'expo-location';
 
 export const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
+const BACKGROUND_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
  * Background location task.
@@ -31,7 +32,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     return;
   }
 
-  const location = locations[0];
+  // Native location managers can batch multiple fixes while JS is suspended.
+  // Send the newest fix rather than the oldest item in the batch.
+  const location = locations.reduce((latest, candidate) =>
+    candidate.timestamp > latest.timestamp ? candidate : latest
+  );
   console.log(
     `[tasks.ts] 📍 Background tick: lat=${location.coords.latitude.toFixed(5)}, ` +
       `lng=${location.coords.longitude.toFixed(5)}`
@@ -62,11 +67,20 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 
     console.log(`[tasks.ts] 🚀 Posting location to: ${pusherTriggerUrl}`);
 
-    const response = await fetch(pusherTriggerUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), BACKGROUND_REQUEST_TIMEOUT_MS);
+    let response: Response;
+
+    try {
+      response = await fetch(pusherTriggerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const text = await response.text();
