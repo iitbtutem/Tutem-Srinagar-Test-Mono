@@ -22,6 +22,9 @@ build/
 .env.local
 .env.*.local
 
+# Server-only Firebase credentials are not part of mobile build inputs.
+**/*firebase-adminsdk*.json
+
 # TypeScript
 *.tsbuildinfo
 

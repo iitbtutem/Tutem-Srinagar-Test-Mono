@@ -162,9 +162,11 @@ http.route({
           longitude: Number(longitude),
           heading: heading != null ? Number(heading) : null,
           speed: speed != null ? Number(speed) : null,
-          // Always use server receive-time so the tracking page shows accurate
-          // "last seen" regardless of GPS clock drift or device clock skew.
-          timestamp: Date.now(),
+          // Keep cached fixes visibly old; do not label a reconnect as a fresh fix.
+          timestamp:
+            typeof timestamp === "number" && Number.isFinite(timestamp)
+              ? Math.min(timestamp, Date.now())
+              : Date.now(),
           isAvailable: isAvailable !== false, // default true
         },
       );

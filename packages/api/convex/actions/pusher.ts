@@ -2,7 +2,7 @@
 
 import Pusher from "pusher";
 import { action, internalAction } from "../_generated/server";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { v } from "convex/values";
 
 // ---------------------------------------------------------------------------
@@ -110,32 +110,22 @@ export const triggerDriverLocation = action({
   handler: async (
     ctx,
     args,
-  ): Promise<{ success: boolean; mode: "on-ride" | "available" }> => {
+  ): Promise<{
+    success: boolean;
+    mode: "on-ride" | "available" | "offline";
+  }> => {
     const now = args.timestamp ?? Date.now();
     const driverId = args.driverId;
 
     // 1. Check if driver has an active ride (server-side routing decision)
-    const hasRide = await ctx.runQuery(
-      internal.routes.driverLocation.driverHasActiveRide,
+    const mode = await ctx.runQuery(
+      internal.routes.driverLocation.driverTrackingMode,
       { driverId },
     );
 
-    if (hasRide) {
-      // ─── ON-RIDE MODE: Broadcast to Pusher + persist to DB ───────────────────
+    if (mode === "offline") return { success: true, mode };
 
-      // Keep DB up-to-date so the HTTP polling fallback can read it from DB
-      // instead of relying on the removed in-process cache.
-      await ctx.runMutation(
-        internal.routes.driverLocation.upsertAvailableDriverLocation,
-        {
-          driverId,
-          latitude: args.latitude,
-          longitude: args.longitude,
-          speed: args.speed ?? undefined,
-          heading: args.heading ?? undefined,
-        },
-      );
-
+    if (mode === "on-ride") {
       // Broadcast to Pusher — rider/admin receive this directly from Pusher
       const pusher = getPusher();
       await pusher.trigger(
@@ -152,7 +142,7 @@ export const triggerDriverLocation = action({
       );
 
       console.log(
-        `[pusher] 📍 ON-RIDE: Broadcast to Pusher + upserted to DB for driver ${args.driverId}`,
+        `[pusher] 📍 ON-RIDE: Broadcast to Pusher for driver ${args.driverId}`,
       );
     } else {
       // ─── AVAILABLE MODE: Upsert to Convex DB ─────────────────────────────────
@@ -165,6 +155,7 @@ export const triggerDriverLocation = action({
           longitude: args.longitude,
           speed: args.speed ?? undefined,
           heading: args.heading ?? undefined,
+          timestamp: now,
         },
       );
 
@@ -173,7 +164,7 @@ export const triggerDriverLocation = action({
       );
     }
 
-    return { success: true, mode: hasRide ? "on-ride" : "available" };
+    return { success: true, mode };
   },
 });
 
@@ -187,35 +178,14 @@ export const triggerInternalDriverLocation = internalAction({
     timestamp: v.optional(v.number()),
     isAvailable: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
-    const now = args.timestamp ?? Date.now();
-    const driverId = args.driverId;
-
-    // Persist to DB so polling fallback has a reliable source of truth
-    await ctx.runMutation(
-      internal.routes.driverLocation.upsertAvailableDriverLocation,
-      {
-        driverId,
-        latitude: args.latitude,
-        longitude: args.longitude,
-      },
-    );
-
-    const pusher = getPusher();
-    await pusher.trigger(
-      `private-driver-location-${args.driverId}`,
-      "client-locationUpdate",
-      {
-        driverId: args.driverId,
-        latitude: args.latitude,
-        longitude: args.longitude,
-        heading: args.heading ?? null,
-        speed: args.speed ?? null,
-        timestamp: now,
-      },
-    );
-
-    return { success: true };
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    mode: "on-ride" | "available" | "offline";
+  }> => {
+    return await ctx.runAction(api.actions.pusher.triggerDriverLocation, args);
   },
 });
 

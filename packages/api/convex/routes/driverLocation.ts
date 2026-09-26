@@ -1,36 +1,78 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "../_generated/server";
 import { driverMutation, adminQuery } from "../helpers/sessionFunctions";
+import type { DatabaseReader, MutationCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 // Entries older than this are considered stale and excluded from getNearbyDrivers.
 const STALE_MS = 61_000;
 
-/**
- * Internal query: does this driver currently have an active ride?
- *
- * Used by triggerDriverLocation to detect the "admin cleared ride while app
- * was backgrounded" scenario — where the background task still runs in
- * on-ride mode but the driver is actually free.
- *
- * Returns true if a non-terminal ride row exists for the driver.
- */
-export const driverHasActiveRide = internalQuery({
+async function trackingMode(db: DatabaseReader, driverId: Id<"driver">) {
+  const driver = await db.get(driverId);
+  if (!driver?.isOnline) return "offline" as const;
+  const ride = await db
+    .query("ride")
+    .withIndex("by_driver", (q) => q.eq("driverId", driverId))
+    .filter((q) =>
+      q.and(
+        q.neq(q.field("status"), "Completed"),
+        q.neq(q.field("status"), "Canceled"),
+        q.neq(q.field("status"), "Abort"),
+      ),
+    )
+    .first();
+  return ride !== null ? ("on-ride" as const) : ("available" as const);
+}
+
+// Use server state even when the app's cached ride state is stale.
+export const driverTrackingMode = internalQuery({
   args: { driverId: v.id("driver") },
-  handler: async (ctx, { driverId }) => {
-    const ride = await ctx.db
-      .query("ride")
-      .withIndex("by_driver", (q) => q.eq("driverId", driverId))
-      .filter((q) =>
-        q.and(
-          q.neq(q.field("status"), "Completed"),
-          q.neq(q.field("status"), "Canceled"),
-          q.neq(q.field("status"), "Abort"),
-        ),
-      )
-      .first();
-    return ride !== null;
-  },
+  handler: (ctx, { driverId }) => trackingMode(ctx.db, driverId),
 });
+
+const locationArgs = {
+  driverId: v.id("driver"),
+  latitude: v.number(),
+  longitude: v.number(),
+  speed: v.optional(v.number()),
+  heading: v.optional(v.number()),
+  timestamp: v.optional(v.number()),
+};
+
+async function saveAvailableLocation(
+  ctx: MutationCtx,
+  args: {
+    driverId: Id<"driver">;
+    latitude: number;
+    longitude: number;
+    speed?: number;
+    heading?: number;
+    timestamp?: number;
+  },
+) {
+  // Recheck inside the transaction: an in-flight update may arrive after
+  // acceptance or going offline. Such an update must not write a DB location.
+  if ((await trackingMode(ctx.db, args.driverId)) !== "available") return;
+  const existing = await ctx.db
+    .query("availableDriverLocation")
+    .withIndex("by_driver", (q) => q.eq("driverId", args.driverId))
+    .first();
+  const updatedAt = Math.min(args.timestamp ?? Date.now(), Date.now());
+  if (existing && existing.updatedAt > updatedAt) return;
+  const location = {
+    latitude: args.latitude,
+    longitude: args.longitude,
+    speed: args.speed,
+    heading: args.heading,
+    updatedAt,
+  };
+  if (existing) await ctx.db.patch(existing._id, location);
+  else
+    await ctx.db.insert("availableDriverLocation", {
+      driverId: args.driverId,
+      ...location,
+    });
+}
 
 /**
  * Upsert a driver's available location.
@@ -38,38 +80,8 @@ export const driverHasActiveRide = internalQuery({
  * One row per driver — existing row is updated, new row is inserted if absent.
  */
 export const upsertAvailableDriverLocation = internalMutation({
-  args: {
-    driverId: v.id("driver"),
-    latitude: v.number(),
-    longitude: v.number(),
-    speed: v.optional(v.number()),
-    heading: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("availableDriverLocation")
-      .withIndex("by_driver", (q) => q.eq("driverId", args.driverId))
-      .first();
-
-    if (existing !== null) {
-      await ctx.db.patch(existing._id, {
-        latitude: args.latitude,
-        longitude: args.longitude,
-        speed: args.speed,
-        heading: args.heading,
-        updatedAt: Date.now(),
-      });
-    } else {
-      await ctx.db.insert("availableDriverLocation", {
-        driverId: args.driverId,
-        latitude: args.latitude,
-        longitude: args.longitude,
-        speed: args.speed,
-        heading: args.heading,
-        updatedAt: Date.now(),
-      });
-    }
-  },
+  args: locationArgs,
+  handler: saveAvailableLocation,
 });
 
 /**
@@ -147,38 +159,8 @@ export const getDriverLocationById = internalQuery({
  * Requires a valid Driver session token.
  */
 export const upsertAvailableDriverLocationSDK = driverMutation({
-  args: {
-    driverId: v.id("driver"),
-    latitude: v.number(),
-    longitude: v.number(),
-    speed: v.optional(v.number()),
-    heading: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("availableDriverLocation")
-      .withIndex("by_driver", (q) => q.eq("driverId", args.driverId))
-      .first();
-
-    if (existing !== null) {
-      await ctx.db.patch(existing._id, {
-        latitude: args.latitude,
-        longitude: args.longitude,
-        speed: args.speed,
-        heading: args.heading,
-        updatedAt: Date.now(),
-      });
-    } else {
-      await ctx.db.insert("availableDriverLocation", {
-        driverId: args.driverId,
-        latitude: args.latitude,
-        longitude: args.longitude,
-        speed: args.speed,
-        heading: args.heading,
-        updatedAt: Date.now(),
-      });
-    }
-  },
+  args: locationArgs,
+  handler: saveAvailableLocation,
 });
 
 /**

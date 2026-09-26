@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Location from 'expo-location';
+import { deliverDriverLocation } from '@/lib/locationDelivery';
+import { getLatestDriverLocation, rememberDriverLocation } from '@/lib/locationSnapshot';
 import { useSetAtom } from 'jotai';
 import { locationAtom } from '@/lib/location';
 import { startLocationTracking, stopLocationTracking } from '@/lib/locationService';
@@ -14,8 +16,7 @@ import {
 import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { api } from '@tutem/api';
 
-// Pusher HTTP fallback URL — used only in Expo Go / unbuilt dev client
-// when the native Pusher module is not linked (on-ride mode, foreground).
+// Unified HTTP endpoint: the server routes by the driver's current ride state.
 const PUSHER_TRIGGER_URL = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL ?? '';
 
 /**
@@ -59,7 +60,6 @@ export function useLocationManager({
   driverId,
   userId,
   isOnline = false,
-  isAvailableForRide = false,
   isLicenseVerified: _isLicenseVerified = false,
   hasActiveRide = false,
   stateResolved = true,
@@ -67,10 +67,7 @@ export function useLocationManager({
   const setLocation = useSetAtom(locationAtom);
   const isNativePusherReadyRef = useRef<boolean>(false);
 
-  // Convex SDK mutations — called directly over the WebSocket, no HTTP fetch needed
-  const upsertLocation = useAuthenticatedMutation(
-    api.routes.driverLocation.upsertAvailableDriverLocationSDK
-  );
+  // Delete the discovery location when explicitly going offline.
   const deleteLocation = useAuthenticatedMutation(
     api.routes.driverLocation.deleteAvailableDriverLocationSDK
   );
@@ -87,7 +84,7 @@ export function useLocationManager({
       return;
     }
 
-    const shouldTrack = (isAvailableForRide && isOnline) || hasActiveRide;
+    const shouldTrack = isOnline;
 
     if (shouldTrack) {
       const currentMode = hasActiveRide ? 'on-ride' : 'available';
@@ -96,6 +93,9 @@ export function useLocationManager({
     } else {
       console.log('[useLocationManager] Stopping background location service...');
       void stopLocationTracking();
+      void deleteLocation({ driverId: driverId as any }).catch((error) => {
+        console.warn('[useLocationManager] Offline location cleanup failed:', error);
+      });
     }
 
     // Retry/refresh native registration whenever the app becomes active. This
@@ -108,7 +108,7 @@ export function useLocationManager({
     });
 
     return () => appStateSub.remove();
-  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, stateResolved]);
+  }, [driverId, userId, isOnline, hasActiveRide, stateResolved, deleteLocation]);
 
   // 2. Native Pusher connection — initialised once per driver session.
   //    Only needed for on-ride mode (direct client events to Pusher).
@@ -179,7 +179,7 @@ export function useLocationManager({
   // Pusher enforces a hard limit of ~10 client events/sec per connection.
 
   useEffect(() => {
-    if (!driverId || !userId) return;
+    if (!driverId || !userId || !stateResolved || !isOnline) return;
 
     let sub: Location.LocationSubscription | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -193,54 +193,60 @@ export function useLocationManager({
     // duplicate publishes and Pusher rate-limit rejections.
     let isStarting = false;
 
-    const shouldPublish = (isAvailableForRide && isOnline) || hasActiveRide;
+    const shouldPublish = isOnline;
 
     /**
      * Publish driver location.
      *
-     * - available mode: call Convex SDK mutation directly (upserts DB row, adaptive throttle).
-     *   Uses the already-open Convex WebSocket — zero extra network connections.
-     *   Server-side routing happens in the SDK mutation handler.
+     * - available mode: use the shared latest-only HTTP transport to save to DB.
+     *   Avoid queueing stale Convex mutations while connectivity is unavailable.
      *
      * - on-ride mode: send directly to Pusher via native client event (adaptive throttle).
      *   Falls back to POST /api/pusher/trigger only if native Pusher is not available.
      *   Server-side routing happens in the HTTP endpoint handler.
      */
-    const publishLocation = async (coords: {
-      latitude: number;
-      longitude: number;
-      speed?: number | null;
-      heading?: number | null;
-      timestamp: number;
-    }) => {
-      if (!shouldPublish) return;
+    const publishLocation = async (
+      coords: {
+        latitude: number;
+        longitude: number;
+        speed?: number | null;
+        heading?: number | null;
+        timestamp: number;
+      },
+      force = false
+    ) => {
+      if (!shouldPublish || isCancelled) return;
+      await rememberDriverLocation(driverId, coords);
+      if (isCancelled) return;
 
-      if (!hasActiveRide && isAvailableForRide && isOnline) {
-        // ── Available mode: Convex SDK mutation with adaptive throttle ─────────────
+      if (!hasActiveRide && isOnline) {
+        // Available mode: HTTP delivery with adaptive throttle.
         const now = Date.now();
         const adaptiveInterval = getOptimalIntervalAvailable(coords.speed);
-        if (now - lastDbSentAt < adaptiveInterval) return; // adaptive throttle
+        if (!force && now - lastDbSentAt < adaptiveInterval) return;
         lastDbSentAt = now;
 
         if (!driverId) return;
-        upsertLocation({
-          driverId: driverId as any,
+        await deliverDriverLocation(PUSHER_TRIGGER_URL, {
+          driverId,
           latitude: coords.latitude,
           longitude: coords.longitude,
           speed: coords.speed ?? undefined,
           heading: coords.heading ?? undefined,
+          timestamp: coords.timestamp,
         }).catch((err) => {
-          console.error('[useLocationManager] Convex upsert failed:', err);
+          lastDbSentAt = 0;
+          console.error('[useLocationManager] Convex location delivery failed:', err);
         });
 
         console.log(
-          `[useLocationManager] 📍 Upserted location via Convex SDK (available mode, interval: ${adaptiveInterval}ms)`
+          `[useLocationManager] Available-mode location attempted (interval: ${adaptiveInterval}ms)`
         );
       } else if (hasActiveRide) {
         // ── On-ride mode — adaptive throttle based on speed ────────────────────────
         const now = Date.now();
         const adaptiveInterval = getOptimalIntervalOnRide(coords.speed);
-        if (now - lastOnRideSentAt < adaptiveInterval) return;
+        if (!force && now - lastOnRideSentAt < adaptiveInterval) return;
         lastOnRideSentAt = now;
 
         const payload = {
@@ -265,11 +271,7 @@ export function useLocationManager({
         }
 
         if (!sentViaNative && PUSHER_TRIGGER_URL) {
-          fetch(PUSHER_TRIGGER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }).catch((err) => {
+          deliverDriverLocation(PUSHER_TRIGGER_URL, payload).catch((err) => {
             console.error('[useLocationManager] HTTP fallback also failed:', err);
           });
         }
@@ -296,7 +298,17 @@ export function useLocationManager({
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted' || isCancelled) return;
 
-        // Immediate first fix
+        // On ride completion/cancellation the effect restarts in DB mode.
+        // Save the last known fix first, preserving its capture time, then
+        // replace it with a fresh fix without waiting for the throttle.
+        try {
+          const cached = await getLatestDriverLocation(driverId);
+          if (cached && !isCancelled) await publishLocation(cached, true);
+        } catch (err) {
+          console.warn('[useLocationManager] Cached location unavailable:', err);
+        }
+
+        // Immediate fresh fix
         try {
           const initialLoc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
@@ -311,7 +323,7 @@ export function useLocationManager({
             timestamp: initialLoc.timestamp,
           };
           setLocation({ latitude: coords.latitude, longitude: coords.longitude });
-          publishLocation(coords);
+          await publishLocation(coords, true);
         } catch (err) {
           console.error('[useLocationManager] Initial location fetch error:', err);
         }
@@ -384,5 +396,5 @@ export function useLocationManager({
       if (intervalId !== null) clearInterval(intervalId);
       appStateSub?.remove();
     };
-  }, [driverId, userId, isOnline, isAvailableForRide, hasActiveRide, setLocation, upsertLocation]);
+  }, [driverId, userId, isOnline, hasActiveRide, stateResolved, setLocation]);
 }

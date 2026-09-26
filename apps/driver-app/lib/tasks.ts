@@ -1,9 +1,10 @@
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
 import * as Location from 'expo-location';
+import { rememberDriverLocation } from './locationSnapshot';
+import { deliverDriverLocation } from './locationDelivery';
 
 export const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
-const BACKGROUND_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
  * Background location task.
@@ -65,27 +66,14 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
       timestamp: location.timestamp,
     };
 
+    await rememberDriverLocation(driverId, {
+      ...location.coords,
+      timestamp: location.timestamp,
+    });
+
     console.log(`[tasks.ts] 🚀 Posting location to: ${pusherTriggerUrl}`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), BACKGROUND_REQUEST_TIMEOUT_MS);
-    let response: Response;
-
-    try {
-      response = await fetch(pusherTriggerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`[tasks.ts] ❌ Location update failed (${response.status}): ${text}`);
-    } else {
+    if (await deliverDriverLocation(pusherTriggerUrl, payload)) {
       console.log('[tasks.ts] ✅ Location sent successfully (server determines routing).');
     }
   } catch (err: any) {

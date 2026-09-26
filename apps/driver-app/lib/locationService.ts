@@ -4,6 +4,8 @@ import * as SecureStore from 'expo-secure-store';
 import * as TaskManager from 'expo-task-manager';
 import { AppState, Platform } from 'react-native';
 import { BACKGROUND_LOCATION_TASK } from './tasks';
+import { clearDriverLocationSnapshot } from './locationSnapshot';
+import { cancelLocationDelivery } from './locationDelivery';
 
 export type LocationMode = 'available' | 'on-ride';
 
@@ -93,7 +95,7 @@ export const startLocationTracking = async (driverId: string, mode: LocationMode
       }
 
       // Persist the unified trigger URL + mode to SecureStore before starting the task.
-      // process.env is NOT available in headless background tasks — URL is hardcoded here.
+      // Persist the build-time environment value for the headless task.
       const pusherTriggerUrl = process.env.EXPO_PUBLIC_PUSHER_TRIGGER_URL;
 
       if (!pusherTriggerUrl) {
@@ -212,9 +214,12 @@ export const stopLocationTracking = async () => {
       const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
       if (hasStarted) {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-        await SecureStore.deleteItemAsync(LOCATION_MODE_KEY);
         console.log('[locationService] Stopped background location tracking.');
       }
+      await SecureStore.deleteItemAsync(LOCATION_MODE_KEY);
+      await SecureStore.deleteItemAsync('driverId');
+      cancelLocationDelivery();
+      await clearDriverLocationSnapshot();
     } catch (error) {
       console.error('[locationService] Error stopping location tracking:', error);
     }
