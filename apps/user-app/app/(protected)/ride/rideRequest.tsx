@@ -255,17 +255,16 @@ export default function RideRequest() {
 
   const handleCancel = useCallback(() => {
     if (!ride) return;
-    
-    if(ride.status === "Open" || ride.status === "Driver Arrived"){
-      handleConfirmCancel();
-      return;
-    }
     setCancelStep('reason');
     cancelSheetRef.current?.expand();
   }, [ride]);
 
-  const calculateCancelCharges = async () => {
+  const handleContinueCancel = async () => {
     if (!ride) return;
+    if (ride.status === 'Open' || ride.status === 'Driver Arrived') {
+      handleConfirmCancel();
+      return;
+    }
     if (ride.status === 'Active' && !effectiveDriverLocation) {
       retryLocation();
       showToast({
@@ -536,9 +535,7 @@ export default function RideRequest() {
                   ) : (
                     <MaterialIcons name="edit" size={18} color="white" />
                   )}
-                  <Text className="text-sm font-semibold">
-                    Change Driver
-                  </Text>
+                  <Text className="text-sm font-semibold">Change Driver</Text>
                 </Button>
               )}
               <Button
@@ -641,7 +638,7 @@ export default function RideRequest() {
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
-          style={{ flex: 1}}
+          style={{ flex: 1 }}
           rotateEnabled={true}
           customMapStyle={mapStyle.light}
           mapPadding={{
@@ -845,7 +842,6 @@ export default function RideRequest() {
             showsVerticalScrollIndicator={false}>
             {/* Only the driver summary and pinned actions remain when collapsed. */}
             <Animated.View style={expandedDetailsStyle} animatedProps={expandedDetailsProps}>
-
               {/* Vehicle details */}
               {vehicle && (
                 <View
@@ -886,12 +882,7 @@ export default function RideRequest() {
               {/* Rejection banner */}
               {ride.requestStatus === 'Rejected' && (
                 <View className="mb-2 flex-row items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
-                  <MaterialIcons
-                    name="cancel"
-                    size={16}
-                    color="#dc2626"
-                    style={{ marginTop: 1 }}
-                  />
+                  <MaterialIcons name="cancel" size={16} color="#dc2626" style={{ marginTop: 1 }} />
                   <View className="flex-1">
                     <Text className="text-[13px] font-semibold text-red-700">
                       Driver declined your request
@@ -937,7 +928,7 @@ export default function RideRequest() {
                   </View>
                 </View>
               )}
-              
+
               {/* OTP */}
               {ride.status === 'Driver Arrived' && ride.otp && (
                 <View className="mb-2 items-center rounded-2xl bg-indigo-50 px-6 py-7">
@@ -963,7 +954,7 @@ export default function RideRequest() {
 
               {/* Route */}
               <View className="rounded-2xl border border-slate-200 bg-white p-4">
-                <View className='flex-row justify-between'>
+                <View className="flex-row justify-between">
                   <Text className="mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                     Route
                   </Text>
@@ -979,11 +970,7 @@ export default function RideRequest() {
                       <View className="h-10 w-px bg-gray-200" />
                       <MaterialCommunityIcons name="map-marker" size={14} color="#f97316" />
                       <View className="h-10 w-px border-l border-dashed border-gray-300" />
-                      <MaterialCommunityIcons
-                        name="map-marker-outline"
-                        size={14}
-                        color="#9ca3af"
-                      />
+                      <MaterialCommunityIcons name="map-marker-outline" size={14} color="#9ca3af" />
                     </View>
 
                     <View className="flex-1 gap-3">
@@ -1075,7 +1062,6 @@ export default function RideRequest() {
                   </View>
                 )}
               </View>
-              
             </Animated.View>
           </BottomSheetScrollView>
         </View>
@@ -1378,7 +1364,7 @@ export default function RideRequest() {
                             title: 'Settings unavailable',
                             description:
                               'Open your phone settings and allow location access for this app.',
-                          }),
+                          })
                         );
                       } else retryLocation();
                     }}>
@@ -1402,7 +1388,7 @@ export default function RideRequest() {
                 </Button>
                 <Button
                   disabled={selectedReason === null || cancelling}
-                  onPress={calculateCancelCharges}
+                  onPress={handleContinueCancel}
                   className={`flex-1 ${
                     selectedReason === null
                       ? 'border-red-900/40 bg-red-900/20'
