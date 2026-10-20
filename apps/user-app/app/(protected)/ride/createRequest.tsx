@@ -26,7 +26,7 @@ import Animated, {
   useDerivedValue,
 } from 'react-native-reanimated';
 import { useToast } from '@/components/CustomToast';
-import { getAddressFromCoords, fetchRoute } from '@/lib/maps';
+import { verifyIndianCoordinates, isIndianAddress, fetchRoute } from '@/lib/maps';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { cn, distanceFormat, formatFare } from '@/lib/utils';
@@ -63,6 +63,9 @@ const VEHICLE_ICONS = {
 } as const;
 
 type Cords = { latitude: number; longitude: number };
+
+// The library forwards region but omits it from its legacy Place Details query type.
+const INDIA_PLACE_DETAILS_QUERY = { region: 'in', language: 'en' as const };
 
 type VehicleClass = (typeof VEHICLE_CLASS)[number];
 
@@ -349,7 +352,9 @@ export default function WhereTo() {
     coords: { latitude: number; longitude: number };
   } | null>(null);
 
-  const [isPickupSetAutomatically, setIsPickupSetAutomatically] = useState(false);
+  const pickupSelectionVersion = useRef(0);
+  const mapVerificationVersion = useRef(0);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<{
     distance: { text: string; value: number };
     duration: string;
@@ -472,29 +477,63 @@ export default function WhereTo() {
     [currentLocation]
   );
 
-  async function getCurrentLocation() {
-    setIsPickupSearching(true);
+  const verificationMessage = (status: 'outside-india' | 'unverified') =>
+    status === 'outside-india'
+      ? 'Please select a location within India.'
+      : 'Unable to verify this location is in India. Move the pin or search again.';
 
-    const title = await getAddressFromCoords(currentLocation.latitude, currentLocation.longitude);
-    pickupRef.current?.setAddressText(title);
-    setPickupLocation({
-      title,
-      coords: { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
-    });
-
-    setIsPickupSearching(false);
-  }
+  const rejectLocation = (message: string) => {
+    showToast({ title: 'Location unavailable', description: message, type: 'error' });
+  };
 
   useEffect(() => {
-    fitMap();
-    getCurrentLocation();
-  }, [currentLocation]);
+    let cancelled = false;
+    const version = pickupSelectionVersion.current;
+    const selectGpsPickup = async () => {
+      setIsPickupSearching(true);
+      try {
+        // The shared atom initially contains Delhi, not a device GPS fix.
+        const coords = await refreshLocation();
+        const result = await verifyIndianCoordinates(coords.latitude, coords.longitude, apiKey);
+        if (cancelled || version !== pickupSelectionVersion.current) return;
+        fitMap(coords);
+        if (result.status !== 'verified') {
+          rejectLocation(
+            `${verificationMessage(result.status)} Search for a pickup address in India.`
+          );
+          setMapSelectionMode('pickup');
+          return;
+        }
+        pickupRef.current?.setAddressText(result.title);
+        setPickupLocation({ title: result.title, coords });
+      } catch {
+        if (!cancelled && version === pickupSelectionVersion.current) {
+          rejectLocation(
+            'Unable to get your current location. Search for a pickup address in India.'
+          );
+          setMapSelectionMode('pickup');
+        }
+      } finally {
+        if (!cancelled) setIsPickupSearching(false);
+      }
+    };
+    selectGpsPickup();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (rider && rider.riderDetails) setGenderMatch(rider.riderDetails.genderMatching);
   }, [rider]);
 
   const handlePickupSelect = async (data: any, details: any = null) => {
+    pickupSelectionVersion.current += 1;
+    if (!details?.geometry?.location || !isIndianAddress(details)) {
+      pickupRef.current?.setAddressText(pickupLocation?.title || '');
+      rejectLocation('Please select a verified pickup address within India.');
+      return;
+    }
     if (details?.geometry?.location) {
       const title =
         data.description || data.structured_formatting?.main_text || 'Selected Location';
@@ -526,6 +565,11 @@ export default function WhereTo() {
   };
 
   const handleDestinationSelect = async (data: any, details: any = null) => {
+    if (!details?.geometry?.location || !isIndianAddress(details)) {
+      destinationRef.current?.setAddressText(destination?.title || '');
+      rejectLocation('Please select a verified destination within India.');
+      return;
+    }
     if (details?.geometry?.location) {
       const title =
         data.description || data.structured_formatting?.main_text || 'Selected Destination';
@@ -546,18 +590,12 @@ export default function WhereTo() {
         }).catch(() => {});
       }
 
-      // If pickup location is null, set it to current location
-      if (!pickupLocation && !isPickupSetAutomatically) {
-        setIsPickupSetAutomatically(true);
-        await getCurrentLocation();
-      }
-
-      // Auto-show drivers panel when destination is selected
-      setShowDrivers(true);
+      setShowDrivers(!!pickupLocation);
       setHasSearchedDrivers(false);
-      setSheetIndex(0);
+      setSheetIndex(pickupLocation ? 0 : 1);
       Keyboard.dismiss();
-      setMapSelectionMode(null);
+      setMapSelectionMode(pickupLocation ? null : 'pickup');
+      if (!pickupLocation) pickupRef.current?.focus();
     }
   };
 
@@ -571,11 +609,8 @@ export default function WhereTo() {
   };
 
   const confirmLocationFromMap = () => {
-    if (!tempLocation && pickupLocation && destination) {
-      setSheetIndex(0);
-      return;
-    }
-    if (!tempLocation) return;
+    if (!tempLocation || isUpdatingFromMap || locationError) return;
+    if (mapSelectionMode === 'pickup') pickupSelectionVersion.current += 1;
 
     const { title, latitude, longitude } = tempLocation;
     // Capture mode before any state updates so the setTimeout closure is reliable
@@ -596,9 +631,7 @@ export default function WhereTo() {
         setHasSearchedDrivers(false);
         isBoth = true;
       } else {
-        // Also show drivers if destination is set, wait no, only if both.
-        // But the existing code did setShowDrivers(true) here unconditionally.
-        setShowDrivers(true);
+        setShowDrivers(false);
         setHasSearchedDrivers(false);
       }
     }
@@ -615,7 +648,7 @@ export default function WhereTo() {
 
     setTempLocation(null);
     setSheetIndex(isBoth || (mode === 'destination' && pickupLocation) ? 0 : 1);
-    setMapSelectionMode(null);
+    setMapSelectionMode(mode === 'destination' && !pickupLocation ? 'pickup' : null);
 
     // Delay so the sheet/inputs are mounted before we interact with them
     setTimeout(() => {
@@ -629,51 +662,69 @@ export default function WhereTo() {
       } else if (mode === 'destination') {
         destinationRef.current?.setAddressText(title);
         destinationRef.current?.blur();
+        if (!pickupLocation) pickupRef.current?.focus();
       }
     }, 300);
   };
 
-  const onRegionChangeComplete = async (region: any) => {
-    if (
-      sheetState === 'COLLAPSED' &&
-      !isPickupSearching &&
-      !isDestinationSearching &&
-      !isUpdatingFromMap &&
-      mapSelectionMode !== null
-    ) {
-      setIsUpdatingFromMap(true);
-      try {
-        const title = await getAddressFromCoords(region.latitude, region.longitude);
-        setTempLocation({ title, latitude: region.latitude, longitude: region.longitude });
+  const invalidateMapLocation = () => {
+    mapVerificationVersion.current += 1;
+    setTempLocation(null);
+    setLocationError(null);
+    setIsUpdatingFromMap(true);
+  };
 
-        const route =
-          mapSelectionMode === 'pickup'
-            ? await fetchRoute(
-                { latitude: region.latitude, longitude: region.longitude },
-                destination
-                  ? destination.coords
-                  : { latitude: region.latitude, longitude: region.longitude }
-              )
-            : await fetchRoute(
-                pickupLocation
-                  ? pickupLocation.coords
-                  : { latitude: region.latitude, longitude: region.longitude },
-                { latitude: region.latitude, longitude: region.longitude }
-              );
-        if (!route) return;
-        setSelectedRoute(route);
-        setRouteCoords(route.polyline);
-      } catch (error) {
-        console.error('Failed to update location from map', error);
-      } finally {
-        setIsUpdatingFromMap(false);
+  const onRegionChangeComplete = async (region: Cords) => {
+    if (sheetState !== 'COLLAPSED' || mapSelectionMode === null) return;
+    const version = ++mapVerificationVersion.current;
+    setTempLocation(null);
+    setLocationError(null);
+    setIsUpdatingFromMap(true);
+    try {
+      const result = await verifyIndianCoordinates(region.latitude, region.longitude, apiKey);
+      if (version !== mapVerificationVersion.current) return;
+      if (result.status !== 'verified') {
+        setLocationError(verificationMessage(result.status));
+        return;
       }
+      const coords = { latitude: region.latitude, longitude: region.longitude };
+      setTempLocation({ title: result.title, ...coords });
+      const route = await fetchRoute(
+        mapSelectionMode === 'pickup' ? coords : (pickupLocation?.coords ?? coords),
+        mapSelectionMode === 'destination' ? coords : (destination?.coords ?? coords)
+      );
+      if (version !== mapVerificationVersion.current || !route) return;
+      setSelectedRoute(route);
+      setRouteCoords(route.polyline);
+    } finally {
+      if (version === mapVerificationVersion.current) setIsUpdatingFromMap(false);
     }
   };
 
+  useEffect(() => {
+    invalidateMapLocation();
+    const version = mapVerificationVersion.current;
+    if (sheetState === 'COLLAPSED' && mapSelectionMode !== null) {
+      mapRef.current
+        ?.getCamera()
+        .then((camera) => {
+          if (version === mapVerificationVersion.current) onRegionChangeComplete(camera.center);
+        })
+        .catch(() => {
+          if (version === mapVerificationVersion.current) {
+            setLocationError(verificationMessage('unverified'));
+            setIsUpdatingFromMap(false);
+          }
+        });
+    }
+    return () => {
+      mapVerificationVersion.current += 1;
+    };
+  }, [sheetState, mapSelectionMode]);
+
   const handleLocatePress = async () => {
-    await refreshLocation();
-    fitMap();
+    const coords = await refreshLocation();
+    fitMap(coords);
   };
 
   const fitCurrentMapToCenter = async () => {
@@ -823,6 +874,7 @@ export default function WhereTo() {
           mapType="standard"
           userLocationUpdateInterval={5000}
           style={{ height: '100%', width: 'auto' }}
+          onRegionChange={invalidateMapLocation}
           onRegionChangeComplete={onRegionChangeComplete}
           onPanDrag={() => {
             if (sheetState === 'FULL') setSheetIndex(0);
@@ -1018,15 +1070,20 @@ export default function WhereTo() {
                               isPickupSearching ? 'Loading current location...' : 'Pickup location'
                             }
                             fetchDetails={true}
+                            GooglePlacesDetailsQuery={INDIA_PLACE_DETAILS_QUERY}
                             onPress={handlePickupSelect}
                             textInputProps={{
-                              onFocus: () => setMapSelectionMode('pickup'),
+                              onFocus: () => {
+                                pickupSelectionVersion.current += 1;
+                                setMapSelectionMode('pickup');
+                              },
                               placeholderTextColor: '#6b7280',
                             }}
                             query={{
                               key: apiKey,
                               language: 'en',
                               sessionToken: pickupSessionToken,
+                              components: 'country:in',
                             }}
                             debounce={400}
                             enablePoweredByContainer={false}
@@ -1075,6 +1132,7 @@ export default function WhereTo() {
                             ref={destinationRef}
                             placeholder="Where to?"
                             fetchDetails={true}
+                            GooglePlacesDetailsQuery={INDIA_PLACE_DETAILS_QUERY}
                             onPress={handleDestinationSelect}
                             textInputProps={{
                               onFocus: () => setMapSelectionMode('destination'),
@@ -1084,6 +1142,7 @@ export default function WhereTo() {
                               key: apiKey,
                               language: 'en',
                               sessionToken: destinationSessionToken,
+                              components: 'country:in',
                             }}
                             debounce={400}
                             enablePoweredByContainer={false}
@@ -1134,9 +1193,24 @@ export default function WhereTo() {
                       {recentLocations.map((loc) => (
                         <TouchableOpacity
                           key={loc._id}
-                          onPress={() => {
+                          onPress={async () => {
+                            const mode = mapSelectionMode;
+                            const version =
+                              mode === 'pickup'
+                                ? ++pickupSelectionVersion.current
+                                : pickupSelectionVersion.current;
                             const coords = { latitude: loc.latitude, longitude: loc.longitude };
-                            if (mapSelectionMode === 'pickup') {
+                            const result = await verifyIndianCoordinates(
+                              coords.latitude,
+                              coords.longitude,
+                              apiKey
+                            );
+                            if (version !== pickupSelectionVersion.current) return;
+                            if (result.status !== 'verified') {
+                              rejectLocation(verificationMessage(result.status));
+                              return;
+                            }
+                            if (mode === 'pickup') {
                               setPickupLocation({ title: loc.title, coords });
                               pickupRef.current?.setAddressText(loc.title);
                               fitMap(coords);
@@ -1151,10 +1225,10 @@ export default function WhereTo() {
                               setDestination({ title: loc.title, coords });
                               destinationRef.current?.setAddressText(loc.title);
                               fitMap(coords);
-                              setMapSelectionMode(null);
-                              setShowDrivers(true);
+                              setMapSelectionMode(pickupLocation ? null : 'pickup');
+                              setShowDrivers(!!pickupLocation);
                               setHasSearchedDrivers(false);
-                              setSheetIndex(0);
+                              setSheetIndex(pickupLocation ? 0 : 1);
                               Keyboard.dismiss();
                             }
                           }}
@@ -1335,7 +1409,15 @@ export default function WhereTo() {
                   </Button>
 
                   {/* Confirm button */}
-                  <Button onPress={confirmLocationFromMap} className="h-14 rounded-xl">
+                  {locationError && (
+                    <Text accessibilityRole="alert" className="mb-3 text-sm text-destructive">
+                      {locationError}
+                    </Text>
+                  )}
+                  <Button
+                    onPress={confirmLocationFromMap}
+                    disabled={!tempLocation || isUpdatingFromMap || !!locationError}
+                    className="h-14 rounded-xl">
                     <Text className="text-lg font-bold text-secondary">
                       Confirm {mapSelectionMode === 'pickup' ? 'pickup' : 'destination'}
                     </Text>

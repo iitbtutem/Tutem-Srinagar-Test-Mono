@@ -44,18 +44,21 @@ const services = [
     name: 'Ride Request',
     image: require('@/assets/images/ride_request.png'),
     href: '/ride/createRequest',
+    visible: true,
   },
   {
     id: 'ride_pooling',
     name: 'Ride Pooling',
     image: require('@/assets/images/ride_pooling.png'),
     href: '/',
+    visible: false,
   },
   {
     id: 'walk_mode',
     name: 'Walk Mode',
     image: require('@/assets/images/walk_mode.png'),
     href: '/',
+    visible: false,
   },
 ] as const;
 
@@ -69,6 +72,8 @@ export default function HomeScreen() {
   const { rider: user } = useRider();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
+  // Preserve the original three-column card size when services are hidden.
+  const serviceCardWidth = (screenWidth - 2 * 16 - 2 * 8) / 3;
 
   const [showRideDialog, setShowRideDialog] = useState(false);
   const [footerImageError, setFooterImageError] = useState(false);
@@ -108,29 +113,32 @@ export default function HomeScreen() {
         <Text className="mx-4 mb-3 text-xl font-bold">Ride Services</Text>
         {/*  Ride Services  */}
         <View className="flex-row gap-2 px-4">
-          {services.map((service) => (
-            <TouchableOpacity
-              key={service.id}
-              onPress={() => {
-                if (currentRide) return setShowRideDialog(true);
-                router.push(service.href);
-              }}
-              className="aspect-square flex-1 items-center justify-center rounded-xl bg-primary/10 px-2 hover:scale-50">
-              {/* Icon container */}
-              <Image
-                source={service.image}
-                style={{ width: '100%', height: 70 }}
-                resizeMode="cover"
-              />
+          {services
+            .filter((service) => service.visible)
+            .map((service) => (
+              <TouchableOpacity
+                key={service.id}
+                onPress={() => {
+                  if (currentRide) return setShowRideDialog(true);
+                  router.push(service.href);
+                }}
+                style={{ width: serviceCardWidth }}
+                className="aspect-square items-center justify-center rounded-xl bg-primary/10 px-2 hover:scale-50">
+                {/* Icon container */}
+                <Image
+                  source={service.image}
+                  style={{ width: '100%', height: 70 }}
+                  resizeMode="cover"
+                />
 
-              {/* Label with fixed min-height to prevent layout shift */}
-              <View className="justify-center">
-                <Text className="text-center text-xs font-bold text-foreground">
-                  {service.name}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                {/* Label with fixed min-height to prevent layout shift */}
+                <View className="justify-center">
+                  <Text className="text-center text-xs font-bold text-foreground">
+                    {service.name}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
         </View>
 
         {currentRide && <ActiveRideCard currentRide={currentRide} />}
@@ -215,7 +223,10 @@ export function ActiveRideCard({ currentRide }: { currentRide: NonNullable<Curre
       <Card className="rounded-2xl border-2 border-primary/25 bg-card shadow-xl">
         <CardContent className="gap-3 p-4">
           {/* Header: Status */}
-          <RideStatusBanner ride={currentRide} className="-m-4 mb-1 rounded-b-none border-0 py-2 bg-primary/10" />
+          <RideStatusBanner
+            ride={currentRide}
+            className="-m-4 mb-1 rounded-b-none border-0 bg-primary/10 py-2"
+          />
 
           {/* Route */}
           <View className="flex-row items-center justify-between gap-1">
