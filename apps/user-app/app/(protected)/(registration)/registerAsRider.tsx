@@ -4,10 +4,10 @@ import { useNotification } from '@/context/NotificationContext';
 import { useRider } from '@/hooks/useRider';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@tutem/api';
-import { useAuthenticatedMutation } from '@/hooks/customApi';
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { useState } from 'react';
+import { useMutation } from 'convex/react';
 
 export default function RegisterAsRider() {
   const { showToast } = useToast();
@@ -16,7 +16,7 @@ export default function RegisterAsRider() {
 
   const { sessionToken } = useAuth();
   const { rider, isLoading: riderIsLoading } = useRider();
-  const registerAsRider = useAuthenticatedMutation(api.routes.rider.registerAsRider);
+  const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
   const handleRegisterAsRider = async () => {
     if (expoPushToken === null || sessionToken === null) return;
@@ -25,6 +25,7 @@ export default function RegisterAsRider() {
       setIsSubmitting(true);
       await registerAsRider({
         expoPushToken,
+        sessionToken,
       });
       showToast({
         type: 'success',

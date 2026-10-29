@@ -2,7 +2,6 @@ import { ConvexError, v } from "convex/values";
 import { mutation } from "../_generated/server";
 import {
   authenticatedQuery,
-  authenticatedMutation,
   riderMutation,
   riderQuery,
 } from "../helpers/sessionFunctions";
@@ -52,7 +51,12 @@ export const addRider = mutation({
   handler: async (ctx, args) => {
     // Validate rider age based on DB settings
     const ageSettings = await getAgeSettingsOrThrow(ctx);
-    validateAge(args.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
+    validateAge(
+      args.dob,
+      ageSettings.minRiderAge,
+      ageSettings.maxRiderAge,
+      "Rider",
+    );
 
     const existingUser = await ctx.db
       .query("user")
@@ -97,31 +101,50 @@ export const addRider = mutation({
   },
 });
 
-export const registerAsRider = riderMutation({
+export const registerAsRider = mutation({
   args: {
     expoPushToken: v.optional(v.string()),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) =>
+        q.eq("sessionToken", args.sessionToken),
+      )
+      .first();
+    if (session === null) throw new ConvexError("Session not found");
+
+    const user = await ctx.db.get(session.userId);
+    if (user === null) throw new ConvexError("User not found");
+
     const existingRider = await ctx.db
       .query("rider")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (existingRider !== null)
       throw new ConvexError("Rider profile already exists");
 
     // Validate rider age based on DB settings (user already exists with DOB)
     const ageSettings = await getAgeSettingsOrThrow(ctx);
-    validateAge(ctx.user.dob, ageSettings.minRiderAge, ageSettings.maxRiderAge, "Rider");
+    validateAge(
+      user.dob,
+      ageSettings.minRiderAge,
+      ageSettings.maxRiderAge,
+      "Rider",
+    );
 
     await ctx.db.insert("rider", {
       isVerified: "Unverified",
-      userId: ctx.user._id,
+      userId: user._id,
       genderMatching: false,
       isBlacklisted: false,
-      ...(args.expoPushToken !== undefined ? { expoPushToken: args.expoPushToken } : {}),
+      ...(args.expoPushToken !== undefined
+        ? { expoPushToken: args.expoPushToken }
+        : {}),
     });
     await ctx.db.insert("userPermission", {
-      userId: ctx.user._id,
+      userId: user._id,
       permission: "Rider",
     });
   },
@@ -271,4 +294,3 @@ export const getRecentLocations = riderQuery({
       .take(5);
   },
 });
-

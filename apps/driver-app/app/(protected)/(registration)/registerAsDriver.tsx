@@ -20,8 +20,7 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
-import { useQuery } from 'convex/react';
-import { useAuthenticatedMutation } from '@/hooks/customApi';
+import { useMutation, useQuery } from 'convex/react';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -69,7 +68,7 @@ export default function RegisterAsRider() {
   const licenseRef = useRef<TextInput>(null);
 
   const { driver, isLoading: driverIsLoading } = useDriver();
-  const registerAsDriver = useAuthenticatedMutation(api.routes.driver.registerAsDriver);
+  const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(
     api.routes.organizations.getNearbyOrganization,
     initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
@@ -174,6 +173,7 @@ export default function RegisterAsRider() {
         licenseImageFrontKey: uploadedFrontKey,
         licenseImageBackKey: uploadedBackKey,
         expoPushToken: expoPushToken ?? undefined,
+        sessionToken: sessionToken,
       });
 
       showToast({ title: 'Success', description: 'Account created successfully', type: 'success' });

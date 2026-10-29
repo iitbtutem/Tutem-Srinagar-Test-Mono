@@ -24,7 +24,7 @@ export default {
         UIBackgroundModes: ["location", "fetch"]
       },
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
     },
     android: {
@@ -39,7 +39,8 @@ export default {
         backgroundColor: "#ffffff"
       },
       package: "com.driver.tutem",
-      googleServicesFile: "./driver-google-services.json",
+      // googleServicesFile: "./driver-google-services.json",
+      googleServicesFile: "./driver-google-services-production.json",
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -50,7 +51,7 @@ export default {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },
@@ -80,7 +81,8 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "5975e692-ecf7-421f-aabb-3e6c78f69da6"
+        // projectId: "5975e692-ecf7-421f-aabb-3e6c78f69da6" //development
+        projectId: "6f8c9c8c-005b-40db-bb54-e7c78bb7225a" //production
       },
       GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     }

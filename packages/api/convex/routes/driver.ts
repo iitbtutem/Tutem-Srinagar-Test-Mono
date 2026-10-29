@@ -156,32 +156,44 @@ export const addDriver = mutation({
   },
 });
 
-export const registerAsDriver = driverMutation({
+export const registerAsDriver = mutation({
   args: {
     licenseNumber: v.string(),
     licenseImageFrontKey: v.optional(v.string()),
     licenseImageBackKey: v.optional(v.string()),
     organizationId: v.id("organization"),
     expoPushToken: v.optional(v.string()),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionToken", (q) =>
+        q.eq("sessionToken", args.sessionToken),
+      )
+      .first();
+    if (session === null) throw new ConvexError("Session not found");
+
+    const user = await ctx.db.get(session.userId);
+    if (user === null) throw new ConvexError("User not found");
+
     const existingDriver = await ctx.db
       .query("driver")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (existingDriver !== null)
       throw new ConvexError("Driver profile already exists");
 
     // Validate driver age based on DB settings (user already exists with DOB)
     const ageSettings = await getAgeSettingsOrThrow(ctx);
-    validateAge(ctx.user.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
+    validateAge(user.dob, ageSettings.minDriverAge, ageSettings.maxDriverAge, "Driver");
 
     const organization = await ctx.db.get(args.organizationId);
 
     if (organization === null) throw new ConvexError("Organization not found");
 
     await ctx.db.insert("driver", {
-      userId: ctx.user._id,
+      userId: user._id,
       licenseNumber: args.licenseNumber,
       isAvailableForRide: true,
       isOnline: true,
@@ -202,7 +214,7 @@ export const registerAsDriver = driverMutation({
         : {}),
     });
     await ctx.db.insert("userPermission", {
-      userId: ctx.user._id,
+      userId: user._id,
       permission: "Driver",
     });
   },

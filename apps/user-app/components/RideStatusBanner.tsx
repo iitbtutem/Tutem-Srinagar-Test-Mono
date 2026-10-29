@@ -211,7 +211,7 @@ function RideStatusBanner({ ride, className, driverResponseTime: propDriverRespo
 
 function formatElapsed(startTimestamp: number | undefined): string {
   if (startTimestamp === undefined) return '--';
-  const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+  const elapsed = Math.max(0, Math.floor((Date.now() - startTimestamp) / 1000));
   const h = Math.floor(elapsed / 3600);
   const m = Math.floor((elapsed % 3600) / 60);
   const s = elapsed % 60;
@@ -220,9 +220,11 @@ function formatElapsed(startTimestamp: number | undefined): string {
 }
 
 function LiveTimer({ startTimestamp }: { startTimestamp: number | undefined }) {
-  const [display, setDisplay] = useState(() => formatElapsed(startTimestamp));
+  // Store only a render tick so timestamp changes take effect immediately.
+  const [, setTick] = useState(0);
+  const display = formatElapsed(startTimestamp);
   useEffect(() => {
-    const id = setInterval(() => setDisplay(formatElapsed(startTimestamp)), 1000);
+    const id = setInterval(() => setTick((tick) => tick + 1), 1000);
     return () => clearInterval(id);
   }, [startTimestamp]);
   return (

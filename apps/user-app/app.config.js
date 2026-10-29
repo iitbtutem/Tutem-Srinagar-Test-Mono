@@ -24,7 +24,7 @@ export default {
         NSLocationAlwaysAndWhenInUseUsageDescription: "This app needs to access your location to pick you up and track your ride."
       },
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
     },
     android: {
@@ -37,7 +37,8 @@ export default {
         backgroundColor: "#ffffff"
       },
       package: "com.rider.tutem",
-      googleServicesFile: "./rider-google-services.json",
+      // googleServicesFile: "./rider-google-services.json", //development
+      googleServicesFile: "./rider-google-services-production.json", //production
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -46,7 +47,7 @@ export default {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_TESTING
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },
@@ -74,7 +75,8 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: "10149e7f-e9a1-4520-b5e7-3cd5776cc65c"
+        // projectId: "10149e7f-e9a1-4520-b5e7-3cd5776cc65c" //development
+        projectId: "2d31da12-693c-4869-821c-c5f3770258e4" //production
       },
     }
   }
