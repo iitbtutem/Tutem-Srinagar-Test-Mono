@@ -1,9 +1,16 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
+import { handleRequest, preflight } from "./accountDeletionHttp";
 
 const http = httpRouter();
+
+for (const endpoint of ["status", "otp", "submit"]) {
+  const path = `/api/account-deletion/${endpoint}`;
+  http.route({ path, method: "OPTIONS", handler: preflight });
+  http.route({ path, method: "POST", handler: handleRequest });
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

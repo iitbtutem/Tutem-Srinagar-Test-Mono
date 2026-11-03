@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { deletionScope, deletionStatus } from "./helpers/accountDeletion";
 import {
   FUEL_TYPE,
   PERMISSIONS,
@@ -8,6 +9,31 @@ import {
 } from "./CONSTANTS";
 
 export default defineSchema({
+  // Intake only. These records never change account access or delete data.
+  accountDeletionRequest: defineTable({
+    phoneNumber: v.string(),
+    scope: deletionScope,
+    status: deletionStatus,
+    reason: v.optional(v.string()),
+    confirmedAt: v.number(),
+    requestedAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_phone", ["phoneNumber"]),
+
+  // Independent of login OTPs; no login session is created by this flow.
+  accountDeletionOtp: defineTable({
+    phoneNumber: v.string(),
+    challengeId: v.string(),
+    // Registered profiles permitted by this challenge, before the user's choice.
+    scope: deletionScope,
+    hashedOtp: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    sentAt: v.number(),
+    windowStartedAt: v.number(),
+    sendCount: v.number(),
+  }).index("by_phone", ["phoneNumber"]),
+
   // Users
   user: defineTable({
     firstName: v.string(),
