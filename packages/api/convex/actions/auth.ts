@@ -40,7 +40,6 @@ export const sendOtpAdmin = action({
 
     const otp = generateOtp();
 
-    console.log(`OTP sent on ${phoneNumber} is  ${otp}`);
     const hashedOtp = sha256(otp);
     const smsLicense = process.env.SMS_LICENSE;
     const smsUrl = process.env.SMS_URL;
@@ -87,9 +86,17 @@ export const sendOtp = action({
     phoneNumber: v.string(),
   },
   handler: async (ctx, { phoneNumber }) => {
+    // Fixed OTP for the Google Play review number in both mobile apps.
+    if (phoneNumber === "7889393235" || phoneNumber === "+917889393235") {
+      await ctx.runMutation(internal.routes.auth.upsertOtpSession, {
+        phoneNumber,
+        hashedOtp: sha256("000000"),
+      });
+      return { success: true };
+    }
+
     const otp = generateOtp();
 
-    console.log(`OTP sent on ${phoneNumber} is  ${otp}`);
     const hashedOtp = sha256(otp);
     const smsLicense = process.env.SMS_LICENSE;
     const smsUrl = process.env.SMS_URL;

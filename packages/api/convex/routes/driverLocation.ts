@@ -15,6 +15,8 @@ async function trackingMode(db: DatabaseReader, driverId: Id<"driver">) {
     .withIndex("by_driver", (q) => q.eq("driverId", driverId))
     .filter((q) =>
       q.and(
+        // Rejected and unanswered requests can still have status "Open".
+        q.eq(q.field("requestStatus"), "Accepted"),
         q.neq(q.field("status"), "Completed"),
         q.neq(q.field("status"), "Canceled"),
         q.neq(q.field("status"), "Abort"),
