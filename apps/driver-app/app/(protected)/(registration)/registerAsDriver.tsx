@@ -22,7 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { api, Id } from '@tutem/api';
 import { useMutation, useQuery } from 'convex/react';
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { useDriverLiveLocation } from '@/hooks/useDriverLiveLocation';
+import { useRegistrationLocation } from '@/hooks/useRegistrationLocation';
 import { BasicHeader } from '@/components/CustomHeader';
 
 const formSchema = z.object({
@@ -52,16 +52,16 @@ export default function RegisterAsRider() {
     'licenseImageFrontKey' | 'licenseImageBackKey' | null
   >(null);
 
-  const [initialLocationFetched, setInitialLocationFetched] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-
   const { sessionToken } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
-  const driverLocation = useDriverLiveLocation();
+  const {
+    location,
+    error: locationError,
+    retry: retryLocation,
+    needsSettings,
+  } = useRegistrationLocation();
   const { BottomSheetBackgroundColor, BottomSheetIndicatorColor } = useThemeColors();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -71,7 +71,7 @@ export default function RegisterAsRider() {
   const registerAsDriver = useMutation(api.routes.driver.registerAsDriver);
   const organizations = useQuery(
     api.routes.organizations.getNearbyOrganization,
-    initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
+    location ? { driverLocation: location } : 'skip'
   );
   const { uploadFile } = useFileUpload();
 
@@ -194,15 +194,19 @@ export default function RegisterAsRider() {
     }
   });
 
-  useEffect(() => {
-    if (driverLocation && !initialLocationFetched) {
-      setInitialLocationFetched(driverLocation);
-    }
-  }, [driverLocation]);
-
   if (driverIsLoading) return <LoadingScreen message="Loading account…" />;
   if (driver && driver.driverDetails) return <Redirect href="/" />;
 
+  if (locationError) {
+    return (
+      <ErrorScreen
+        message={locationError}
+        actionText={needsSettings ? 'Open settings' : 'Try again'}
+        onAction={retryLocation}
+      />
+    );
+  }
+  if (!location) return <LoadingScreen message="Getting your location…" />;
   if (organizations === undefined) return <LoadingScreen message="Fetching nearby organization…" />;
 
   if (organizations.length === 0) {

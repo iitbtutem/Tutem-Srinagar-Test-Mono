@@ -21,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useSetAtom } from 'jotai';
 import { locationAtom, getCurrentLocation } from '@/lib/location';
-import * as Location from 'expo-location';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -43,14 +42,6 @@ export default function RootLayout() {
 
     const requestLocationPermission = async () => {
       try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          const { status: askStatus } = await Location.requestForegroundPermissionsAsync();
-          if (askStatus !== 'granted') {
-            console.warn('Location permission not granted on launch');
-            return;
-          }
-        }
         const loc = await getCurrentLocation();
         setLocation(loc);
       } catch (err) {

@@ -9,8 +9,26 @@ export type Cords = {
 
 export const locationAtom = atom<Cords | null>(null);
 
+let permissionRequest: Promise<Location.LocationPermissionResponse> | null = null;
+
+// Launch and registration can mount together. Share one native permission dialog.
+export function getLocationPermission() {
+  if (!permissionRequest) {
+    permissionRequest = (async () => {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted' && permission.canAskAgain) {
+        return Location.requestForegroundPermissionsAsync();
+      }
+      return permission;
+    })().finally(() => {
+      permissionRequest = null;
+    });
+  }
+  return permissionRequest;
+}
+
 export async function getCurrentLocation() {
-  const { status } = await Location.requestForegroundPermissionsAsync();
+  const { status } = await getLocationPermission();
 
   if (status !== 'granted') {
     throw new ConvexError('Location permission denied');

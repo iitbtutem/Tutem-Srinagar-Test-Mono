@@ -36,7 +36,7 @@ import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-
 import { useNotification } from '@/context/NotificationContext';
 import useThemeColors from '@/hooks/useColorScheme';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { useDriverLiveLocation } from '../../../hooks/useDriverLiveLocation';
+import { useRegistrationLocation } from '@/hooks/useRegistrationLocation';
 import { subYears } from 'date-fns';
 
 const formSchema = z.object({
@@ -69,13 +69,13 @@ export default function Register() {
   const { showToast } = useToast();
   const { expoPushToken } = useNotification();
   const { uploadFile } = useFileUpload();
-  const driverLocation = useDriverLiveLocation();
+  const {
+    location,
+    error: locationError,
+    retry: retryLocation,
+    needsSettings,
+  } = useRegistrationLocation();
   const { driver, isLoading: driverIsLoading } = useDriver();
-
-  const [initialLocationFetched, setInitialLocationFetched] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
 
   const lastNameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
@@ -85,18 +85,12 @@ export default function Register() {
 
   const organizations = useQuery(
     api.routes.organizations.getNearbyOrganization,
-    initialLocationFetched ? { driverLocation: initialLocationFetched } : 'skip'
+    location ? { driverLocation: location } : 'skip'
   );
   const ageSettings = useQuery(api.routes.settings.getUserAgeSettings);
   const addDriver = useMutation(api.routes.driver.addDriver);
   const login = useMutation(api.routes.driver.login);
   const createSession = useAction(api.actions.auth.createSessionForUser);
-
-  useEffect(() => {
-    if (driverLocation && !initialLocationFetched) {
-      setInitialLocationFetched(driverLocation);
-    }
-  }, [driverLocation]);
 
   const {
     handleSubmit,
@@ -257,6 +251,16 @@ export default function Register() {
   if (ageSettings === undefined) return <LoadingScreen message="Loading…" />;
 
   if (driver && sessionToken) return <Redirect href="/" />;
+
+  if (locationError) {
+    return (
+      <ErrorScreen
+        message={locationError}
+        actionText={needsSettings ? 'Open settings' : 'Try again'}
+        onAction={retryLocation}
+      />
+    );
+  }
 
   if (organizations && organizations.length === 0) {
     return <ErrorScreen message="No organizations found near you" />;
