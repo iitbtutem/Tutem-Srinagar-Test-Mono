@@ -1,6 +1,10 @@
 import { ConvexError, v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
-import { driverQuery, driverMutation } from "../helpers/sessionFunctions";
+import {
+  authenticatedQuery,
+  driverQuery,
+  driverMutation,
+} from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -220,7 +224,8 @@ export const registerAsDriver = mutation({
   },
 });
 
-export const getUser = driverQuery({
+// Existing riders need their own profile before they can register as drivers.
+export const getUser = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const driver = await ctx.db

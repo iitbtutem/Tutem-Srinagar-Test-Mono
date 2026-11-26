@@ -19,12 +19,15 @@ export default function RegisterAsRider() {
   const registerAsRider = useMutation(api.routes.rider.registerAsRider);
 
   const handleRegisterAsRider = async () => {
-    if (expoPushToken === null || sessionToken === null) return;
+    if (!sessionToken || !rider) {
+      showToast({ title: 'Error', description: 'User not found', type: 'error' });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
       await registerAsRider({
-        expoPushToken,
+        expoPushToken: expoPushToken ?? undefined,
         sessionToken,
       });
       showToast({
