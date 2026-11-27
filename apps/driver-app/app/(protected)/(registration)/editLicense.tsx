@@ -143,7 +143,7 @@ export default function EditLicense() {
     } catch (error: any) {
       showToast({
         title: 'Error',
-        description: error.message || 'Failed to update license',
+        description: error.data ?? 'Failed to update license',
         type: 'error',
       });
     } finally {

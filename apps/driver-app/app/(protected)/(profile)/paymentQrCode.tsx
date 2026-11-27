@@ -3,7 +3,8 @@ import { api, Id } from '@tutem/api';
 import { useAuthenticatedQuery, useAuthenticatedMutation } from '@/hooks/customApi';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Image, View } from 'react-native';
+import { Image, View } from 'react-native';
+import { useToast } from '@/components/CustomToast';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, Pencil, QrCode } from 'lucide-react-native';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -14,6 +15,7 @@ export default function PaymentQrCard() {
 
   const [uploading, setUploading] = useState(false);
   const { uploadFile } = useFileUpload();
+  const { showToast } = useToast();
 
   const driverPaymentQrImage = useAuthenticatedQuery(
     api.routes.driver.getDriverPaymentQrImage,
@@ -26,10 +28,11 @@ export default function PaymentQrCard() {
     if (!driverId) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please allow access to your photo library to upload a QR code.'
-      );
+      showToast({
+        title: 'Permission Required',
+        description: 'Please allow access to your photo library to upload a QR code.',
+        type: 'error',
+      });
       return;
     }
 
@@ -53,14 +56,18 @@ export default function PaymentQrCard() {
           driverId: driverId,
           paymentQrCodeKey: paymentQrCodeKey,
         });
-      } catch (e) {
-        Alert.alert('Upload Failed', 'Could not upload QR code. Please try again.');
+      } catch (e: any) {
+        showToast({
+          title: 'Upload Failed',
+          description: e.data || 'Could not upload QR code. Please try again.',
+          type: 'error',
+        });
       } finally {
         setUploading(false);
       }
     }
     return;
-  }, [driverId]);
+  }, [driverId, uploadFile, updatePaymentQrCode, showToast]);
 
   if (driverPaymentQrImage === undefined) {
     return (

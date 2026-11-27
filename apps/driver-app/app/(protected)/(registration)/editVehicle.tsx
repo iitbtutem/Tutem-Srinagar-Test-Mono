@@ -159,8 +159,12 @@ export default function EditVehicle() {
 
       showToast({ title: 'Success', description: 'Vehicle updated successfully', type: 'success' });
       router.back();
-    } catch (error) {
-      showToast({ title: 'Error', description: 'Failed to update vehicle', type: 'error' });
+    } catch (error: any) {
+      showToast({
+        title: 'Error',
+        description: error.data || 'Failed to update vehicle',
+        type: 'error',
+      });
     }
   });
 

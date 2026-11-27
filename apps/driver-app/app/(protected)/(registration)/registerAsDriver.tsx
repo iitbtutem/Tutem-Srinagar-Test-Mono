@@ -186,7 +186,7 @@ export default function RegisterAsRider() {
     } catch (error: any) {
       showToast({
         title: 'Error',
-        description: error.message || 'Failed to create profile',
+        description: error.data || 'Failed to create profile',
         type: 'error',
       });
     } finally {

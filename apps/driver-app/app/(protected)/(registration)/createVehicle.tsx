@@ -147,9 +147,9 @@ export default function CreateVehicle() {
       showToast({ title: 'Vehicle registered successfully', type: 'success' });
       router.replace('/(protected)/(tabs)');
       if (router.canDismiss()) router.dismissAll();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      showToast({ title: 'Something went wrong', type: 'error' });
+      showToast({ title: error.data || 'Something went wrong', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }

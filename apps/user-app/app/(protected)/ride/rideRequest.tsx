@@ -362,7 +362,7 @@ export default function RideRequest() {
       showToast({
         type: 'error',
         title: 'Failed',
-        description: 'Failed to change driver',
+        description: error.data || 'Failed to change driver',
       });
     } finally {
       setChangingDriver(false);

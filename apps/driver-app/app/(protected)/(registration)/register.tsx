@@ -233,7 +233,7 @@ export default function Register() {
     } catch (error: any) {
       showToast({
         title: 'Error',
-        description: error.message || 'Failed to save profile',
+        description: error.data ?? 'Failed to save profile',
         type: 'error',
       });
     } finally {

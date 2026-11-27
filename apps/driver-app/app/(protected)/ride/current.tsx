@@ -269,7 +269,7 @@ export default function Ride() {
             showToast({
               type: 'error',
               title: 'Error',
-              description: 'Failed to update destination reached status',
+              description: error.data || 'Failed to update destination reached status',
             });
           }
         }

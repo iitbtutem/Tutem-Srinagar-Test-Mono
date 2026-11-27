@@ -48,10 +48,10 @@ export function useFileUpload() {
 
       setState({ isUploading: false, error: null });
       return key;
-    } catch (err) {
+    } catch (err: any) {
       setState({
         isUploading: false,
-        error: 'Failed to upload image',
+        error: err.data || 'Failed to upload image',
       });
       throw err;
     }

@@ -199,8 +199,12 @@ export default function EditProfile() {
       showToast({ title: 'Success', description: 'Profile updated successfully', type: 'success' });
 
       router.replace('/profile');
-    } catch (error) {
-      showToast({ title: 'Error', description: 'Failed to update profile', type: 'error' });
+    } catch (error: any) {
+      showToast({
+        title: 'Error',
+        description: error.data || 'Failed to update profile',
+        type: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }

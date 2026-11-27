@@ -171,9 +171,13 @@ export const RideRequests = memo(
           description: 'Ride accepted successfully',
           type: 'success',
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        showToast({ title: 'Failed', description: 'Failed to accept ride', type: 'error' });
+        showToast({
+          title: 'Failed',
+          description: e.data || 'Failed to accept ride',
+          type: 'error',
+        });
       } finally {
         setActionLoading(null);
       }
@@ -188,9 +192,13 @@ export const RideRequests = memo(
           rideId,
         });
         showToast({ title: 'Ride Rejected', description: 'Ride rejected', type: 'success' });
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        showToast({ title: 'Failed', description: 'Failed to reject ride', type: 'error' });
+        showToast({
+          title: 'Failed',
+          description: e.data || 'Failed to reject ride',
+          type: 'error',
+        });
       } finally {
         setActionLoading(null);
       }

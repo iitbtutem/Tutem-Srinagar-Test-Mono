@@ -110,8 +110,12 @@ export default function Register() {
       showToast({ title: 'Success', description: 'Profile saved successfully', type: 'success' });
 
       router.replace('/(protected)/(tabs)');
-    } catch (error) {
-      showToast({ title: 'Error', description: 'Failed to save profile', type: 'error' });
+    } catch (error: any) {
+      showToast({
+        title: 'Error',
+        description: error.data || 'Failed to save profile',
+        type: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
