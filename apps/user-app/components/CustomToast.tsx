@@ -1,14 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { View, Text, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  FadeInUp,
-  FadeOutUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
-import { cn } from '@/lib/utils';
+import ToastMessage, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -22,7 +15,7 @@ type Toast = {
 type ToastContextType = {
   showToast: (toast: Toast) => void;
 };
-// Type safety for toast
+
 const ToastContext = createContext<ToastContextType | null>(null);
 
 export const useToast = () => {
@@ -31,95 +24,75 @@ export const useToast = () => {
   return context;
 };
 
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
+const toastVariants = {
+  success: { background: 'bg-green-500', icon: 'checkmark-circle' },
+  error: { background: 'bg-red-500', icon: 'close-circle' },
+  info: { background: 'bg-gray-800', icon: 'information-circle' },
+  warning: { background: 'bg-amber-700', icon: 'warning' },
+} as const;
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toast, setToast] = useState<Toast | null>(null);
+type ToastCardProps = ToastConfigParams<{ centered?: boolean }> & { variant: ToastType };
 
-  const scale = useSharedValue(0);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  // ✅ FIX: re-run animation whenever toast changes
-  useEffect(() => {
-    if (toast) {
-      scale.value = 0; // reset
-      scale.value = withSpring(1.5, {}, () => {
-        scale.value = withSpring(1);
-      });
-    }
-  }, [toast]);
-
-  const showToast = ({ title, description, type, position = 'top' }: Toast) => {
-    setToast({ title, description, type, position });
-
-    setTimeout(() => {
-      setToast(null);
-    }, 3000);
-  };
-
-  const getIconName = () => {
-    switch (toast?.type) {
-      case 'success':
-        return 'checkmark-circle';
-      case 'error':
-        return 'close-circle';
-      case 'warning':
-        return 'warning';
-      default:
-        return 'information-circle';
-    }
-  };
+function ToastCard({ text1, text2, props, variant }: ToastCardProps) {
+  const { width } = useWindowDimensions();
+  const [height, setHeight] = useState(0);
+  const { background, icon } = toastVariants[variant];
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
+      style={{
+        width: width - 32,
+        // The library supports top/bottom; offset the card to retain our center option.
+        transform: [{ translateY: props.centered ? -height / 2 : 0 }],
+      }}
+      className={`flex-row items-center gap-3 rounded-lg px-4 py-3 shadow-lg ${background}`}>
+      <Ionicons name={icon} size={26} color="white" />
+      <View className="flex-1">
+        <Text className="font-semibold text-white">{text1}</Text>
+        {!!text2 && <Text className="mt-1 text-sm text-white/90">{text2}</Text>}
+      </View>
+    </View>
+  );
+}
+
+const toastConfig: ToastConfig = {
+  success: (params) => <ToastCard {...params} variant="success" />,
+  error: (params) => <ToastCard {...params} variant="error" />,
+  info: (params) => <ToastCard {...params} variant="info" />,
+  warning: (params) => <ToastCard {...params} variant="warning" />,
+};
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { height } = useWindowDimensions();
+  const showToast = useCallback(
+    ({ title, description, type, position = 'top' }: Toast) => {
+      ToastMessage.show({
+        type,
+        text1: title,
+        text2: description,
+        position: position === 'bottom' ? 'bottom' : 'top',
+        topOffset: position === 'center' ? height / 2 : 40,
+        props: { centered: position === 'center' },
+      });
+    },
+    [height]
+  );
+  const value = useMemo(() => ({ showToast }), [showToast]);
+
+  return (
+    <ToastContext.Provider value={value}>
       {children}
-
-      {toast && (
-        <Animated.View
-          entering={FadeInUp.duration(300)}
-          exiting={FadeOutUp.duration(300)}
-          className={cn('absolute left-4 right-4', {
-            'top-10': toast.position === 'top',
-            'bottom-10': toast.position === 'bottom',
-            'top-1/2 -translate-y-1/2': toast.position === 'center', // ✅ FIX center
-          })}>
-          <View
-            className={`flex-row items-center gap-3 rounded-lg px-4 py-3 shadow-lg ${
-              toast.type === 'success'
-                ? 'bg-green-500'
-                : toast.type === 'error'
-                  ? 'bg-red-500'
-                  : toast.type === 'warning'
-                    ? 'bg-amber-700'
-                    : 'bg-gray-800'
-            }`}>
-            {/* ✅ FIX: actually render icon */}
-            <AnimatedIonicons
-              key={toast.type} // 🔥 ensures animation retriggers
-              name={getIconName()}
-              size={26}
-              color="white"
-              style={animatedStyle}
-            />
-
-            {/* Text */}
-            <View className="flex-1">
-              <Text className="truncate font-semibold text-white" numberOfLines={1}>
-                {toast.title}
-              </Text>
-
-              {toast.description && (
-                <Text className="mt-1 truncate text-sm text-white/90" numberOfLines={1}>
-                  {toast.description}
-                </Text>
-              )}
-            </View>
-          </View>
-        </Animated.View>
-      )}
+      <ToastMessage
+        config={toastConfig}
+        visibilityTime={3000}
+        autoHide
+        swipeable
+        topOffset={40}
+        bottomOffset={40}
+      />
     </ToastContext.Provider>
   );
 }
