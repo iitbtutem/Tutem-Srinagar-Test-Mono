@@ -238,6 +238,8 @@ export default defineSchema({
     .index("by_driver", ["driverId"]),
 
   rideSettings: defineTable({
+    minimumRideDistance: v.optional(v.number()),
+    maximumRideDistance: v.optional(v.number()),
     nearbyRadius: v.number(),
     arrivedDistance: v.number(),
     driverResponseTime: v.number(),

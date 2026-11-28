@@ -35,6 +35,7 @@ import { mapStyle } from '@/constants/mapStyles';
 import { colors, VERIFICATION_CONFIG } from '@/constants/colors';
 import BottomSheet, {
   BottomSheetBackdrop,
+  type BottomSheetBackdropProps,
   BottomSheetFooter,
   type BottomSheetFooterProps,
   BottomSheetScrollView,
@@ -219,6 +220,18 @@ export default function RideRequest() {
   const mapRef = useRef<MapView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const cancelSheetRef = useRef<BottomSheet>(null);
+  // Keep the backdrop mounted when sheet state changes.
+  const renderSheetBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+    ),
+    []
+  );
+  const handleCancelSheetClose = useCallback(() => {
+    setCancelStep(null);
+    setSelectedReason(null);
+    setCanceledRideCharges(null);
+  }, []);
 
   const animatedIndex = useSharedValue(1);
 
@@ -255,8 +268,11 @@ export default function RideRequest() {
 
   const handleCancel = useCallback(() => {
     if (!ride) return;
+    setSelectedReason(null);
+    setCanceledRideCharges(null);
     setCancelStep('reason');
-    cancelSheetRef.current?.expand();
+    // Commit the content and open target together, before the sheet starts moving.
+    setCancelSheetIndex(0);
   }, [ride]);
 
   const handleContinueCancel = async () => {
@@ -318,8 +334,6 @@ export default function RideRequest() {
         reason: selectedReason,
         ...(effectiveDriverLocation ? { driverLocation: effectiveDriverLocation } : {}),
       });
-      setCancelStep(null);
-      setSelectedReason(null);
       cancelSheetRef.current?.close();
       showToast({
         type: 'success',
@@ -530,11 +544,7 @@ export default function RideRequest() {
                       ? 'bg-red-500'
                       : 'bg-primary'
                   )}>
-                  {isSearchingDrivers ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <MaterialIcons name="edit" size={18} color="white" />
-                  )}
+                  {isSearchingDrivers && <ActivityIndicator size="small" color="white" />}
                   <Text className="text-sm font-semibold">Change Driver</Text>
                 </Button>
               )}
@@ -546,13 +556,13 @@ export default function RideRequest() {
                   'min-h-[52px] flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50',
                   { 'pointer-events-none': isSheetOpen }
                 )}>
-                <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
+                {/* <Ionicons name="close-circle-outline" size={18} color="#dc2626" /> */}
                 <Text className="text-sm font-semibold text-red-600">
                   {ride?.status === 'Active'
                     ? 'Abort Ride'
                     : ride?.status === 'Driver Arrived'
                       ? 'Cancel Ride'
-                      : 'Cancel Ride Request'}
+                      : 'Cancel Request'}
                 </Text>
               </Button>
             </View>
@@ -590,6 +600,24 @@ export default function RideRequest() {
       router,
       id,
     ]
+  );
+
+  const renderChooseDriverFooter = useCallback(
+    (props: BottomSheetFooterProps) =>
+      !selectedDriver ? (
+        <BottomSheetFooter {...props} bottomInset={insets.bottom}>
+          <View className="h-[72px]" pointerEvents="box-none">
+            <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+              <View className="px-6 pb-4">
+                <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
+                  <Text className="text-lg font-bold text-secondary">Choose Driver</Text>
+                </Button>
+              </View>
+            </SheetLayer>
+          </View>
+        </BottomSheetFooter>
+      ) : null,
+    [selectedDriver, insets.bottom, animatedIndex]
   );
 
   if (ride === undefined) return <Loader subtitle="Loading..." />;
@@ -634,7 +662,11 @@ export default function RideRequest() {
       />
 
       {/* Keep the route centered in the map area above the ride sheet. */}
-      <View pointerEvents={isSheetOpen ? 'none' : 'auto'} className="absolute inset-0">
+      {/* Keep a native parent in both touch states so flattening cannot reparent the map. */}
+      <View
+        collapsable={false}
+        pointerEvents={isSheetOpen ? 'none' : 'auto'}
+        className="absolute inset-0">
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -1070,9 +1102,7 @@ export default function RideRequest() {
       {/* change driver */}
       <BottomSheet
         ref={bottomSheetRef}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
+        backdropComponent={renderSheetBackdrop}
         index={sheetIndex}
         animatedIndex={animatedIndex}
         onChange={(index) => {
@@ -1080,6 +1110,7 @@ export default function RideRequest() {
           if (index === -1) setSelectedDriver(null);
         }}
         snapPoints={['50%', '80%']}
+        footerComponent={renderChooseDriverFooter}
         enableDynamicSizing={false}
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
@@ -1277,11 +1308,6 @@ export default function RideRequest() {
                       </View>
                     </TouchableOpacity>
                   </View>
-
-                  {/* Confirm button */}
-                  <Button onPress={() => setSheetIndex(1)} className="h-14 rounded-xl">
-                    <Text className="text-lg font-bold text-secondary">Choose driver</Text>
-                  </Button>
                 </View>
               </SheetLayer>
             )}
@@ -1292,11 +1318,12 @@ export default function RideRequest() {
       {/*  Cancel / Abort BottomSheet  */}
       <BottomSheet
         ref={cancelSheetRef}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
-        )}
+        snapPoints={['70%']}
+        enableDynamicSizing={false}
+        backdropComponent={renderSheetBackdrop}
         index={cancelSheetIndex}
         onChange={setCancelSheetIndex}
+        onClose={handleCancelSheetClose}
         enablePanDownToClose={true}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 28 }}
         handleIndicatorStyle={{ backgroundColor: BottomSheetIndicatorColor, width: 40 }}>
@@ -1304,7 +1331,7 @@ export default function RideRequest() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 36 }}>
           {/*  Step 1: Reason selection  */}
           {cancelStep === 'reason' && (
-            <Animated.View entering={FadeInUp.duration(280)}>
+            <View>
               {/* Header */}
               <View className="mb-3 flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
@@ -1364,7 +1391,7 @@ export default function RideRequest() {
                             title: 'Settings unavailable',
                             description:
                               'Open your phone settings and allow location access for this app.',
-                          })
+                          }),
                         );
                       } else retryLocation();
                     }}>
@@ -1374,13 +1401,10 @@ export default function RideRequest() {
                   </TouchableOpacity>
                 </View>
               )}
-
               {/* Action buttons */}
               <View className="flex-row gap-3">
                 <Button
                   onPress={() => {
-                    setCancelStep(null);
-                    setSelectedReason(null);
                     cancelSheetRef.current?.close();
                   }}
                   className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
@@ -1406,7 +1430,7 @@ export default function RideRequest() {
                   )}
                 </Button>
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {/*  Step 2: Fare summary + confirm  */}
@@ -1422,9 +1446,7 @@ export default function RideRequest() {
                     {ride.status === 'Abort' ? 'Ride Aborted by Driver' : 'Confirm Cancellation'}
                   </Text>
                   <Text className="text-xs text-slate-500">
-                    {ride.status === 'Abort'
-                      ? 'Review the trip summary'
-                      : 'Review before proceeding'}
+                    {ride.status === 'Abort' ? 'Review the trip summary' : 'Review before proceeding'}
                   </Text>
                 </View>
               </View>
@@ -1440,9 +1462,7 @@ export default function RideRequest() {
                       </View>
                       <View>
                         <Text className="text-xs font-light text-slate-400">Distance Covered</Text>
-                        <Text className="text-xs font-light text-slate-400">
-                          Remaining Distance
-                        </Text>
+                        <Text className="text-xs font-light text-slate-400">Remaining Distance</Text>
                       </View>
                     </View>
                     <View>
@@ -1484,9 +1504,7 @@ export default function RideRequest() {
                         <View className="h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
                           <MaterialCommunityIcons name="currency-inr" size={16} color="#ef4444" />
                         </View>
-                        <Text className="text-sm font-semibold text-foreground">
-                          Calculated Fare
-                        </Text>
+                        <Text className="text-sm font-semibold text-foreground">Calculated Fare</Text>
                       </View>
                       <Text className="text-2xl font-extrabold tracking-tight text-red-400">
                         {formatFare(canceledRideCharges.calculatedFare)}
@@ -1531,20 +1549,16 @@ export default function RideRequest() {
                       </Text>
                       <View className="flex-row items-center gap-2">
                         <View className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                        <Text className="text-xs font-medium text-slate-400">
-                          {driverReason.reason}
-                        </Text>
+                        <Text className="text-xs font-medium text-slate-400">{driverReason.reason}</Text>
                       </View>
                     </View>
                   ) : null;
                 })()}
-
               {/* Action buttons */}
               {ride.status === 'Abort' ? (
                 // Driver aborted — rider just acknowledges
                 <Button
                   onPress={() => {
-                    setCancelStep(null);
                     cancelSheetRef.current?.close();
                   }}
                   className="min-h-[52px] flex-1 items-center justify-center rounded-2xl">
@@ -1575,7 +1589,6 @@ export default function RideRequest() {
                   </Button>
                 </View>
               )}
-
               <Text className="mt-3 text-center text-[11px] leading-4 text-slate-500">
                 {canceledRideCharges && canceledRideCharges.calculatedFare > 0
                   ? 'Fare is calculated based on distance covered and applicable penalty.'

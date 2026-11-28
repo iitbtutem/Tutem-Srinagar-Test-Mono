@@ -14,6 +14,7 @@ import { s3Client } from "../s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { internal } from "../_generated/api";
+import { validateRideDistance } from "../helpers/rideDistance";
 
 export type NearbyDriverResult = {
   driver: Doc<"driver"> & {
@@ -232,6 +233,9 @@ export const bookRideInternal = internalMutation({
     if (existingRide !== null)
       throw new ConvexError("Can't book multiple rides at the same time");
 
+    const settings = await ctx.db.query("rideSettings").first();
+    validateRideDistance(args.distance, settings);
+
     const rideId = await ctx.db.insert("ride", {
       riderId: rider._id,
       driverId: driver._id,
@@ -247,7 +251,6 @@ export const bookRideInternal = internalMutation({
       updatedAt: Date.now(),
     });
 
-    const settings = await ctx.db.query("rideSettings").first();
     const responseTime = settings?.driverResponseTime ?? 10;
 
     await ctx.scheduler.runAfter(

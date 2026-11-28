@@ -14,7 +14,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import BottomSheet, { BottomSheetFooter, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetFooter,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useColorScheme } from 'nativewind';
 import { useToast } from '@/components/CustomToast';
@@ -534,6 +537,7 @@ export default function Ride() {
         />
       )}
       <View
+        collapsable={false}
         style={{ height: MAP_HEIGHT }}
         pointerEvents={driverChanged || rideCanceled ? 'none' : 'auto'}>
         {/* Full-screen map */}
@@ -603,7 +607,6 @@ export default function Ride() {
         index={1}
         animatedIndex={animatedSheetIndex}
         snapPoints={['25%', '55%']}
-        // animationConfigs={{ damping: 50, overshootClamping: true, stiffness: 500 }}
         footerComponent={(props) => (
           <BottomSheetFooter {...props}>
             {/* The parent safe area handles the system inset; keep 20px of extra bottom space. */}
@@ -730,7 +733,12 @@ export default function Ride() {
                       </Button>
                     ) : (
                       <Button
-                        onPress={() => setCancelStep('reason')}
+                        onPress={() => {
+                          setSelectedReason(null);
+                          setCanceledRideCharges(null);
+                          setCancelStep('reason');
+                          activeSheetRef.current?.snapToIndex(1);
+                        }}
                         disabled={loading === 'canceling'}
                         variant="destructive"
                         className="flex-row items-center justify-center gap-2 rounded-2xl border-2 border-red-200 bg-red-50">
@@ -755,7 +763,7 @@ export default function Ride() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 }}>
           {/* CANCEL FLOW — Step 1: Reason selection */}
           {cancelStep === 'reason' && (
-            <Animated.View entering={FadeInUp.duration(280)}>
+            <View key="cancel-reason">
               {/* Header */}
               <View className="mb-2 flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
@@ -800,7 +808,7 @@ export default function Ride() {
                   );
                 })}
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {/* CANCEL FLOW — Step 2: Confirm + fare summary */}

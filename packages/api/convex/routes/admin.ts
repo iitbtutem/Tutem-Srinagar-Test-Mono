@@ -9,6 +9,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { validateAge, getAgeSettingsOrThrow } from "../helpers/validation";
+import { validateRideDistanceLimits } from "../helpers/rideDistance";
 
 // Riders
 
@@ -1017,6 +1018,8 @@ export const deleteAdminUser = superAdminMutation({
 
 export const updateRideSettings = adminMutation({
   args: {
+    minimumRideDistance: v.number(),
+    maximumRideDistance: v.number(),
     nearbyRadius: v.number(),
     arrivedDistance: v.number(),
     driverResponseTime: v.number(),
@@ -1024,6 +1027,7 @@ export const updateRideSettings = adminMutation({
     cancellationPenalty: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    validateRideDistanceLimits(args.minimumRideDistance, args.maximumRideDistance);
     const settings = await ctx.db.query("rideSettings").first();
 
     if (settings) {

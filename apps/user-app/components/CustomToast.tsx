@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 type Toast = {
   title: string;
@@ -66,6 +66,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         return 'checkmark-circle';
       case 'error':
         return 'close-circle';
+      case 'warning':
+        return 'warning';
       default:
         return 'information-circle';
     }
@@ -90,7 +92,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 ? 'bg-green-500'
                 : toast.type === 'error'
                   ? 'bg-red-500'
-                  : 'bg-gray-800'
+                  : toast.type === 'warning'
+                    ? 'bg-amber-700'
+                    : 'bg-gray-800'
             }`}>
             {/* ✅ FIX: actually render icon */}
             <AnimatedIonicons

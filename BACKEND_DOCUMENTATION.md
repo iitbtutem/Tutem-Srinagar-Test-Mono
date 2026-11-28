@@ -306,6 +306,8 @@ Purpose: Stores global ride behavior configuration.
 | Field                   | Type     | Required | Default                                        | Description                                                                           | Relationship / Reference        |
 | ----------------------- | -------- | -------: | ---------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------- |
 | `nearbyRadius`          | `number` |      Yes | None                                           | Driver discovery radius. Stored in meters                                             | Used by nearby-driver discovery |
+| `minimumRideDistance` | `number` | No (rollout only) | No runtime fallback | Minimum allowed route distance in meters, inclusive. Required on settings writes and booking. | Create-request warnings and booking |
+| `maximumRideDistance` | `number` | No (rollout only) | No runtime fallback | Maximum allowed route distance in meters, inclusive. Required on settings writes and booking. | Create-request warnings and booking |
 | `arrivedDistance`       | `number` |      Yes | None                                           | Distance threshold for arrival/completion/cancellation fare logic, treated as meters. | Used by ride actions            |
 | `driverResponseTime`    | `number` |      Yes | 10 minutes.                                    | Driver response timeout in minutes.                                                   | Used by scheduler               |
 | `maxDriverRideRequests` | `number` |       No | Defaults to `3` in nearby-driver filtering     | Max pending ride requests a driver can have.                                          | Used by discovery               |
@@ -315,7 +317,15 @@ Indexes: None.
 
 Usage notes:
 
-- Queries throw `ConvexError("Ride settings not configured")` if no document exists.
+- The settings query returns `null` if no document exists. The create-request page skips distance checks while settings are loading or incomplete; booking requires valid saved limits.
+- Configure both route limits in the web **Settings → Ride Settings** form, in meters. Values must be finite and positive, with minimum strictly below maximum.
+- After deploying the updated Convex functions, initialize existing records once from `packages/api`:
+
+  ```powershell
+  yarn convex run routes/settings:initializeRideDistanceLimits '{}'
+  ```
+
+  Use the intended deployment's normal Convex CLI configuration (add `--prod` only when targeting production). This saves 300 and 100,000 meters for missing fields, preserves configured values, and is safe to rerun. It does not create a settings document if none exists; use the web form in that case. Initialize before enabling bookings on an existing deployment.
 
 ### Table: `otpSession`
 

@@ -12,7 +12,11 @@ import {
 import { Feather, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import BottomSheet, { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import Animated, {
@@ -73,11 +77,18 @@ type VehicleClass = (typeof VEHICLE_CLASS)[number];
 type SheetLayerProps = {
   children: React.ReactNode;
   animatedIndex: SharedValue<number>;
+  interactiveAt: number;
   visibleFrom?: number;
   visibleUntil?: number;
 };
 const AnimatedView = Animated.createAnimatedComponent(View);
-function SheetLayer({ children, animatedIndex, visibleFrom = 0, visibleUntil }: SheetLayerProps) {
+function SheetLayer({
+  children,
+  animatedIndex,
+  interactiveAt,
+  visibleFrom = 0,
+  visibleUntil,
+}: SheetLayerProps) {
   const opacity = useDerivedValue(() => {
     const inputRange =
       visibleUntil !== undefined
@@ -92,7 +103,9 @@ function SheetLayer({ children, animatedIndex, visibleFrom = 0, visibleUntil }: 
   }));
 
   const animatedProps = useAnimatedProps(() => ({
-    pointerEvents: opacity.value > 0.1 ? ('box-none' as const) : ('none' as const),
+    // Crossfading layers overlap while dragging; only a settled layer can accept touches.
+    pointerEvents:
+      animatedIndex.value === interactiveAt ? ('box-none' as const) : ('none' as const),
   }));
 
   return (
@@ -138,48 +151,42 @@ function NearbyDriversPanel({
   isSearchingDrivers,
   onViewImage,
 }: NearbyDriversPanelProps) {
-  type VehicleClass = (typeof VEHICLE_CLASS)[number];
-
   return (
-    <View className="mb-6 px-4 pt-2">
+    <View className="mb-6 mt-1 px-4 pt-2">
       {/* Filters */}
-      <View className="mb-3 flex-row items-center">
-        <BottomSheetFlatList
-          data={VEHICLE_CLASS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item: VehicleClass) => item}
-          contentContainerStyle={{ gap: 4 }}
-          renderItem={({ item }: { item: VehicleClass }) => {
+      <View className="mb-3 flex-row items-center gap-3">
+        <View className="min-w-0 flex-1 flex-row gap-1">
+          {VEHICLE_CLASS.map((item) => {
             const isSelected = filters.includes(item);
             return (
               <TouchableOpacity
+                key={item}
                 onPress={() => {
                   setFilters((prev) =>
                     prev.includes(item) ? prev.filter((el) => el !== item) : [...prev, item]
                   );
                 }}
                 className={cn(
-                  'flex-row items-center gap-x-1 rounded-full border px-3 py-1',
-                  isSelected ? 'border-primary bg-primary' : 'border-border bg-background'
+                  'flex-1 flex-col items-center justify-center rounded-xl border py-0.5',
+                  isSelected ? 'border-primary bg-primary/15' : 'border-border bg-background'
                 )}>
                 <Image
                   source={VEHICLE_ICONS[item]}
-                  style={{ width: 16, height: 16 }}
+                  style={{ width: 24, height: 24 }}
                   resizeMode="contain"
                 />
                 <Text
                   className={cn(
-                    'text-sm',
-                    isSelected ? 'text-primary-foreground' : 'text-foreground'
+                    'text-[10px] leading-3',
+                    isSelected ? 'text-primary' : 'text-foreground'
                   )}>
                   {item}
                 </Text>
               </TouchableOpacity>
             );
-          }}
-        />
-        <View className="flex-row items-center gap-2">
+          })}
+        </View>
+        <View className="shrink-0 flex-row items-center gap-2">
           <Text className="text-xs"> Gender{'\n'}Matching</Text>
           <Switch checked={genderMatch} onCheckedChange={setGenderMatch} />
         </View>
@@ -320,6 +327,7 @@ function NearbyDriversPanel({
 export default function WhereTo() {
   const { rider } = useRider();
   const bookRide = useAuthenticatedAction(api.actions.ride.bookRide);
+  const rideSettings = useAuthenticatedQuery(api.routes.settings.rideSettings);
 
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -382,9 +390,19 @@ export default function WhereTo() {
     rider?.riderDetails?._id ? { riderId: rider.riderDetails._id } : 'skip'
   );
 
-  // Track if we're in driver selection mode
-  const [showDrivers, setShowDrivers] = useState(false);
+  // A complete route opens the search panel; it does not mean a search has completed.
+  const showDrivers = bothSelected;
+  const [driverSearchRequested, setDriverSearchRequested] = useState(false);
   const [hasSearchedDrivers, setHasSearchedDrivers] = useState(false);
+  const driverSearchVersion = useRef(0);
+
+  const resetDriverSearch = useCallback(() => {
+    driverSearchVersion.current += 1;
+    setDriverSearchRequested(false);
+    setHasSearchedDrivers(false);
+    setNearbyDrivers([]);
+    setIsSearchingDrivers(false);
+  }, []);
 
   const apiKey =
     Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -403,10 +421,12 @@ export default function WhereTo() {
 
   // Discovery logic using Action
   useEffect(() => {
+    let cancelled = false;
+    const version = ++driverSearchVersion.current;
     const shouldFetch =
       bothSelected &&
       showDrivers &&
-      hasSearchedDrivers &&
+      driverSearchRequested &&
       selectedRoute &&
       rider &&
       rider.riderDetails &&
@@ -436,28 +456,44 @@ export default function WhereTo() {
             genderMatch: genderMatch,
             filters: filters,
           });
+          if (cancelled || version !== driverSearchVersion.current) return;
           setNearbyDrivers(drivers);
+          setHasSearchedDrivers(true);
         } catch (error) {
+          if (cancelled || version !== driverSearchVersion.current) return;
           console.error('Discovery error:', error);
           setNearbyDrivers([]);
+          setHasSearchedDrivers(false);
+          setDriverSearchRequested(false);
         } finally {
-          setIsSearchingDrivers(false);
+          if (!cancelled && version === driverSearchVersion.current) {
+            setIsSearchingDrivers(false);
+          }
         }
       };
 
       fetchDrivers();
     } else {
       // Only clear nearby drivers if we are no longer in driver selection mode
-      const isStillInDriverSelection = bothSelected && showDrivers && hasSearchedDrivers;
+      const isStillInDriverSelection = bothSelected && showDrivers && driverSearchRequested;
       if (!isStillInDriverSelection) {
         setNearbyDrivers([]);
+        setHasSearchedDrivers(false);
       }
+      setIsSearchingDrivers(false);
     }
+    return () => {
+      cancelled = true;
+    };
   }, [
     bothSelected,
     showDrivers,
-    hasSearchedDrivers,
+    driverSearchRequested,
     selectedRoute?.distance.value,
+    pickupLocation?.coords.latitude,
+    pickupLocation?.coords.longitude,
+    destination?.coords.latitude,
+    destination?.coords.longitude,
     rider?.riderDetails?._id,
     genderMatch,
     filters,
@@ -505,6 +541,7 @@ export default function WhereTo() {
           return;
         }
         pickupRef.current?.setAddressText(result.title);
+        resetDriverSearch();
         setPickupLocation({ title: result.title, coords });
       } catch {
         if (!cancelled && version === pickupSelectionVersion.current) {
@@ -541,9 +578,10 @@ export default function WhereTo() {
         latitude: details.geometry.location.lat,
         longitude: details.geometry.location.lng,
       };
+      resetDriverSearch();
       setPickupLocation({ title, coords });
       fitMap(coords);
-      setMapSelectionMode(null);
+      setMapSelectionMode(destination ? null : 'destination');
 
       // Persist to recent locations
       if (rider?.riderDetails?._id) {
@@ -556,8 +594,6 @@ export default function WhereTo() {
       }
 
       if (destination) {
-        setShowDrivers(true);
-        setHasSearchedDrivers(false);
         setSheetIndex(0);
         Keyboard.dismiss();
       }
@@ -577,6 +613,7 @@ export default function WhereTo() {
         latitude: details.geometry.location.lat,
         longitude: details.geometry.location.lng,
       };
+      resetDriverSearch();
       setDestination({ title, coords: dropoffCoords });
       fitMap(dropoffCoords);
 
@@ -590,8 +627,6 @@ export default function WhereTo() {
         }).catch(() => {});
       }
 
-      setShowDrivers(!!pickupLocation);
-      setHasSearchedDrivers(false);
       setSheetIndex(pickupLocation ? 0 : 1);
       Keyboard.dismiss();
       setMapSelectionMode(pickupLocation ? null : 'pickup');
@@ -600,39 +635,34 @@ export default function WhereTo() {
   };
 
   const handleBackToPlanning = () => {
+    resetDriverSearch();
     pickupRef.current?.setAddressText(pickupLocation?.title || '');
     setDestination(null);
-    setShowDrivers(false);
-    setHasSearchedDrivers(false);
+    setMapSelectionMode('destination');
     setSelectedDriverId(null);
     setSheetIndex(1);
   };
 
   const confirmLocationFromMap = () => {
-    if (!tempLocation || isUpdatingFromMap || locationError) return;
+    if (!tempLocation || isUpdatingFromMap || locationError || !mapSelectionMode) return;
+    resetDriverSearch();
     if (mapSelectionMode === 'pickup') pickupSelectionVersion.current += 1;
 
     const { title, latitude, longitude } = tempLocation;
-    // Capture mode before any state updates so the setTimeout closure is reliable
     const mode = mapSelectionMode;
     let isBoth = false;
 
     if (mode === 'pickup') {
       setPickupLocation({ title, coords: { latitude, longitude } });
+      pickupRef.current?.setAddressText(title);
       if (destination) {
-        setShowDrivers(true);
-        setHasSearchedDrivers(false);
         isBoth = true;
       }
     } else if (mode === 'destination') {
       setDestination({ title, coords: { latitude, longitude } });
+      destinationRef.current?.setAddressText(title);
       if (pickupLocation) {
-        setShowDrivers(true);
-        setHasSearchedDrivers(false);
         isBoth = true;
-      } else {
-        setShowDrivers(false);
-        setHasSearchedDrivers(false);
       }
     }
 
@@ -647,24 +677,10 @@ export default function WhereTo() {
     }
 
     setTempLocation(null);
-    setSheetIndex(isBoth || (mode === 'destination' && pickupLocation) ? 0 : 1);
-    setMapSelectionMode(mode === 'destination' && !pickupLocation ? 'pickup' : null);
-
-    // Delay so the sheet/inputs are mounted before we interact with them
-    setTimeout(() => {
-      if (mode === 'pickup') {
-        pickupRef.current?.setAddressText(title);
-        pickupRef.current?.blur();
-        // If no destination yet, focus destination so the user can type it
-        if (!destination) {
-          destinationRef.current?.focus();
-        }
-      } else if (mode === 'destination') {
-        destinationRef.current?.setAddressText(title);
-        destinationRef.current?.blur();
-        if (!pickupLocation) pickupRef.current?.focus();
-      }
-    }, 300);
+    // Continue selecting the missing endpoint without expanding the sheet or keyboard.
+    setSheetIndex(0);
+    setMapSelectionMode(isBoth ? null : mode === 'destination' ? 'pickup' : 'destination');
+    Keyboard.dismiss();
   };
 
   const invalidateMapLocation = () => {
@@ -738,15 +754,22 @@ export default function WhereTo() {
 
   useEffect(() => {
     if (!!pickupLocation) pickupRef.current?.setAddressText(pickupLocation.title);
-    destinationRef.current?.focus();
+    if (bothSelected) {
+      setMapSelectionMode(null);
+      setSheetIndex(0);
+      Keyboard.dismiss();
+    }
   }, [bothSelected, showDrivers]);
 
   // Update route when locations change
   useEffect(() => {
+    let cancelled = false;
+    setSelectedRoute(null);
+    setRouteCoords([]);
     if (bothSelected) {
       (async () => {
         const route = await fetchRoute(pickupLocation.coords, destination.coords);
-        if (!route) return;
+        if (cancelled || !route) return;
         setSelectedRoute(route);
         setRouteCoords(route.polyline);
         if (route.polyline.length > 0) {
@@ -756,11 +779,17 @@ export default function WhereTo() {
           });
         }
       })();
-    } else {
-      setSelectedRoute(null);
-      setRouteCoords([]);
     }
-  }, [bothSelected]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    bothSelected,
+    pickupLocation?.coords.latitude,
+    pickupLocation?.coords.longitude,
+    destination?.coords.latitude,
+    destination?.coords.longitude,
+  ]);
 
   // Handle back button
   useEffect(() => {
@@ -790,6 +819,46 @@ export default function WhereTo() {
     setSheetIndex(index);
     if (index === 0) Keyboard.dismiss();
   }, []);
+
+  const handleFindDriver = useCallback(
+    (fromIndex: number) => {
+      // Ignore presses delivered from an outgoing layer during a sheet gesture.
+      if (sheetIndex !== fromIndex || animatedIndex.value !== fromIndex) return;
+      const distance = selectedRoute?.distance.value;
+      if (distance === undefined || !Number.isFinite(distance)) {
+        showToast({
+          title: 'Route not ready',
+          description: 'Please wait for the route and try again.',
+          type: 'info',
+        });
+        return;
+      }
+      const minimum = rideSettings?.minimumRideDistance;
+      const maximum = rideSettings?.maximumRideDistance;
+      if (
+        minimum !== undefined &&
+        maximum !== undefined &&
+        Number.isFinite(minimum) &&
+        Number.isFinite(maximum) &&
+        minimum > 0 &&
+        maximum > minimum &&
+        (distance < minimum || distance > maximum)
+      ) {
+        const tooShort = distance < minimum;
+        const limit = tooShort ? minimum : maximum;
+        const formattedLimit = limit < 1000 ? `${limit} meters` : `${limit / 1000} km`;
+        showToast({
+          title: tooShort ? 'Trip is too short' : 'Trip is too long',
+          description: `${tooShort ? 'Minimum' : 'Maximum'} trip distance is ${formattedLimit}.`,
+          type: 'warning',
+        });
+        return;
+      }
+      setDriverSearchRequested(true);
+      setSheetIndex(1);
+    },
+    [sheetIndex, animatedIndex, selectedRoute, showToast, rideSettings]
+  );
 
   const selectedDriver = nearbyDrivers?.find(
     (nearbyDriver) => nearbyDriver.driver._id === selectedDriverId
@@ -853,6 +922,44 @@ export default function WhereTo() {
       });
     }
   };
+
+  const renderChooseDriverFooter = useCallback(
+    (props: BottomSheetFooterProps) =>
+      bothSelected && !selectedDriver ? (
+        <BottomSheetFooter {...props} bottomInset={insets.bottom}>
+          <View className="h-[124px]" pointerEvents="box-none">
+            <SheetLayer
+              animatedIndex={animatedIndex}
+              interactiveAt={0}
+              visibleFrom={0}
+              visibleUntil={0.5}>
+              <View className="gap-2 px-6 pb-4">
+                <TouchableOpacity
+                  onPress={handleBackToPlanning}
+                  className="h-11 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10">
+                  <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.pickup} />
+                  <Text className="text-sm font-semibold text-primary">Edit Route</Text>
+                </TouchableOpacity>
+                <Button onPress={() => handleFindDriver(0)} className="h-14 rounded-xl">
+                  <Text className="text-lg font-bold text-secondary">
+                    {hasSearchedDrivers ? 'Choose Driver' : 'Find My Driver'}
+                  </Text>
+                </Button>
+              </View>
+            </SheetLayer>
+          </View>
+        </BottomSheetFooter>
+      ) : null,
+    [
+      bothSelected,
+      selectedDriver,
+      insets.bottom,
+      animatedIndex,
+      handleFindDriver,
+      handleBackToPlanning,
+      hasSearchedDrivers,
+    ]
+  );
 
   const verificationStatus = selectedDriver?.driver?.isLicenseVerified;
 
@@ -954,6 +1061,7 @@ export default function WhereTo() {
         animatedIndex={animatedIndex}
         snapPoints={snapPoints}
         onChange={handleSheetChanges}
+        footerComponent={renderChooseDriverFooter}
         enableDynamicSizing={false}
         enablePanDownToClose={false}
         backgroundStyle={{ backgroundColor: BottomSheetBackgroundColor, borderRadius: 32 }}
@@ -974,7 +1082,7 @@ export default function WhereTo() {
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* LAYER 1: Both locations set — show nearby drivers */}
             {bothSelected && showDrivers && !selectedDriver && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0.5}>
+              <SheetLayer animatedIndex={animatedIndex} interactiveAt={1} visibleFrom={0.5}>
                 <View style={{ paddingVertical: 0 }}>
                   {/* Header with back option to re-plan */}
                   <View className="flex-row items-center px-4 py-2">
@@ -987,7 +1095,7 @@ export default function WhereTo() {
                   </View>
 
                   {/* Route summary pill */}
-                  <View className="mx-4 mb-3 flex-row items-center gap-2 rounded-2xl bg-muted/20 px-4 py-3">
+                  <View className="mx-4 flex-row items-center gap-2 rounded-2xl bg-muted/20 px-4 pb-2">
                     {selectedRoute ? (
                       <Text className="-pl-3 -ml-3 text-xs font-semibold text-foreground">
                         {selectedRoute.distance.text}
@@ -1026,7 +1134,7 @@ export default function WhereTo() {
                     setGenderMatch={setGenderMatch}
                     riderGender={rider!.gender} // REMINDER GET IT CHECKED OUT, TO SEE IF IM GETTING THE USER THE RIGHT WAY
                     hasSearchedDrivers={hasSearchedDrivers}
-                    onFindDriver={() => setHasSearchedDrivers(true)}
+                    onFindDriver={() => handleFindDriver(1)}
                     isSearchingDrivers={isSearchingDrivers}
                   />
                 </View>
@@ -1035,7 +1143,7 @@ export default function WhereTo() {
 
             {/* LAYER 2: Locations not fully set OR planning mode — plan your ride */}
             {(!bothSelected || !showDrivers) && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0.5}>
+              <SheetLayer animatedIndex={animatedIndex} interactiveAt={1} visibleFrom={0.5}>
                 <View>
                   {/* Header */}
                   <View className="flex-row items-center px-4 py-2">
@@ -1073,6 +1181,12 @@ export default function WhereTo() {
                             GooglePlacesDetailsQuery={INDIA_PLACE_DETAILS_QUERY}
                             onPress={handlePickupSelect}
                             textInputProps={{
+                              onChangeText: (text) => {
+                                if (text.trim()) return;
+                                pickupSelectionVersion.current += 1;
+                                resetDriverSearch();
+                                setPickupLocation(null);
+                              },
                               onFocus: () => {
                                 pickupSelectionVersion.current += 1;
                                 setMapSelectionMode('pickup');
@@ -1135,6 +1249,11 @@ export default function WhereTo() {
                             GooglePlacesDetailsQuery={INDIA_PLACE_DETAILS_QUERY}
                             onPress={handleDestinationSelect}
                             textInputProps={{
+                              onChangeText: (text) => {
+                                if (text.trim()) return;
+                                resetDriverSearch();
+                                setDestination(null);
+                              },
                               onFocus: () => setMapSelectionMode('destination'),
                               placeholderTextColor: '#6b7280',
                             }}
@@ -1210,14 +1329,13 @@ export default function WhereTo() {
                               rejectLocation(verificationMessage(result.status));
                               return;
                             }
+                            resetDriverSearch();
                             if (mode === 'pickup') {
                               setPickupLocation({ title: loc.title, coords });
                               pickupRef.current?.setAddressText(loc.title);
                               fitMap(coords);
-                              setMapSelectionMode(null);
+                              setMapSelectionMode(destination ? null : 'destination');
                               if (destination) {
-                                setShowDrivers(true);
-                                setHasSearchedDrivers(false);
                                 setSheetIndex(0);
                                 Keyboard.dismiss();
                               }
@@ -1226,8 +1344,6 @@ export default function WhereTo() {
                               destinationRef.current?.setAddressText(loc.title);
                               fitMap(coords);
                               setMapSelectionMode(pickupLocation ? null : 'pickup');
-                              setShowDrivers(!!pickupLocation);
-                              setHasSearchedDrivers(false);
                               setSheetIndex(pickupLocation ? 0 : 1);
                               Keyboard.dismiss();
                             }
@@ -1249,7 +1365,13 @@ export default function WhereTo() {
                   {/* Set location on map accordion */}
                   <View className="-z-10 mt-2 px-4">
                     <TouchableOpacity
-                      onPress={() => setSheetIndex(0)}
+                      onPress={() => {
+                        setMapSelectionMode(
+                          mapSelectionMode ?? (pickupLocation ? 'destination' : 'pickup')
+                        );
+                        setSheetIndex(0);
+                        Keyboard.dismiss();
+                      }}
                       className="flex-row items-center py-2">
                       <View className="mr-3 w-10 items-center justify-center">
                         <MaterialIcons name="location-pin" size={20} color={'black'} />
@@ -1263,10 +1385,14 @@ export default function WhereTo() {
               </SheetLayer>
             )}
 
-            {/* LAYER 3: Collapsed — map pin selection (always present) */}
+            {/* LAYER 3: Collapsed — route summary or map pin selection */}
 
-            {(bothSelected || showDrivers) && !selectedDriver && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+            {bothSelected && !selectedDriver && (
+              <SheetLayer
+                animatedIndex={animatedIndex}
+                interactiveAt={0}
+                visibleFrom={0}
+                visibleUntil={0.5}>
                 <View className="px-6 py-2">
                   <Text className="text-center text-xl font-extrabold">Your Plan</Text>
 
@@ -1300,33 +1426,16 @@ export default function WhereTo() {
                       </View>
                     </TouchableOpacity>
                   </View>
-
-                  {/* Edit Route button */}
-                  <TouchableOpacity
-                    onPress={handleBackToPlanning}
-                    className="mb-2 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 py-2.5">
-                    <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.pickup} />
-                    <Text className="text-sm font-semibold text-primary">Edit Route</Text>
-                  </TouchableOpacity>
-
-                  {/* Confirm button */}
-                  <Button
-                    onPress={() => {
-                      setSheetIndex(1);
-                      if (!hasSearchedDrivers) {
-                        setHasSearchedDrivers(true);
-                      }
-                    }}>
-                    <Text className="text-lg font-bold text-secondary">
-                      {hasSearchedDrivers ? 'Choose driver' : 'Find My Driver'}
-                    </Text>
-                  </Button>
                 </View>
               </SheetLayer>
             )}
 
-            {(!bothSelected || !showDrivers) && !selectedDriver && (
-              <SheetLayer animatedIndex={animatedIndex} visibleFrom={0} visibleUntil={0.5}>
+            {!bothSelected && !selectedDriver && (
+              <SheetLayer
+                animatedIndex={animatedIndex}
+                interactiveAt={0}
+                visibleFrom={0}
+                visibleUntil={0.5}>
                 <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
                   <View className="mb-1 items-center">
                     <Text className="text-xl font-extrabold text-foreground">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { VEHICLE_CLASS } from '../../../packages/api/convex/CONSTANTS';
-import { BottomSheetFlatList, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import { FunctionReturnType } from 'convex/server';
 import { api, Id } from '@tutem/api';
@@ -52,7 +52,6 @@ export default function NearbyDrivers({
   setGenderMatch,
   isSearchingDrivers = false,
 }: NearbyDriversProps) {
-  type VehicleClass = (typeof VEHICLE_CLASS)[number];
   const [viewerImage, setViewerImage] = useState<{ uri?: string | null; name?: string } | null>(
     null
   );
@@ -60,43 +59,39 @@ export default function NearbyDrivers({
   return (
     <View className="mb-6 px-4 pt-2">
       {/* Filters */}
-      <View className="mb-3 flex-row items-center">
-        <BottomSheetFlatList
-          data={VEHICLE_CLASS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item: VehicleClass) => item}
-          contentContainerStyle={{ gap: 4 }}
-          renderItem={({ item }: { item: VehicleClass }) => {
+      <View className="mb-3 flex-row items-center gap-3">
+        <View className="min-w-0 flex-1 flex-row gap-1">
+          {VEHICLE_CLASS.map((item) => {
             const isSelected = filters.includes(item);
             return (
               <TouchableOpacity
+                key={item}
                 onPress={() => {
                   setFilters((prev) =>
                     prev.includes(item) ? prev.filter((el) => el !== item) : [...prev, item]
                   );
                 }}
                 className={cn(
-                  'flex-row items-center gap-x-1 rounded-full border px-3 py-1',
-                  isSelected ? 'border-primary bg-primary' : 'border-border bg-background'
+                  'flex-1 flex-col items-center justify-center rounded-xl border py-0.5',
+                  isSelected ? 'border-primary bg-primary/15' : 'border-border bg-background'
                 )}>
                 <Image
                   source={VEHICLE_ICONS[item]}
-                  style={{ width: 16, height: 16 }}
+                  style={{ width: 24, height: 24 }}
                   resizeMode="contain"
                 />
                 <Text
                   className={cn(
-                    'text-sm',
-                    isSelected ? 'text-primary-foreground' : 'text-foreground'
+                    'text-[10px] leading-3',
+                    isSelected ? 'text-primary' : 'text-foreground'
                   )}>
                   {item}
                 </Text>
               </TouchableOpacity>
             );
-          }}
-        />
-        <View className="flex-row items-center gap-2">
+          })}
+        </View>
+        <View className="shrink-0 flex-row items-center gap-2">
           <Text className="text-xs"> Gender{'\n'}Matching</Text>
           <Switch checked={genderMatch} onCheckedChange={setGenderMatch} />
         </View>

@@ -61,6 +61,8 @@ function getYoutubeId(input: string): string | null {
 }
 
 const settingsSchema = z.object({
+  minimumRideDistance: z.coerce.number().finite().positive("Minimum distance must be positive"),
+  maximumRideDistance: z.coerce.number().finite().positive("Maximum distance must be positive"),
   nearbyRadius: z.coerce
     .number()
     .min(100, "Min 100 meters")
@@ -69,6 +71,9 @@ const settingsSchema = z.object({
   driverResponseTime: z.coerce.number().min(1, "Min 1 minute").max(120),
   maxDriverRideRequests: z.coerce.number().min(1).max(10).optional(),
   cancellationPenalty: z.coerce.number().min(0).optional(),
+}).refine((data) => data.minimumRideDistance < data.maximumRideDistance, {
+  message: "Maximum distance must be greater than minimum distance",
+  path: ["maximumRideDistance"],
 });
 
 const ageSettingsSchema = z
@@ -361,6 +366,8 @@ export function SettingsPage() {
     resolver: zodResolver(settingsSchema),
     values: settings
       ? {
+          minimumRideDistance: settings.minimumRideDistance,
+          maximumRideDistance: settings.maximumRideDistance,
           nearbyRadius: settings.nearbyRadius,
           arrivedDistance: settings.arrivedDistance,
           driverResponseTime: settings.driverResponseTime,
@@ -580,6 +587,24 @@ export function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+            <FieldGroup
+              id="minimumRideDistance"
+              label="Minimum Route Distance"
+              description="Shortest route allowed for a ride"
+              suffix="meters"
+              step="any"
+              error={errors.minimumRideDistance?.message}
+              {...register("minimumRideDistance")}
+            />
+            <FieldGroup
+              id="maximumRideDistance"
+              label="Maximum Route Distance"
+              description="Longest route allowed for a ride"
+              suffix="meters"
+              step="any"
+              error={errors.maximumRideDistance?.message}
+              {...register("maximumRideDistance")}
+            />
             <FieldGroup
               id="nearbyRadius"
               label="Nearby Radius"

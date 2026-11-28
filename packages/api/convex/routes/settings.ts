@@ -1,9 +1,10 @@
 import { ConvexError, v } from "convex/values";
-import { internalQuery, query } from "../_generated/server";
+import { internalMutation, internalQuery, query } from "../_generated/server";
 import { adminMutation, authenticatedQuery } from "../helpers/sessionFunctions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "../s3";
+import { validateRideDistanceLimits } from "../helpers/rideDistance";
 
 export const rideSettings = authenticatedQuery({
   args: {},
@@ -16,6 +17,8 @@ export const rideSettings = authenticatedQuery({
 
 export const addRideSettings = adminMutation({
   args: {
+    minimumRideDistance: v.number(),
+    maximumRideDistance: v.number(),
     nearbyRadius: v.number(),
     arrivedDistance: v.number(),
     driverResponseTime: v.number(),
@@ -23,6 +26,7 @@ export const addRideSettings = adminMutation({
     cancellationPenalty: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    validateRideDistanceLimits(args.minimumRideDistance, args.maximumRideDistance);
     const settings = await ctx.db.query("rideSettings").first();
     if (settings) {
       await ctx.db.patch(settings._id, args);
@@ -34,6 +38,8 @@ export const addRideSettings = adminMutation({
 
 export const updateRideSettings = adminMutation({
   args: {
+    minimumRideDistance: v.number(),
+    maximumRideDistance: v.number(),
     id: v.id("rideSettings"),
     nearbyRadius: v.number(),
     arrivedDistance: v.number(),
@@ -42,12 +48,35 @@ export const updateRideSettings = adminMutation({
     cancellationPenalty: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    validateRideDistanceLimits(args.minimumRideDistance, args.maximumRideDistance);
     const settings = await ctx.db.get(args.id);
     if (!settings) {
       throw new ConvexError("Settings not found");
     }
     const { id, ...rest } = args;
     await ctx.db.patch(id, rest);
+  },
+});
+
+// Run once after deployment: convex run routes/settings:initializeRideDistanceLimits '{}'
+// Safe to rerun: configured values are preserved.
+export const initializeRideDistanceLimits = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db.query("rideSettings").collect();
+    let updated = 0;
+    for (const setting of settings) {
+      if (
+        setting.minimumRideDistance !== undefined &&
+        setting.maximumRideDistance !== undefined
+      ) continue;
+      const minimumRideDistance = setting.minimumRideDistance ?? 300;
+      const maximumRideDistance = setting.maximumRideDistance ?? 100_000;
+      validateRideDistanceLimits(minimumRideDistance, maximumRideDistance);
+      await ctx.db.patch(setting._id, { minimumRideDistance, maximumRideDistance });
+      updated++;
+    }
+    return { updated };
   },
 });
 
