@@ -34,7 +34,7 @@ export function RideCardSkeleton() {
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
-    <View className="mb-3 overflow-hidden rounded-2xl border border-violet-500/30 bg-background">
+    <View className="mb-3 overflow-hidden rounded-2xl border border-slate-100 bg-white">
       {/* Header */}
       <View className="mx-4 my-3 flex-row items-start justify-between">
         <Animated.View style={animStyle} className="mr-4 flex-1">
@@ -61,7 +61,7 @@ export function RideCardSkeleton() {
       {/* Footer strip */}
       <Animated.View
         style={animStyle}
-        className="flex-row items-center justify-end border-t border-slate-200 bg-primary/5 px-4 py-2">
+        className="flex-row items-center justify-end border-t border-slate-100 bg-slate-50 px-4 py-2">
         <View className="h-3 w-24 rounded-md bg-slate-300/75" />
       </Animated.View>
     </View>
@@ -277,7 +277,10 @@ export function RideHistoryCard({
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <Animated.View entering={FadeInDown.delay(200)} style={animStyle} className="mb-3">
+    <Animated.View
+      entering={FadeInDown.delay(200)}
+      style={animStyle}
+      className="mb-3 rounded-2xl bg-white shadow-sm">
       <TouchableOpacity
         activeOpacity={1}
         onPressIn={() => {
@@ -287,11 +290,11 @@ export function RideHistoryCard({
           scale.value = withSpring(1, { damping: 30 });
         }}
         onPress={() => onPress(ride)}
-        className="overflow-hidden rounded-2xl border border-violet-500/50 bg-background">
+        className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
         {/* Header */}
         <View className="mx-4 my-3 flex-row items-start justify-between">
           <View className="flex-1">
-            <Text className="text-title mb-1 text-base font-bold">
+            <Text className="mb-1 text-sm font-bold text-foreground">
               {`${ride.rider?.userDetails?.firstName ?? ''} ${ride.rider?.userDetails?.lastName ?? ''}`.trim() ||
                 'Passenger'}
             </Text>
@@ -312,24 +315,28 @@ export function RideHistoryCard({
             />
           </View>
           <View className="ml-3 flex-1 gap-2.5">
-            <Text className="text-[13px] font-medium text-slate-400" numberOfLines={1}>
+            <Text
+              className="text-[13px] font-medium"
+              style={{ color: colors.pickup, opacity: 0.9 }}
+              numberOfLines={1}>
               {ride.pickup?.address ?? 'Pickup location'}
             </Text>
-            <Text className="text-[13px] font-medium text-slate-400" numberOfLines={1}>
+            <Text
+              className="text-[13px] font-medium"
+              style={{ color: colors.destination, opacity: 0.9 }}
+              numberOfLines={1}>
               {ride.destination?.address ?? 'Dropoff location'}
             </Text>
           </View>
         </View>
-        {ride.startedAt && (
-          <View className="flex-row items-center justify-end border-t border-gray-100 bg-primary/5 px-4 py-2">
-            <View className="flex-row items-center">
-              <Feather name="calendar" size={14} color="#9CA3AF" />
-              <Text className="ml-1.5 text-xs text-gray-500">
-                {format(new Date(ride.startedAt), 'dd MMM yyyy')}
-              </Text>
-            </View>
+        <View className="flex-row items-center justify-end border-t border-slate-100 bg-white px-4 py-2">
+          <View className="flex-row items-center">
+            <Feather name="calendar" size={14} color="#9CA3AF" />
+            <Text className="ml-1.5 text-xs text-gray-400">
+              {format(new Date(ride._creationTime), 'dd MMM yyyy hh:mm a')}
+            </Text>
           </View>
-        )}
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );

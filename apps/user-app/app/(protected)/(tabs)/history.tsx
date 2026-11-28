@@ -4,12 +4,17 @@ import { usePaginatedQuery } from 'convex/react';
 import { FlatList, View } from 'react-native';
 import { RideHistoryCard as RideCard, RideCardSkeleton } from '@/components/RideCard';
 import { Text } from '@tutem/ui';
-import Rides from '@/assets/svgs/rides';
+import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 const PAGE_SIZE = 10;
+const CONTENT_CONTAINER_STYLE = {
+  paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 24,
+};
 
 const Separator = () => <View style={{ height: 12 }} />;
 
@@ -42,16 +47,6 @@ export default function History() {
     }
   }, [isDone, isLoadingMore, loadMore]);
 
-  const contentContainerStyle = useMemo(
-    () => ({
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 24,
-      flexGrow: !isInitialLoading && results.length === 0 ? 1 : (undefined as undefined),
-    }),
-    [isInitialLoading, results.length]
-  );
-
   const ListHeader = useCallback(() => {
     if (isInitialLoading)
       return (
@@ -63,12 +58,11 @@ export default function History() {
       );
     if (results.length > 0)
       return (
-        <View className="mb-3 flex-row justify-between rounded-lg bg-violet-400/10 px-3 py-2">
-          <Text className="text-title text-lg font-bold">Previous Rides</Text>
-          <Text className="text-sm text-gray-500">
-            {results.length}
-            {results.length === 1 ? 'ride' : 'rides'}
-          </Text>
+        <View className="mb-3 flex-row items-center gap-2 border-b border-border/40 px-3 py-2">
+          <Text className="text-base font-bold text-foreground">Previous Rides</Text>
+          <View className="min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5">
+            <Text className="text-xs font-extrabold text-primary">{results.length}</Text>
+          </View>
         </View>
       );
     return null;
@@ -77,9 +71,9 @@ export default function History() {
   const ListEmpty = useCallback(() => {
     if (isInitialLoading) return null;
     return (
-      <View className="flex-1 items-center justify-center py-20">
-        <Rides width={302} height={400} />
-        <Text className="text-titles mt-4 text-xl font-semibold">No rides found</Text>
+      <View className="flex-1 items-center justify-center px-4 py-6">
+        <Feather name="clock" size={96} color="#f59e0b" />
+        <Text className="mt-4 text-center text-xl font-semibold text-foreground">No Rides found</Text>
         <Text className="mt-1 text-center text-sm text-gray-500">
           There are no previous rides available.
         </Text>
@@ -106,8 +100,16 @@ export default function History() {
     return null;
   }, [isInitialLoading, isLoadingMore, isDone, results.length]);
 
+  if (!isInitialLoading && results.length === 0) {
+    return (
+      <View className="flex-1 bg-slate-50">
+        <ListEmpty />
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-slate-50">
       <FlatList
         data={isInitialLoading ? [] : results}
         keyExtractor={keyExtractor}
@@ -115,10 +117,9 @@ export default function History() {
         showsVerticalScrollIndicator={false}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.4}
-        contentContainerStyle={contentContainerStyle}
+        contentContainerStyle={CONTENT_CONTAINER_STYLE}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={ListHeader}
-        ListEmptyComponent={ListEmpty}
         ListFooterComponent={ListFooter}
       />
     </View>
