@@ -927,21 +927,24 @@ export default function WhereTo() {
     (props: BottomSheetFooterProps) =>
       bothSelected && !selectedDriver ? (
         <BottomSheetFooter {...props} bottomInset={insets.bottom}>
-          <View className="h-[124px]" pointerEvents="box-none">
+          <View className="h-[72px]" pointerEvents="box-none">
             <SheetLayer
               animatedIndex={animatedIndex}
               interactiveAt={0}
               visibleFrom={0}
               visibleUntil={0.5}>
-              <View className="gap-2 px-6 pb-4">
-                <TouchableOpacity
-                  onPress={handleBackToPlanning}
-                  className="h-11 flex-row items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10">
-                  <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.pickup} />
-                  <Text className="text-sm font-semibold text-primary">Edit Route</Text>
-                </TouchableOpacity>
-                <Button onPress={() => handleFindDriver(0)} className="h-14 rounded-xl">
-                  <Text className="text-lg font-bold text-secondary">
+              <View className="flex-row gap-2 px-6 pb-4">
+                <Button
+                  className="h-14 min-w-0 flex-1 gap-1 rounded-xl px-2"
+                  variant="destructive"
+                  onPress={handleBackToPlanning}>
+                  <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
+                  <Text className="text-sm font-semibold">Edit Route</Text>
+                </Button>
+                <Button
+                  onPress={() => handleFindDriver(0)}
+                  className="h-14 min-w-0 flex-1 rounded-xl px-2">
+                  <Text className="text-center text-sm font-bold text-secondary">
                     {hasSearchedDrivers ? 'Choose Driver' : 'Find My Driver'}
                   </Text>
                 </Button>
@@ -1396,33 +1399,39 @@ export default function WhereTo() {
                 <View className="px-6 py-2">
                   <Text className="text-center text-xl font-extrabold">Your Plan</Text>
 
-                  <View className="mb-3 w-full gap-2 p-2">
+                  <View className="w-full gap-2 px-2 py-1">
                     <TouchableOpacity
                       onPress={() => fitMap(pickupLocation?.coords)}
-                      className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
+                      className="flex-row items-start gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
                       <MaterialCommunityIcons name="map-marker" size={24} color={colors.pickup} />
 
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-foreground">
+                      <View className="min-w-0 flex-1">
+                        <Text className="text-xs leading-4 text-muted-foreground">Pickup</Text>
+                        <Text
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                          className="text-sm font-semibold leading-4 text-foreground">
                           {pickupLocation?.title}
                         </Text>
-                        <Text className="text-xs text-muted-foreground">Pickup</Text>
                       </View>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => fitMap(destination?.coords)}
-                      className="flex-row items-center gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
+                      className="flex-row items-start gap-2 rounded-2xl border-2 border-transparent bg-muted/20">
                       <MaterialCommunityIcons
                         name="map-marker"
                         size={24}
                         color={colors.destination}
                       />
 
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-foreground">
+                      <View className="min-w-0 flex-1">
+                        <Text className="text-xs leading-4 text-muted-foreground">Destination</Text>
+                        <Text
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                          className="text-sm font-semibold leading-4 text-foreground">
                           {destination?.title}
                         </Text>
-                        <Text className="text-xs text-muted-foreground">Destination</Text>
                       </View>
                     </TouchableOpacity>
                   </View>

@@ -1,19 +1,6 @@
-import CustomDatePicker, { type CustomDatePickerHandle } from '@/components/DateTimePicker';
 import { ScrollView, TextInput, View } from 'react-native';
 import { useRef, useState } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-  Text,
-  Input,
-  Button,
-  Loader,
-} from '@tutem/ui';
+import { Text, Input, Button, Loader } from '@tutem/ui';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -52,8 +39,6 @@ export default function EditProfile() {
   const { sessionToken } = useAuth();
 
   const lastNameRef = useRef<TextInput>(null);
-  const phoneRef = useRef<TextInput>(null);
-  const dobRef = useRef<CustomDatePickerHandle>(null);
 
   const updateUser = useAuthenticatedMutation(api.routes.rider.updateRider);
 
@@ -147,8 +132,7 @@ export default function EditProfile() {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
-                returnKeyType="next"
-                onSubmitEditing={() => phoneRef.current?.focus()}
+                returnKeyType="done"
               />
             )}
           />
@@ -168,9 +152,12 @@ export default function EditProfile() {
               inputMode="tel"
               value={phoneNumber}
               editable={false}
-              className="pl-14 opacity-60"
+              className="pl-14 pr-12 opacity-60"
             />
             <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">+91</Text>
+            <View pointerEvents="none" className="absolute inset-y-0 right-3 justify-center">
+              <Feather name="lock" size={18} color="gray" style={{ opacity: 0.4 }} />
+            </View>
           </View>
         </View>
 
@@ -185,15 +172,16 @@ export default function EditProfile() {
             control={control}
             render={({ field, fieldState }) => (
               <>
-                <CustomDatePicker
-                  disabled={true}
-                  ref={dobRef}
-                  placeholder="Choose DOB"
-                  date={field.value}
-                  setDate={(date) => {
-                    field.onChange(date);
-                  }}
-                />
+                <View className="relative">
+                  <Input
+                    value={field.value?.toLocaleDateString()}
+                    editable={false}
+                    className="pr-12"
+                  />
+                  <View pointerEvents="none" className="absolute inset-y-0 right-3 justify-center">
+                    <Feather name="lock" size={18} color="gray" style={{ opacity: 0.4 }} />
+                  </View>
+                </View>
                 {fieldState.error && (
                   <Text className="text-md text-destructive">{fieldState.error.message}</Text>
                 )}
@@ -212,38 +200,17 @@ export default function EditProfile() {
             name="gender"
             control={control}
             render={({ field }) => (
-              <Select
-                defaultValue={
-                  field.value
-                    ? {
-                        value: field.value,
-                        label: field.value,
-                      }
-                    : undefined
-                }
-                value={
-                  field.value
-                    ? {
-                        value: field.value,
-                        label: field.value,
-                      }
-                    : undefined
-                }
-                onValueChange={(option: any) => field.onChange(option?.value)}>
-                <SelectTrigger className="w-full" disabled={true}>
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent className="w-10/12">
-                  <SelectGroup>
-                    <SelectLabel>Gender</SelectLabel>
-                    {GENDER.map((gender) => (
-                      <SelectItem key={gender} label={gender} value={gender}>
-                        {gender}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <View className="relative">
+                <Input
+                  value={field.value}
+                  placeholder="Select Gender"
+                  editable={false}
+                  className="pr-12"
+                />
+                <View pointerEvents="none" className="absolute inset-y-0 right-3 justify-center">
+                  <Feather name="lock" size={18} color="gray" style={{ opacity: 0.4 }} />
+                </View>
+              </View>
             )}
           />
           {errors.gender && (

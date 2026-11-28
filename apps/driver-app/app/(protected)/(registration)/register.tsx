@@ -395,11 +395,14 @@ export default function Register() {
                   inputMode="tel"
                   value={displayPhone}
                   editable={false}
-                  className="pl-14 opacity-60"
+                  className="pl-14 pr-12 opacity-60"
                 />
                 <Text className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500/60">
                   +91
                 </Text>
+                <View pointerEvents="none" className="absolute inset-y-0 right-3 justify-center">
+                  <Feather name="lock" size={18} color="gray" style={{ opacity: 0.4 }} />
+                </View>
               </View>
               <Text className="mt-1 text-xs text-muted-foreground">
                 Phone number verified at sign-in
